@@ -10,7 +10,7 @@
     </div>
     <div>
         <a href="{{ url_for('index') }}" class="btn-secondary">← All Weddings</a>
-        <form method="POST" action="{{ url_for('delete_wedding', wedding_id=wedding.id) }}" style="display: inline;">
+        <form method="POST" action="{{ url_for('delete_wedding', wedding_id=wedding.id) }}" class="inline-form">
             <button type="submit" class="btn-danger" onclick="return confirm('Delete this wedding and all data?')">Delete Wedding</button>
         </form>
     </div>

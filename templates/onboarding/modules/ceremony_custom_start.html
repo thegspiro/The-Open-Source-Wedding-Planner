@@ -23,86 +23,12 @@
         </div>
 
         <a href="{{ url_for('onboarding_ceremony_customize', wedding_id=wedding.id) }}" class="btn-primary btn-large">Start Custom Setup →</a>
-        
+
         <div class="or-divider">
             <span>Changed your mind?</span>
         </div>
-        
+
         <a href="{{ url_for('onboarding_ceremony_templates', wedding_id=wedding.id) }}" class="btn-secondary">Use a Template Instead</a>
     </div>
 </div>
-
-<style>
-.custom-intro {
-    max-width: 600px;
-    margin: 0 auto;
-    text-align: center;
-}
-
-.intro-card {
-    background: white;
-    border-radius: 12px;
-    padding: 3rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    margin-bottom: 2rem;
-}
-
-.intro-card h2 {
-    color: #e91e63;
-    font-size: 1.8rem;
-    margin-bottom: 2rem;
-}
-
-.intro-steps {
-    list-style: none;
-    padding: 0;
-    text-align: left;
-    max-width: 400px;
-    margin: 0 auto 2rem;
-}
-
-.intro-steps li {
-    padding: 1rem;
-    margin: 0.5rem 0;
-    background: #f9f9f9;
-    border-radius: 8px;
-    border-left: 4px solid #e91e63;
-    color: #333;
-}
-
-.intro-steps li::before {
-    content: "✓ ";
-    color: #4caf50;
-    font-weight: bold;
-    margin-right: 0.5rem;
-}
-
-.intro-time {
-    color: #666;
-    font-size: 1.1rem;
-    margin-top: 2rem;
-}
-
-.or-divider {
-    margin: 2rem 0;
-    position: relative;
-}
-
-.or-divider::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 50%;
-    height: 1px;
-    background: #e0e0e0;
-}
-
-.or-divider span {
-    background: #f5f5f5;
-    padding: 0.5rem 1rem;
-    position: relative;
-    color: #999;
-}
-</style>
 {% endblock %}
