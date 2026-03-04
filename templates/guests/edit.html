@@ -155,5 +155,19 @@
             <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
         </div>
     </form>
+
+    {% if guest_link %}
+    <div class="module-section" style="margin-top: 2rem;">
+        <h2>Check-In Link</h2>
+        <p class="form-help">This personalized link identifies the guest via a browser cookie. Include it in emails, digital invitations, or day-of communications. When they scan the venue QR code, they'll be recognized automatically.</p>
+        <div class="form-group">
+            <input type="text" value="{{ guest_link }}" readonly style="cursor: pointer; font-size: 0.9rem;"
+                   onclick="this.select(); document.execCommand('copy');">
+        </div>
+        <form method="POST" action="{{ url_for('guest_regenerate_token', wedding_id=wedding.id, guest_id=guest.id) }}" style="display: inline;">
+            <button type="submit" class="btn-secondary btn-small" onclick="return confirm('This will invalidate the current link. Continue?');">Regenerate Link</button>
+        </form>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

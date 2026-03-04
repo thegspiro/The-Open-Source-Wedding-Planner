@@ -26,18 +26,45 @@
     </div>
     {% endif %}
 
-    <!-- Generate Links -->
+    <!-- How Tokens Get Assigned -->
     <div class="form-container" style="margin-bottom: 2rem; padding: 1.5rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="margin-bottom: 0.5rem;">How Guests Get Their Link</h2>
+        <p style="color: #666; margin-bottom: 1rem;">Tokens are automatically assigned at multiple touchpoints, so every guest ends up with one regardless of how they interact with you:</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div style="background: #f3e5f5; border-radius: 8px; padding: 1rem;">
+                <strong style="color: #6a1b9a;">Adding a Guest</strong>
+                <p style="color: #666; font-size: 0.85rem; margin: 0.25rem 0 0;">Token created when you add them to the guest list.</p>
+            </div>
+            <div style="background: #e3f2fd; border-radius: 8px; padding: 1rem;">
+                <strong style="color: #1565c0;">Online RSVP</strong>
+                <p style="color: #666; font-size: 0.85rem; margin: 0.25rem 0 0;">Token assigned when guest submits RSVP. Cookie set automatically.</p>
+            </div>
+            <div style="background: #e8f5e9; border-radius: 8px; padding: 1rem;">
+                <strong style="color: #2e7d32;">Day-Of Email</strong>
+                <p style="color: #666; font-size: 0.85rem; margin: 0.25rem 0 0;">Send table details + check-in link to all accepted guests.</p>
+            </div>
+            <div style="background: #fff3e0; border-radius: 8px; padding: 1rem;">
+                <strong style="color: #e65100;">Paper Invites</strong>
+                <p style="color: #666; font-size: 0.85rem; margin: 0.25rem 0 0;">Copy a guest's link from here or from their edit page. Include in any communication.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="form-container" style="margin-bottom: 2rem; padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
             <div>
                 <h2 style="margin-bottom: 0.25rem;">Personalized Guest Links</h2>
                 <p style="color: #666; margin: 0;">
-                    Each link sets a cookie so the guest is recognized at check-in. Include it in emails or digital invitations.
+                    Each link sets a cookie so the guest is recognized at check-in.
                 </p>
             </div>
-            <form method="POST" action="{{ url_for('guest_links_generate', wedding_id=wedding.id) }}">
-                <button type="submit" class="btn-primary">Generate Missing Links</button>
-            </form>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <form method="POST" action="{{ url_for('guest_links_generate', wedding_id=wedding.id) }}">
+                    <button type="submit" class="btn-secondary">Generate Missing Links</button>
+                </form>
+                <a href="{{ url_for('guest_send_day_of_emails', wedding_id=wedding.id) }}" class="btn-primary">Send Day-Of Emails</a>
+            </div>
         </div>
     </div>
 
@@ -49,6 +76,7 @@
                     <th style="text-align: left; padding: 0.75rem 0.5rem;">Guest</th>
                     <th style="text-align: left; padding: 0.75rem 0.5rem;">Table</th>
                     <th style="text-align: left; padding: 0.75rem 0.5rem;">Link</th>
+                    <th style="text-align: center; padding: 0.75rem 0.5rem;">Email</th>
                 </tr>
             </thead>
             <tbody>
@@ -72,6 +100,16 @@
                                onclick="this.select(); document.execCommand('copy');">
                         {% else %}
                         <span style="color: #ccc;">Not generated</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.6rem 0.5rem; text-align: center;">
+                        {% if guest.email and guest.guest_token %}
+                        <form method="POST" action="{{ url_for('guest_send_email', wedding_id=wedding.id, guest_id=guest.id) }}" style="display: inline;">
+                            <input type="hidden" name="email_type" value="checkin">
+                            <button type="submit" class="btn-secondary btn-small" title="Send check-in link to {{ guest.email }}">Send</button>
+                        </form>
+                        {% elif not guest.email %}
+                        <span style="color: #ccc; font-size: 0.8rem;">No email</span>
                         {% endif %}
                     </td>
                 </tr>

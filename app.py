@@ -21,7 +21,7 @@ import os
 import csv
 import io
 import secrets
-from email_service import send_reminder_email
+from email_service import send_reminder_email, send_guest_email
 import threading
 import time as time_module
 import json
@@ -1239,7 +1239,8 @@ def guest_add(wedding_id):
             side=request.form.get('side'),
             dietary_restrictions=request.form.get('dietary_restrictions'),
             household_group=request.form.get('household_group'),
-            social_groups=request.form.get('social_groups')
+            social_groups=request.form.get('social_groups'),
+            guest_token=generate_token()
         )
         db.session.add(guest)
         db.session.commit()
@@ -1272,10 +1273,32 @@ def guest_edit(wedding_id, guest_id):
         guest.thank_you_sent = request.form.get('thank_you_sent') == 'on'
         guest.household_group = request.form.get('household_group')
         guest.social_groups = request.form.get('social_groups')
+        # Generate token if guest doesn't have one yet
+        if not guest.guest_token:
+            guest.guest_token = generate_token()
         db.session.commit()
         flash('Guest updated!', 'success')
         return redirect(url_for('guests_view', wedding_id=wedding_id))
-    return render_template('guests/edit.html', wedding=wedding, guest=guest)
+
+    # Ensure token exists for display
+    if not guest.guest_token:
+        guest.guest_token = generate_token()
+        db.session.commit()
+
+    guest_link = url_for('guest_identify', token=guest.guest_token, _external=True)
+    return render_template('guests/edit.html', wedding=wedding, guest=guest, guest_link=guest_link)
+
+@app.route('/wedding/<int:wedding_id>/guests/<int:guest_id>/regenerate-token', methods=['POST'])
+@login_required
+def guest_regenerate_token(wedding_id, guest_id):
+    """Regenerate a guest's check-in token (invalidates old link)."""
+    wedding = get_wedding_or_403(wedding_id)
+    guest = Guest.query.get_or_404(guest_id)
+    guest.guest_token = generate_token()
+    db.session.commit()
+    flash(f'Check-in link regenerated for {guest.name}.', 'success')
+    return redirect(url_for('guest_edit', wedding_id=wedding_id, guest_id=guest_id))
+
 
 @app.route('/wedding/<int:wedding_id>/guests/<int:guest_id>/delete', methods=['POST'])
 @login_required
@@ -2973,8 +2996,12 @@ def rsvp_submit(token):
     guest = Guest.query.filter_by(wedding_id=wedding.id, name=guest_name).first()
     if not guest:
         # Allow new guests to RSVP (they type their name)
-        guest = Guest(wedding_id=wedding.id, name=guest_name)
+        guest = Guest(wedding_id=wedding.id, name=guest_name, guest_token=generate_token())
         db.session.add(guest)
+
+    # Ensure guest has a check-in token
+    if not guest.guest_token:
+        guest.guest_token = generate_token()
 
     guest.rsvp_status = rsvp_status
     guest.rsvp_date = datetime.utcnow().date()
@@ -2988,11 +3015,22 @@ def rsvp_submit(token):
         existing_po = Guest.query.filter_by(wedding_id=wedding.id, name=plus_one_name).first()
         if not existing_po:
             po = Guest(wedding_id=wedding.id, name=plus_one_name, is_plus_one=True,
-                       plus_one_of=guest_name, rsvp_status='accepted')
+                       plus_one_of=guest_name, rsvp_status='accepted',
+                       guest_token=generate_token())
             db.session.add(po)
 
     db.session.commit()
-    return render_template('rsvp/thank_you.html', wedding=wedding, guest=guest, token=token)
+
+    # Set cookie so this guest is recognized at venue check-in
+    response = make_response(render_template('rsvp/thank_you.html', wedding=wedding, guest=guest, token=token))
+    response.set_cookie(
+        f'guest_{wedding.id}',
+        guest.guest_token,
+        max_age=60 * 60 * 24 * 90,
+        httponly=True,
+        samesite='Lax',
+    )
+    return response
 
 @app.route('/wedding/<int:wedding_id>/rsvp/enable', methods=['POST'])
 @login_required
@@ -3145,6 +3183,105 @@ def guest_links_generate(wedding_id):
     db.session.commit()
     flash(f'Generated links for {count} guests.', 'success')
     return redirect(url_for('guest_links', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/guests/<int:guest_id>/send-email', methods=['POST'])
+@login_required
+def guest_send_email(wedding_id, guest_id):
+    """Send a single guest their personalized check-in link via email."""
+    wedding = get_wedding_or_403(wedding_id)
+    guest = Guest.query.get_or_404(guest_id)
+
+    if not guest.email:
+        flash(f'No email address on file for {guest.name}.', 'error')
+        return redirect(url_for('guest_links', wedding_id=wedding_id))
+
+    if not guest.guest_token:
+        guest.guest_token = generate_token()
+        db.session.commit()
+
+    guest_link = url_for('guest_identify', token=guest.guest_token, _external=True)
+    email_type = request.form.get('email_type', 'checkin')
+    custom_message = sanitize_string(request.form.get('message', ''), max_length=2000)
+
+    if email_type == 'day_of':
+        subject = f'Day-Of Details - {wedding.couple_names}'
+        message = custom_message or (
+            f"The big day is almost here! Here are your details for our wedding."
+        )
+        if guest.seating_table:
+            table_info = guest.seating_table.table_name or f"Table {guest.seating_table.table_number}"
+            message += f"\n\nYour table: {table_info}"
+        if guest.meal_choice:
+            message += f"\nYour meal: {guest.meal_choice}"
+    else:
+        subject = f'Your Check-In Link - {wedding.couple_names}'
+        message = custom_message or (
+            f"We're so excited to celebrate with you! "
+            f"Click the link below to save your details. "
+            f"At the venue, just scan the QR code to find your table."
+        )
+
+    send_guest_email(
+        to_email=guest.email,
+        guest_name=guest.name,
+        couple_names=wedding.couple_names,
+        wedding_date=wedding.wedding_date,
+        subject=subject,
+        message=message,
+        guest_link=guest_link,
+    )
+    flash(f'Email sent to {guest.name}.', 'success')
+    return redirect(url_for('guest_links', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/guests/send-day-of-emails', methods=['GET', 'POST'])
+@login_required
+def guest_send_day_of_emails(wedding_id):
+    """Send day-of details to all accepted guests with email addresses."""
+    wedding = get_wedding_or_403(wedding_id)
+
+    eligible_guests = [
+        g for g in wedding.guests
+        if g.email and g.rsvp_status == 'accepted'
+    ]
+
+    if request.method == 'POST':
+        custom_message = sanitize_string(request.form.get('message', ''), max_length=2000)
+        sent_count = 0
+        for guest in eligible_guests:
+            if not guest.guest_token:
+                guest.guest_token = generate_token()
+
+            guest_link = url_for('guest_identify', token=guest.guest_token, _external=True)
+
+            message = custom_message or (
+                f"The big day is almost here! Here are your details for our wedding."
+            )
+            guest_message = message
+            if guest.seating_table:
+                table_info = guest.seating_table.table_name or f"Table {guest.seating_table.table_number}"
+                guest_message += f"\n\nYour table: {table_info}"
+            if guest.meal_choice:
+                guest_message += f"\nYour meal: {guest.meal_choice}"
+
+            send_guest_email(
+                to_email=guest.email,
+                guest_name=guest.name,
+                couple_names=wedding.couple_names,
+                wedding_date=wedding.wedding_date,
+                subject=f'Day-Of Details - {wedding.couple_names}',
+                message=guest_message,
+                guest_link=guest_link,
+            )
+            sent_count += 1
+
+        db.session.commit()
+        flash(f'Day-of details sent to {sent_count} guests.', 'success')
+        return redirect(url_for('guest_links', wedding_id=wedding_id))
+
+    return render_template('checkin/send_day_of.html',
+        wedding=wedding, eligible_guests=eligible_guests)
 
 
 # ============================================

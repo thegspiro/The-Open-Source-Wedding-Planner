@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Send Day-Of Details - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div style="max-width: 700px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h1>Send Day-Of Details</h1>
+        <a href="{{ url_for('guest_links', wedding_id=wedding.id) }}" class="btn-secondary">Back</a>
+    </div>
+
+    <div class="form-container" style="padding: 1.5rem;">
+        <p style="color: #666; margin-bottom: 1rem;">
+            This will send each accepted guest an email with their table assignment, meal choice,
+            and a personalized check-in link. When they click the link, a cookie is set so they're
+            automatically recognized when scanning the venue QR code.
+        </p>
+
+        <div style="background: #e3f2fd; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+            <strong>{{ eligible_guests|length }}</strong> guests will receive this email
+            (accepted RSVP with an email address on file).
+        </div>
+
+        {% if eligible_guests %}
+        <form method="POST">
+            <div class="form-group">
+                <label for="message">Custom Message (optional)</label>
+                <textarea id="message" name="message" rows="4" placeholder="The big day is almost here! Here are your details for our wedding."></textarea>
+                <p class="form-help">Leave blank to use the default message. Table and meal details are appended automatically for each guest.</p>
+            </div>
+
+            <details style="margin-bottom: 1.5rem;">
+                <summary style="cursor: pointer; color: #666;">Preview recipients ({{ eligible_guests|length }})</summary>
+                <ul style="margin-top: 0.5rem; max-height: 300px; overflow-y: auto;">
+                    {% for guest in eligible_guests %}
+                    <li style="padding: 0.25rem 0; color: #555;">
+                        {{ guest.name }} &mdash; {{ guest.email }}
+                        {% if guest.seating_table %} &mdash; {{ guest.seating_table.table_name or 'Table ' + guest.seating_table.table_number }}{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </details>
+
+            <button type="submit" class="btn-primary" onclick="return confirm('Send day-of details to {{ eligible_guests|length }} guests?');">
+                Send to {{ eligible_guests|length }} Guests
+            </button>
+        </form>
+        {% else %}
+        <p style="color: #999;">No eligible guests found. Guests need an email address and an accepted RSVP status.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
