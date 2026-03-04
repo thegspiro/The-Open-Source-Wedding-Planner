@@ -55,6 +55,7 @@ def init_csrf(app):
     # Endpoints that are intentionally public and don't use session auth
     CSRF_EXEMPT_ENDPOINTS = {
         'rsvp_portal', 'rsvp_submit', 'shared_view',
+        'guest_identify', 'guest_checkin', 'guest_checkin_lookup',
         'static',
     }
 

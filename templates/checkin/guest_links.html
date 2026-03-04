@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Guest Links - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h1>Guest Links &amp; Check-In</h1>
+        <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}" class="btn-secondary">Back to Guests</a>
+    </div>
+
+    <!-- Check-in QR Section -->
+    {% if checkin_url %}
+    <div class="form-container" style="margin-bottom: 2rem; padding: 1.5rem;">
+        <h2 style="margin-bottom: 0.5rem;">Venue Check-In QR Code</h2>
+        <p style="color: #666; margin-bottom: 1rem;">
+            Print this QR code and display it at the reception entrance.
+            Guests who clicked their personalized link (below) will be automatically recognized and shown their table.
+        </p>
+        <div style="text-align: center; margin: 1.5rem 0;">
+            <div id="checkin-qr" style="display: inline-block; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #ddd;"></div>
+            <p style="margin-top: 0.75rem; font-size: 0.85rem; color: #999; word-break: break-all;">{{ checkin_url }}</p>
+        </div>
+    </div>
+    {% else %}
+    <div class="form-container" style="margin-bottom: 2rem; padding: 1.5rem;">
+        <p style="color: #666;">Enable RSVP on the <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}">Guests page</a> to generate a venue check-in QR code.</p>
+    </div>
+    {% endif %}
+
+    <!-- Generate Links -->
+    <div class="form-container" style="margin-bottom: 2rem; padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 style="margin-bottom: 0.25rem;">Personalized Guest Links</h2>
+                <p style="color: #666; margin: 0;">
+                    Each link sets a cookie so the guest is recognized at check-in. Include it in emails or digital invitations.
+                </p>
+            </div>
+            <form method="POST" action="{{ url_for('guest_links_generate', wedding_id=wedding.id) }}">
+                <button type="submit" class="btn-primary">Generate Missing Links</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Guest List with Links -->
+    <div class="form-container" style="padding: 1.5rem;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 2px solid #eee;">
+                    <th style="text-align: left; padding: 0.75rem 0.5rem;">Guest</th>
+                    <th style="text-align: left; padding: 0.75rem 0.5rem;">Table</th>
+                    <th style="text-align: left; padding: 0.75rem 0.5rem;">Link</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for guest in guests %}
+                <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 0.6rem 0.5rem;">
+                        <strong>{{ guest.name }}</strong>
+                        {% if guest.email %}<br><span style="color: #999; font-size: 0.85rem;">{{ guest.email }}</span>{% endif %}
+                    </td>
+                    <td style="padding: 0.6rem 0.5rem; color: #666;">
+                        {% if guest.seating_table %}
+                            {{ guest.seating_table.table_name or 'Table ' + guest.seating_table.table_number }}
+                        {% else %}
+                            <span style="color: #ccc;">--</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.6rem 0.5rem;">
+                        {% if guest.guest_token %}
+                        <input type="text" value="{{ url_for('guest_identify', token=guest.guest_token, _external=True) }}"
+                               readonly style="font-size: 0.8rem; width: 100%; max-width: 300px; cursor: pointer; padding: 0.3rem 0.5rem;"
+                               onclick="this.select(); document.execCommand('copy');">
+                        {% else %}
+                        <span style="color: #ccc;">Not generated</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if checkin_url %}
+<!-- QR code generation using vanilla JS - no external dependencies -->
+<script>
+(function() {
+    // Minimal QR code generator in pure JS (numeric/alphanumeric/byte modes)
+    // For simplicity, we render the check-in URL as a simple visual QR placeholder
+    // and provide the copyable URL. For actual QR generation we use the lightweight
+    // qrcode generator from CDN (already allowed in CSP).
+    var container = document.getElementById('checkin-qr');
+    var url = {{ checkin_url|tojson }};
+
+    // Create a canvas-based QR code using the CDN library
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
+    script.onload = function() {
+        var qr = qrcode(0, 'M');
+        qr.addData(url);
+        qr.make();
+        container.innerHTML = qr.createSvgTag(6, 0);
+    };
+    script.onerror = function() {
+        // Fallback: just show the URL prominently
+        container.innerHTML = '<p style="padding: 2rem; font-size: 1.1rem; font-weight: 600;">Check-in URL ready - copy the link below to generate a QR code with any free QR tool.</p>';
+    };
+    document.head.appendChild(script);
+})();
+</script>
+{% endif %}
+{% endblock %}

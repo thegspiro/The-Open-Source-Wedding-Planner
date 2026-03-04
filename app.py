@@ -3012,6 +3012,142 @@ def rsvp_enable(wedding_id):
     return redirect(url_for('guests_view', wedding_id=wedding_id))
 
 # ============================================
+# GUEST CHECK-IN (PUBLIC - COOKIE-BASED)
+# ============================================
+
+@app.route('/g/<token>')
+@rate_limit(max_requests=30, window_seconds=60)
+def guest_identify(token):
+    """Guest clicks personalized link (from email). Sets a cookie and shows their info."""
+    guest = Guest.query.filter_by(guest_token=token).first_or_404()
+    wedding = Wedding.query.get(guest.wedding_id)
+    if not wedding:
+        abort(404)
+
+    table_name = None
+    table_number = None
+    if guest.seating_table:
+        table_name = guest.seating_table.table_name
+        table_number = guest.seating_table.table_number
+
+    response = make_response(render_template('checkin/welcome.html',
+        guest=guest, wedding=wedding,
+        table_name=table_name, table_number=table_number))
+
+    # Set a long-lived cookie so they're recognized at the venue
+    response.set_cookie(
+        f'guest_{wedding.id}',
+        token,
+        max_age=60 * 60 * 24 * 90,  # 90 days
+        httponly=True,
+        samesite='Lax',
+    )
+    return response
+
+
+@app.route('/checkin/<rsvp_token>')
+@rate_limit(max_requests=30, window_seconds=60)
+def guest_checkin(rsvp_token):
+    """QR code at the venue points here. Reads guest cookie to identify them."""
+    wedding = Wedding.query.filter_by(rsvp_token=rsvp_token).first_or_404()
+
+    # Try to identify the guest from their cookie
+    guest_token = request.cookies.get(f'guest_{wedding.id}')
+    guest = None
+    if guest_token:
+        guest = Guest.query.filter_by(guest_token=guest_token, wedding_id=wedding.id).first()
+
+    table_name = None
+    table_number = None
+    if guest and guest.seating_table:
+        table_name = guest.seating_table.table_name
+        table_number = guest.seating_table.table_number
+
+    return render_template('checkin/table.html',
+        guest=guest, wedding=wedding,
+        table_name=table_name, table_number=table_number,
+        rsvp_token=rsvp_token)
+
+
+@app.route('/checkin/<rsvp_token>/lookup', methods=['POST'])
+@rate_limit(max_requests=10, window_seconds=60)
+def guest_checkin_lookup(rsvp_token):
+    """Fallback: guest types their name to find their table."""
+    wedding = Wedding.query.filter_by(rsvp_token=rsvp_token).first_or_404()
+    name = sanitize_string(request.form.get('name', ''), max_length=200)
+
+    guest = Guest.query.filter(
+        Guest.wedding_id == wedding.id,
+        db.func.lower(Guest.name) == name.lower()
+    ).first()
+
+    table_name = None
+    table_number = None
+    if guest and guest.seating_table:
+        table_name = guest.seating_table.table_name
+        table_number = guest.seating_table.table_number
+
+    # If found and guest has a token, set the cookie for next time
+    response = make_response(render_template('checkin/table.html',
+        guest=guest, wedding=wedding,
+        table_name=table_name, table_number=table_number,
+        rsvp_token=rsvp_token, searched_name=name))
+
+    if guest and guest.guest_token:
+        response.set_cookie(
+            f'guest_{wedding.id}',
+            guest.guest_token,
+            max_age=60 * 60 * 24 * 90,
+            httponly=True,
+            samesite='Lax',
+        )
+    return response
+
+
+@app.route('/wedding/<int:wedding_id>/guest-links')
+@login_required
+def guest_links(wedding_id):
+    """Planner view: generate tokens and see personalized links for all guests."""
+    wedding = get_wedding_or_403(wedding_id)
+    guests = Guest.query.filter_by(wedding_id=wedding_id).order_by(Guest.name).all()
+
+    # Auto-generate tokens for any guests that don't have one
+    generated = 0
+    for guest in guests:
+        if not guest.guest_token:
+            guest.guest_token = generate_token()
+            generated += 1
+    if generated:
+        db.session.commit()
+
+    checkin_url = None
+    if wedding.rsvp_token:
+        checkin_url = url_for('guest_checkin', rsvp_token=wedding.rsvp_token, _external=True)
+
+    return render_template('checkin/guest_links.html',
+        wedding=wedding, guests=guests, checkin_url=checkin_url)
+
+
+@app.route('/wedding/<int:wedding_id>/guest-links/generate', methods=['POST'])
+@login_required
+def guest_links_generate(wedding_id):
+    """Generate tokens for all guests that don't have one yet."""
+    wedding = get_wedding_or_403(wedding_id)
+    guests = Guest.query.filter_by(wedding_id=wedding_id).all()
+    count = 0
+    for guest in guests:
+        if not guest.guest_token:
+            guest.guest_token = generate_token()
+            count += 1
+    # Also ensure the wedding has an RSVP token for the check-in QR code
+    if not wedding.rsvp_token:
+        wedding.rsvp_token = generate_token()
+    db.session.commit()
+    flash(f'Generated links for {count} guests.', 'success')
+    return redirect(url_for('guest_links', wedding_id=wedding_id))
+
+
+# ============================================
 # GUEST MEAL COUNT SUMMARY
 # ============================================
 
