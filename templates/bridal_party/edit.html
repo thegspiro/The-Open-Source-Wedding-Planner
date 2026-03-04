@@ -84,6 +84,12 @@
             </div>
 
             <div class="form-group">
+                <label for="gift_cost">Gift Cost ($)</label>
+                <input type="number" id="gift_cost" name="gift_cost" step="0.01" min="0" value="{{ member.gift_cost or '' }}" placeholder="e.g., 75.00">
+                <p class="form-help">This cost will appear in your wedding budget.</p>
+            </div>
+
+            <div class="form-group">
                 <label>
                     <input type="checkbox" name="gift_purchased" {% if member.gift_purchased %}checked{% endif %}>
                     Gift Purchased

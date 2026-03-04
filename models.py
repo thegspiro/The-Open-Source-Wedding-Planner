@@ -327,6 +327,7 @@ class BridalPartyMember(db.Model):
     
     # Gift Tracking
     gift_idea = db.Column(db.Text)
+    gift_cost = db.Column(db.Float)
     gift_purchased = db.Column(db.Boolean, default=False)
     gift_given = db.Column(db.Boolean, default=False)
     
@@ -563,6 +564,7 @@ class FloralItem(db.Model):
     flowers = db.Column(db.Text)  # flower types
     colors = db.Column(db.String(200))
     quantity = db.Column(db.Integer, default=1)
+    cost = db.Column(db.Float)
     notes = db.Column(db.Text)
 
     wedding = db.relationship('Wedding', backref=db.backref('floral_items', lazy=True, cascade='all, delete-orphan'))

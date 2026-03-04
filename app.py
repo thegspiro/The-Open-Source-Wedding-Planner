@@ -654,11 +654,15 @@ def wedding_dashboard(wedding_id):
         'bridal_party_count': len(wedding.bridal_party),
     }
     
-    # Budget summary
+    # Budget summary (includes module costs)
     if wedding.budget:
         total_spent = sum([e.paid_amount or 0 for e in wedding.budget.expenses])
+        # Add module-sourced paid amounts
+        module_paid = sum(v.deposit_amount or 0 for v in wedding.vendors if v.deposit_paid)
+        module_paid += sum(a.price or 0 for a in wedding.attire if a.purchased)
+        module_paid += sum(bp.gift_cost or 0 for bp in wedding.bridal_party if bp.gift_purchased)
         stats['budget_total'] = wedding.budget.total_budget
-        stats['budget_spent'] = total_spent
+        stats['budget_spent'] = total_spent + module_paid
     else:
         stats['budget_total'] = 0
         stats['budget_spent'] = 0
@@ -953,6 +957,7 @@ def bridal_party_edit(wedding_id, member_id):
         member.shoe_size = request.form.get('shoe_size')
         member.height = request.form.get('height')
         member.gift_idea = request.form.get('gift_idea')
+        member.gift_cost = request.form.get('gift_cost', type=float)
         member.gift_purchased = request.form.get('gift_purchased') == 'on'
         member.gift_given = request.form.get('gift_given') == 'on'
         member.has_plus_one = request.form.get('has_plus_one') == 'on'
@@ -987,16 +992,102 @@ def budget_view(wedding_id):
     total_actual = sum([e.actual_cost or 0 for e in expenses])
     total_paid = sum([e.paid_amount or 0 for e in expenses])
 
+    # Aggregate costs from other modules
+    module_costs = []
+
+    # Vendors
+    for v in wedding.vendors:
+        if v.total_cost:
+            module_costs.append({
+                'source': 'Vendors',
+                'item': v.business_name,
+                'cost': v.total_cost,
+                'paid': v.deposit_amount or 0 if v.deposit_paid else 0,
+                'link': url_for('vendors_view', wedding_id=wedding_id)
+            })
+
+    # Attire
+    for a in wedding.attire:
+        if a.price:
+            module_costs.append({
+                'source': 'Attire',
+                'item': '{} - {}'.format(a.person_name or 'Unknown', a.garment_type or 'Outfit'),
+                'cost': a.price,
+                'paid': a.price if a.purchased else 0,
+                'link': url_for('attire_view', wedding_id=wedding_id)
+            })
+
+    # Flowers & Decor
+    for f in wedding.floral_items:
+        if f.cost:
+            module_costs.append({
+                'source': 'Flowers',
+                'item': '{} (x{})'.format(f.item_type, f.quantity or 1),
+                'cost': f.cost * (f.quantity or 1),
+                'paid': 0,
+                'link': url_for('flowers_view', wedding_id=wedding_id)
+            })
+
+    # Hair & Makeup
+    for hm in wedding.hair_makeup:
+        if hm.cost:
+            module_costs.append({
+                'source': 'Hair & Makeup',
+                'item': '{} - {}'.format(hm.person_name, hm.service_type or 'Service'),
+                'cost': hm.cost,
+                'paid': 0,
+                'link': url_for('hair_makeup_view', wedding_id=wedding_id)
+            })
+
+    # Invitations
+    for inv in wedding.invitations:
+        if inv.cost:
+            module_costs.append({
+                'source': 'Stationery',
+                'item': inv.item_type.replace('_', ' ').title() if inv.item_type else 'Invitation',
+                'cost': inv.cost,
+                'paid': 0,
+                'link': url_for('invitations_view', wedding_id=wedding_id)
+            })
+
+    # Marriage License
+    if wedding.marriage_license and wedding.marriage_license.cost:
+        module_costs.append({
+            'source': 'Legal',
+            'item': 'Marriage License',
+            'cost': wedding.marriage_license.cost,
+            'paid': wedding.marriage_license.cost if wedding.marriage_license.filed else 0,
+            'link': url_for('license_view', wedding_id=wedding_id)
+        })
+
+    # Bridal Party Gifts
+    for bp in wedding.bridal_party:
+        if bp.gift_cost:
+            module_costs.append({
+                'source': 'Gifts',
+                'item': 'Gift for {}'.format(bp.name),
+                'cost': bp.gift_cost,
+                'paid': bp.gift_cost if bp.gift_purchased else 0,
+                'link': url_for('bridal_party_view', wedding_id=wedding_id)
+            })
+
+    module_total_cost = sum(m['cost'] for m in module_costs)
+    module_total_paid = sum(m['paid'] for m in module_costs)
+
     stats = {
         'budget_total': budget.total_budget if budget else 0,
         'estimated': total_estimated,
         'actual': total_actual,
         'paid': total_paid,
-        'remaining': (budget.total_budget if budget else 0) - total_paid
+        'remaining': (budget.total_budget if budget else 0) - total_paid - module_total_paid,
+        'module_total_cost': module_total_cost,
+        'module_total_paid': module_total_paid,
+        'all_costs': total_estimated + module_total_cost,
+        'all_paid': total_paid + module_total_paid,
     }
 
     return render_template('budget/view.html', wedding=wedding, budget=budget,
-                         expenses=expenses, stats=stats)
+                         expenses=expenses, stats=stats, module_costs=module_costs)
 
 @app.route('/wedding/<int:wedding_id>/budget/update', methods=['POST'])
 @login_required
@@ -1014,14 +1105,23 @@ def budget_update(wedding_id):
 @app.route('/wedding/<int:wedding_id>/budget/expense/add', methods=['POST'])
 @login_required
 def budget_expense_add(wedding_id):
-    budget = Wedding.query.get_or_404(wedding_id).budget
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if not wedding.budget:
+        budget = Budget(wedding_id=wedding_id, total_budget=0)
+        db.session.add(budget)
+        db.session.commit()
     expense = BudgetExpense(
-        budget_id=budget.id,
+        budget_id=wedding.budget.id,
         category=request.form.get('category'),
         item_name=request.form.get('item_name'),
         estimated_cost=request.form.get('estimated_cost', type=float),
-        payment_status=request.form.get('payment_status', 'unpaid')
+        actual_cost=request.form.get('actual_cost', type=float),
+        paid_amount=request.form.get('paid_amount', type=float) or 0,
+        payment_status=request.form.get('payment_status', 'unpaid'),
+        notes=request.form.get('notes')
     )
+    if request.form.get('payment_due_date'):
+        expense.payment_due_date = datetime.strptime(request.form.get('payment_due_date'), '%Y-%m-%d').date()
     db.session.add(expense)
     db.session.commit()
     flash('Expense added!', 'success')
@@ -1891,6 +1991,7 @@ def flowers_add(wedding_id):
             flowers=request.form.get('flowers'),
             colors=request.form.get('colors'),
             quantity=request.form.get('quantity', type=int) or 1,
+            cost=request.form.get('cost', type=float),
             notes=request.form.get('notes')
         )
         db.session.add(item)

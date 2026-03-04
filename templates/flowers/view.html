@@ -34,6 +34,11 @@
                 <strong>Quantity:</strong> {{ item.quantity }}
             </div>
             {% endif %}
+            {% if item.cost %}
+            <div class="info-item">
+                <strong>Cost:</strong> ${{ "{:,.2f}".format(item.cost) }}{% if item.quantity and item.quantity > 1 %} each (${{ "{:,.2f}".format(item.cost * item.quantity) }} total){% endif %}
+            </div>
+            {% endif %}
             {% if item.notes %}
             <div class="info-item">
                 <strong>Notes:</strong> {{ item.notes }}
