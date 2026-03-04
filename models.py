@@ -75,6 +75,8 @@ class Wedding(db.Model):
     registry_items = db.relationship('RegistryItem', backref='wedding', lazy=True, cascade='all, delete-orphan')
     attire = db.relationship('Attire', backref='wedding', lazy=True, cascade='all, delete-orphan')
     access_list = db.relationship('WeddingAccess', backref='wedding', lazy=True, cascade='all, delete-orphan')
+    inventory_items = db.relationship('InventoryItem', backref='wedding', lazy=True, cascade='all, delete-orphan')
+    inventory_bins = db.relationship('InventoryBin', backref='wedding', lazy=True, cascade='all, delete-orphan')
 
 # ============================================
 # PERSON MODEL (People Getting Married)
@@ -1088,6 +1090,88 @@ POST_WEDDING_TASKS = [
     ('Return or exchange duplicate gifts', 'gifts', 'low'),
     ('Send final vendor payments if outstanding', 'budget', 'high'),
     ('Donate or preserve wedding flowers', 'flowers', 'low'),
+]
+
+# ============================================
+# INVENTORY & ITEM TRACKING
+# ============================================
+
+class InventoryBin(db.Model):
+    """A bin/box used to organize and transport wedding items."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    label = db.Column(db.String(100), nullable=False)  # e.g., "Table 5 Box", "Ceremony Bin A"
+    area = db.Column(db.String(50))  # ceremony, cocktail_hour, reception, other
+    table_number = db.Column(db.Integer)  # optional: which table this bin is for
+    color_code = db.Column(db.String(20))  # optional color label for physical bin
+    storage_location = db.Column(db.String(200))  # where the bin is stored before the event
+    assigned_to = db.Column(db.String(200))  # who is responsible for transporting this bin
+    notes = db.Column(db.Text)
+    setup_photo_url = db.Column(db.String(500))  # URL/path to a reference photo
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    items = db.relationship('InventoryItem', backref='bin', lazy=True)
+
+    @property
+    def item_count(self):
+        return len(self.items)
+
+    @property
+    def total_quantity(self):
+        return sum(i.quantity or 1 for i in self.items)
+
+    @property
+    def packed_count(self):
+        return sum(1 for i in self.items if i.status == 'packed')
+
+
+class InventoryItem(db.Model):
+    """An individual inventory item for the wedding."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    bin_id = db.Column(db.Integer, db.ForeignKey('inventory_bin.id'), nullable=True)  # optional bin assignment
+
+    name = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(50))  # centerpiece, linen, flatware, candle, signage, favor, decor, tableware, other
+    quantity = db.Column(db.Integer, default=1)
+    source = db.Column(db.String(30))  # owned, rented, borrowed, purchased, diy
+    source_detail = db.Column(db.String(200))  # vendor name, who it's borrowed from, etc.
+    area = db.Column(db.String(50))  # ceremony, cocktail_hour, reception, other
+    table_number = db.Column(db.Integer)  # which table (if applicable)
+    status = db.Column(db.String(30), default='needed')  # needed, acquired, packed, setup, returned, lost
+    condition = db.Column(db.String(30))  # new, good, fair, fragile
+    cost = db.Column(db.Float)
+    return_by = db.Column(db.Date)  # for rentals: return deadline
+    return_to = db.Column(db.String(200))  # where to return after wedding
+    notes = db.Column(db.Text)
+    setup_instructions = db.Column(db.Text)  # how to set this item up
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+INVENTORY_CATEGORIES = [
+    ('centerpiece', 'Centerpieces'),
+    ('linen', 'Linens & Table Runners'),
+    ('flatware', 'Flatware & Silverware'),
+    ('tableware', 'Plates, Glasses & Tableware'),
+    ('candle', 'Candles & Lighting'),
+    ('signage', 'Signs & Table Numbers'),
+    ('favor', 'Favors'),
+    ('floral', 'Flowers & Greenery'),
+    ('decor', 'Decorative Elements'),
+    ('ceremony', 'Ceremony Items'),
+    ('photo', 'Photo Props & Displays'),
+    ('card_box', 'Card Box & Guest Book'),
+    ('supplies', 'Supplies & Tools'),
+    ('other', 'Other'),
+]
+
+INVENTORY_AREAS = [
+    ('ceremony', 'Ceremony'),
+    ('cocktail_hour', 'Cocktail Hour'),
+    ('reception', 'Reception'),
+    ('entrance', 'Entrance / Welcome'),
+    ('photo_area', 'Photo Area'),
+    ('other', 'Other'),
 ]
 
 # ============================================

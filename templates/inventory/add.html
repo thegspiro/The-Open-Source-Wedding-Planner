@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Add Inventory Item - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Add Inventory Item</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Item Name *</label>
+                <input type="text" name="name" required placeholder="e.g., Glass votive holders">
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select name="category">
+                    <option value="">-- Select --</option>
+                    {% for key, label in categories %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Quantity</label>
+                <input type="number" name="quantity" min="1" value="1">
+            </div>
+            <div class="form-group">
+                <label>Area</label>
+                <select name="area">
+                    <option value="">-- Select --</option>
+                    {% for key, label in areas %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Table Number</label>
+                <input type="number" name="table_number" min="1" placeholder="Optional">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Source</label>
+                <select name="source">
+                    <option value="">-- Select --</option>
+                    <option value="purchased">Purchased</option>
+                    <option value="rented">Rented</option>
+                    <option value="borrowed">Borrowed</option>
+                    <option value="owned">Already Owned</option>
+                    <option value="diy">DIY / Handmade</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Source Detail</label>
+                <input type="text" name="source_detail" placeholder="Vendor name, who it's from, etc.">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Status</label>
+                <select name="status">
+                    <option value="needed">Needed</option>
+                    <option value="acquired">Acquired</option>
+                    <option value="packed">Packed</option>
+                    <option value="setup">Set Up</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Condition</label>
+                <select name="condition">
+                    <option value="">-- Select --</option>
+                    <option value="new">New</option>
+                    <option value="good">Good</option>
+                    <option value="fair">Fair</option>
+                    <option value="fragile">Fragile</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Cost ($)</label>
+                <input type="number" name="cost" step="0.01" min="0" placeholder="0.00">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Assign to Bin</label>
+                <select name="bin_id">
+                    <option value="">-- No Bin --</option>
+                    {% for bin in bins %}
+                    <option value="{{ bin.id }}">{{ bin.label }}{% if bin.table_number %} (Table {{ bin.table_number }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Return By (for rentals)</label>
+                <input type="date" name="return_by">
+            </div>
+            <div class="form-group">
+                <label>Return To</label>
+                <input type="text" name="return_to" placeholder="e.g., ABC Rentals, 123 Main St">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Setup Instructions</label>
+            <textarea name="setup_instructions" rows="2" placeholder="How should this item be set up? Include photos or descriptions."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="2" placeholder="Additional details"></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Item</button>
+            <a href="{{ url_for('inventory_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

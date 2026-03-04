@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Edit Bin - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Edit: {{ bin.label }}</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Bin Label *</label>
+                <input type="text" name="label" required value="{{ bin.label }}">
+            </div>
+            <div class="form-group">
+                <label>Area</label>
+                <select name="area">
+                    <option value="">-- Select --</option>
+                    {% for key, label in areas %}
+                    <option value="{{ key }}" {% if bin.area == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Table Number</label>
+                <input type="number" name="table_number" min="1" value="{{ bin.table_number or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Color Code</label>
+                <input type="color" name="color_code" value="{{ bin.color_code or '#b76e79' }}" style="height: 38px; padding: 2px;">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Storage Location</label>
+                <input type="text" name="storage_location" value="{{ bin.storage_location or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Assigned To</label>
+                <input type="text" name="assigned_to" value="{{ bin.assigned_to or '' }}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="2">{{ bin.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('inventory_bin_view', wedding_id=wedding.id, bin_id=bin.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
