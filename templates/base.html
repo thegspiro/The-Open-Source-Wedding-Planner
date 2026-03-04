@@ -76,5 +76,47 @@
             <p>Wedding Organizer &middot; Making your special day perfect</p>
         </div>
     </footer>
+
+    <script>
+    /**
+     * Print the current page directly (whole page, print CSS handles hiding UI).
+     */
+    function printPage() {
+        window.print();
+    }
+
+    /**
+     * Print only a specific section by ID.
+     * Clones the section into a print-only container, prints, then cleans up.
+     */
+    function printSection(sectionId, title) {
+        var source = document.getElementById(sectionId);
+        if (!source) return;
+
+        // Create print wrapper
+        var wrapper = document.createElement('div');
+        wrapper.className = 'print-section-only';
+        if (title) {
+            var h = document.createElement('h1');
+            h.style.cssText = 'font-size:16pt;border-bottom:2px solid #333;padding-bottom:0.4rem;margin-bottom:1rem;font-family:Playfair Display,Georgia,serif;';
+            h.textContent = title;
+            wrapper.appendChild(h);
+        }
+        wrapper.appendChild(source.cloneNode(true));
+
+        // Make all tab panels inside visible
+        wrapper.querySelectorAll('.tab-panel').forEach(function(p) { p.style.display = 'block'; });
+        // Remove interactive elements from clone
+        wrapper.querySelectorAll('form[method="POST"], select[onchange], .btn-primary, .btn-secondary, .btn-danger').forEach(function(el) { el.remove(); });
+
+        document.body.appendChild(wrapper);
+        document.body.classList.add('printing-section');
+        window.print();
+        document.body.classList.remove('printing-section');
+        document.body.removeChild(wrapper);
+    }
+    </script>
+
+    {% block scripts %}{% endblock %}
 </body>
 </html>

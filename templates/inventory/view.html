@@ -9,6 +9,7 @@
         <a href="{{ url_for('inventory_export_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
         <a href="{{ url_for('inventory_print_all', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Checklists</a>
         <a href="{{ url_for('inventory_labels_print', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Labels</a>
+        <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
     </div>
 </div>
 
@@ -43,7 +44,7 @@
 </div>
 
 <!-- Tab: All Items -->
-<div class="tab-panel active" id="all-tab">
+<div class="tab-panel active" id="all-tab" data-print-title="All Items">
     <!-- Status filter -->
     <div class="tab-links" style="margin-bottom: 1rem;">
         <span class="tab-link active" onclick="filterItems(this, 'all')">All</span>
@@ -123,7 +124,7 @@
 </div>
 
 <!-- Tab: Bins & Boxes -->
-<div class="tab-panel" id="bins-tab">
+<div class="tab-panel" id="bins-tab" data-print-title="Bins & Boxes">
     <p class="form-help" style="margin-bottom: 1rem;">Organize items into bins or boxes for easy setup and teardown. Pro tip: create one bin per table, or group by area (ceremony, cocktail hour, reception).</p>
 
     {% if bins %}
@@ -181,7 +182,7 @@
 </div>
 
 <!-- Tab: By Area -->
-<div class="tab-panel" id="area-tab">
+<div class="tab-panel" id="area-tab" data-print-title="Items by Area">
     {% for area_key, area_label in areas %}
     {% set area_items = by_area.get(area_key, []) %}
     {% if area_items %}
@@ -216,7 +217,7 @@
 </div>
 
 <!-- Tab: Rentals -->
-<div class="tab-panel" id="rentals-tab">
+<div class="tab-panel" id="rentals-tab" data-print-title="Rental Items">
     {% set rental_items = items|selectattr('source', 'equalto', 'rented')|list %}
     {% if rental_items %}
     <p class="form-help" style="margin-bottom: 1rem;">Track all rented items to ensure timely returns. Items with return deadlines are highlighted.</p>

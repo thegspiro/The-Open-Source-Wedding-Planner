@@ -9,6 +9,7 @@
         <a href="{{ url_for('seating_chart', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Seating Chart</a>
         <a href="{{ url_for('export_guests_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
         <a href="{{ url_for('export_mailing_labels', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Mailing Labels</a>
+        <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
     </div>
 </div>
 

@@ -22,6 +22,7 @@
         <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Setup Wizard</a>
         <a href="{{ url_for('calendar_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Calendar</a>
         <a href="{{ url_for('index') }}" class="btn-secondary btn-small">All Weddings</a>
+        <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
     </div>
 </div>
 

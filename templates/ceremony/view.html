@@ -10,6 +10,7 @@
         <a href="{{ url_for('ceremony_vows', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Vows</a>
         <a href="{{ url_for('ceremony_script', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Script</a>
         <a href="{{ url_for('processional_order', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Processional</a>
+        <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
     </div>
 </div>
 
@@ -21,7 +22,7 @@
 </div>
 
 <!-- Tab: Details -->
-<div class="tab-panel active" id="details-tab">
+<div class="tab-panel active" id="details-tab" data-print-title="Ceremony Details">
     <div class="info-cards-grid">
         <div class="info-card">
             <div class="info-card-header">
@@ -70,7 +71,7 @@
 </div>
 
 <!-- Tab: Timeline -->
-<div class="tab-panel" id="timeline-tab">
+<div class="tab-panel" id="timeline-tab" data-print-title="Ceremony Timeline">
     <div style="margin-bottom: 1rem;">
         <button onclick="document.getElementById('timeline-form').style.display=document.getElementById('timeline-form').style.display==='none'?'block':'none'; this.querySelector('.toggle-arrow').classList.toggle('open')" class="collapsible-toggle">
             <span class="toggle-arrow">&#9654;</span> Add Timeline Item
@@ -139,7 +140,7 @@
 
 <!-- Tab: Readings -->
 {% if ceremony.has_special_readings %}
-<div class="tab-panel" id="readings-tab">
+<div class="tab-panel" id="readings-tab" data-print-title="Readings">
     {% if readings %}
     <div class="info-cards-grid">
         {% for reading in readings %}
