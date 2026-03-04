@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Seating Preferences - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Seating Preferences</h1>
+    <a href="{{ url_for('seating_chart', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Back to Seating Chart</a>
+</div>
+
+<p class="form-help">
+    Define which guests should sit <strong>together</strong> or <strong>apart</strong>.
+    The auto-assign algorithm will respect these constraints when placing guests.
+    Higher priority (1-10) means the constraint is more important to honor.
+</p>
+
+<div class="module-section">
+    <h2>Add Preference</h2>
+    {% if guests|length >= 2 %}
+    <form method="POST" action="{{ url_for('seating_preference_add', wedding_id=wedding.id) }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Guest 1</label>
+                <select name="guest_id" required>
+                    <option value="">-- Select --</option>
+                    {% for guest in guests|sort(attribute='name') %}
+                    <option value="{{ guest.id }}">{{ guest.name }}{% if guest.side %} ({{ guest.side }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Preference</label>
+                <select name="preference_type">
+                    <option value="together">Seat TOGETHER</option>
+                    <option value="apart">Keep APART</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Guest 2</label>
+                <select name="other_guest_id" required>
+                    <option value="">-- Select --</option>
+                    {% for guest in guests|sort(attribute='name') %}
+                    <option value="{{ guest.id }}">{{ guest.name }}{% if guest.side %} ({{ guest.side }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Priority (1=low, 10=must)</label>
+                <input type="number" name="priority" value="5" min="1" max="10">
+            </div>
+            <div class="form-group">
+                <label>Reason (optional)</label>
+                <input type="text" name="notes" placeholder="e.g., They are exes, They are best friends">
+            </div>
+        </div>
+        <button type="submit" class="btn-primary btn-small">Add Preference</button>
+    </form>
+    {% else %}
+    <p class="empty-message">You need at least 2 attending guests to set preferences.</p>
+    {% endif %}
+</div>
+
+<div class="module-section">
+    <h2>Current Preferences ({{ preferences|length }})</h2>
+    {% if preferences %}
+
+    <h3 style="color: #4caf50; margin-top: 1rem;">Seat Together</h3>
+    {% set together = preferences|selectattr('preference_type', 'equalto', 'together')|list %}
+    {% if together %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Guest 1</th>
+                <th></th>
+                <th>Guest 2</th>
+                <th>Priority</th>
+                <th>Notes</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pref in together %}
+            <tr>
+                <td>{{ pref.guest.name }}</td>
+                <td style="text-align: center; color: #4caf50; font-weight: bold;">&#x2194; together</td>
+                <td>{{ pref.other_guest.name }}</td>
+                <td>{{ pref.priority }}/10</td>
+                <td>{{ pref.notes or '-' }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('seating_preference_delete', wedding_id=wedding.id, pref_id=pref.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-tiny">&times;</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-message">No "seat together" preferences.</p>
+    {% endif %}
+
+    <h3 style="color: #f44336; margin-top: 1.5rem;">Keep Apart</h3>
+    {% set apart = preferences|selectattr('preference_type', 'equalto', 'apart')|list %}
+    {% if apart %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Guest 1</th>
+                <th></th>
+                <th>Guest 2</th>
+                <th>Priority</th>
+                <th>Notes</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pref in apart %}
+            <tr>
+                <td>{{ pref.guest.name }}</td>
+                <td style="text-align: center; color: #f44336; font-weight: bold;">&#x2194; apart</td>
+                <td>{{ pref.other_guest.name }}</td>
+                <td>{{ pref.priority }}/10</td>
+                <td>{{ pref.notes or '-' }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('seating_preference_delete', wedding_id=wedding.id, pref_id=pref.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-tiny">&times;</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-message">No "keep apart" preferences.</p>
+    {% endif %}
+
+    {% else %}
+    <p class="empty-message">No seating preferences defined yet. Add constraints above to guide the auto-assign algorithm.</p>
+    {% endif %}
+</div>
+
+<div class="module-section">
+    <h2>Tips for Seating Preferences</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Couples & Partners:</strong> Always seat together. Plus-ones are grouped automatically.
+        </div>
+        <div class="info-item">
+            <strong>Exes & Conflicts:</strong> Mark "apart" with high priority (8-10) to keep on separate tables.
+        </div>
+        <div class="info-item">
+            <strong>Families:</strong> Use household groups on guest profiles to auto-group. Or add "together" preferences.
+        </div>
+        <div class="info-item">
+            <strong>Friend Groups:</strong> Mark key connectors as "together" and the algorithm will cluster their friends nearby.
+        </div>
+    </div>
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('seating_chart', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Seating Chart</a>
+</div>
+{% endblock %}

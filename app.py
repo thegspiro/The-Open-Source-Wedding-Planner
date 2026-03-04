@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g, Response, make_response
 from models import (
     db, Wedding, Person, Task, Ceremony, CeremonyTimelineItem, CeremonyReading,
-    Reception, ReceptionTimelineItem, MenuItem, SeatingTable,
+    Reception, ReceptionTimelineItem, MenuItem, SeatingTable, SeatingPreference,
     Honeymoon, HoneymoonItinerary, PackingItem,
     WeddingBranding, BridalPartyMember, Guest,
     Budget, BudgetExpense, BudgetCategoryLimit, Vendor, RegistryItem, Attire, TraditionalElement,
@@ -12,8 +12,10 @@ from models import (
     ContingencyPlan, TipItem, Gift,
     VendorNote, VendorQuote, SpeechToast, WeddingFavor,
     ActivityLog, Comment,
-    BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES
+    BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES,
+    TABLE_SIZE_REFERENCE, TABLE_ROLES
 )
+import random
 from datetime import datetime, timedelta, date
 import os
 import csv
@@ -3002,7 +3004,7 @@ def budget_payment_schedule(wedding_id):
                          upcoming=upcoming, vendor_payments=vendor_payments)
 
 # ============================================
-# SEATING CHART VISUAL ROUTES
+# SEATING CHART & BUILDER ROUTES
 # ============================================
 
 @app.route('/wedding/<int:wedding_id>/seating-chart')
@@ -3011,9 +3013,193 @@ def seating_chart(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     reception = wedding.reception
     tables = reception.seating_tables if reception else []
-    unassigned = [g for g in wedding.guests if g.rsvp_status == 'accepted' and not g.table_id]
+    all_attending = [g for g in wedding.guests if g.rsvp_status == 'accepted']
+    unassigned = [g for g in all_attending if not g.table_id]
+    preferences = SeatingPreference.query.filter_by(wedding_id=wedding_id).all()
+
+    # Build stats
+    total_capacity = sum(t.capacity for t in tables)
+    total_attending = len(all_attending)
+    total_assigned = total_attending - len(unassigned)
+
+    # Check for constraint violations
+    violations = []
+    for pref in preferences:
+        guest_table = None
+        other_table = None
+        for g in all_attending:
+            if g.id == pref.guest_id:
+                guest_table = g.table_id
+            if g.id == pref.other_guest_id:
+                other_table = g.table_id
+        if guest_table and other_table:
+            if pref.preference_type == 'together' and guest_table != other_table:
+                violations.append(f'{pref.guest.name} and {pref.other_guest.name} should sit together but are at different tables')
+            elif pref.preference_type == 'apart' and guest_table == other_table:
+                violations.append(f'{pref.guest.name} and {pref.other_guest.name} should sit apart but are at the same table')
+
+    stats = {
+        'total_capacity': total_capacity,
+        'total_attending': total_attending,
+        'total_assigned': total_assigned,
+        'total_unassigned': len(unassigned),
+        'capacity_surplus': total_capacity - total_attending,
+    }
+
     return render_template('seating/chart.html', wedding=wedding, tables=tables,
-                         unassigned_guests=unassigned)
+                         unassigned_guests=unassigned, preferences=preferences,
+                         violations=violations, stats=stats,
+                         table_size_ref=TABLE_SIZE_REFERENCE, table_roles=TABLE_ROLES)
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/table/add', methods=['POST'])
+@login_required
+def seating_table_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    reception = wedding.reception
+    if not reception:
+        flash('Please set up reception details first.', 'warning')
+        return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+    preset = request.form.get('preset')
+    if preset and preset in TABLE_SIZE_REFERENCE:
+        ref = TABLE_SIZE_REFERENCE[preset]
+        shape = ref['shape']
+        capacity = ref['capacity']
+        size = preset
+        name_label = ref['label']
+    else:
+        shape = request.form.get('table_shape', 'round')
+        capacity = request.form.get('capacity', 8, type=int)
+        size = request.form.get('table_size', '')
+        name_label = ''
+
+    # Auto-number
+    existing_count = len(reception.seating_tables)
+    table_number = str(existing_count + 1)
+
+    table = SeatingTable(
+        reception_id=reception.id,
+        table_number=table_number,
+        table_name=request.form.get('table_name', '') or name_label,
+        capacity=capacity,
+        table_shape=shape,
+        table_size=size,
+        table_role=request.form.get('table_role', 'guest'),
+        x_position=50 + (existing_count % 4) * 220,
+        y_position=50 + (existing_count // 4) * 200,
+        notes=request.form.get('notes', '')
+    )
+    db.session.add(table)
+    db.session.commit()
+    log_activity(wedding_id, 'added', 'table', f'Table {table_number}')
+    flash(f'Table {table_number} added!', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/table/<int:table_id>/edit', methods=['POST'])
+@login_required
+def seating_table_edit(wedding_id, table_id):
+    table = SeatingTable.query.get_or_404(table_id)
+    table.table_name = request.form.get('table_name', '')
+    table.table_shape = request.form.get('table_shape', 'round')
+    table.capacity = request.form.get('capacity', 8, type=int)
+    table.table_size = request.form.get('table_size', '')
+    table.table_role = request.form.get('table_role', 'guest')
+    table.notes = request.form.get('notes', '')
+    db.session.commit()
+    flash(f'Table {table.table_number} updated!', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/table/<int:table_id>/delete', methods=['POST'])
+@login_required
+def seating_table_delete(wedding_id, table_id):
+    table = SeatingTable.query.get_or_404(table_id)
+    # Unassign guests from this table
+    for g in table.assigned_guests:
+        g.table_id = None
+    db.session.delete(table)
+    db.session.commit()
+    flash('Table removed. Guests have been unassigned.', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/tables/bulk-add', methods=['POST'])
+@login_required
+def seating_tables_bulk_add(wedding_id):
+    """Add multiple tables at once from a preset configuration."""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    reception = wedding.reception
+    if not reception:
+        flash('Please set up reception details first.', 'warning')
+        return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+    count = request.form.get('count', 1, type=int)
+    preset = request.form.get('preset', 'round_60')
+    include_head = request.form.get('include_head') == 'on'
+    include_kids = request.form.get('include_kids') == 'on'
+
+    existing = len(reception.seating_tables)
+    ref = TABLE_SIZE_REFERENCE.get(preset, TABLE_SIZE_REFERENCE['round_60'])
+
+    added = 0
+    # Optionally add head table first
+    if include_head:
+        existing += 1
+        head = SeatingTable(
+            reception_id=reception.id,
+            table_number=str(existing),
+            table_name='Head Table',
+            capacity=request.form.get('head_capacity', 8, type=int),
+            table_shape='rectangular',
+            table_size='banquet_8ft',
+            table_role='head',
+            x_position=350,
+            y_position=30,
+        )
+        db.session.add(head)
+        added += 1
+
+    # Add guest tables in a grid layout
+    for i in range(count):
+        existing += 1
+        table = SeatingTable(
+            reception_id=reception.id,
+            table_number=str(existing),
+            table_name=f'{ref["label"]}',
+            capacity=ref['capacity'],
+            table_shape=ref['shape'],
+            table_size=preset,
+            table_role='guest',
+            x_position=50 + (i % 4) * 220,
+            y_position=180 + (i // 4) * 200,
+        )
+        db.session.add(table)
+        added += 1
+
+    # Optionally add kids table
+    if include_kids:
+        existing += 1
+        kids = SeatingTable(
+            reception_id=reception.id,
+            table_number=str(existing),
+            table_name='Kids Table',
+            capacity=request.form.get('kids_capacity', 8, type=int),
+            table_shape='round',
+            table_size='round_60',
+            table_role='kids',
+            x_position=50 + (count % 4) * 220,
+            y_position=180 + (count // 4) * 200,
+        )
+        db.session.add(kids)
+        added += 1
+
+    db.session.commit()
+    log_activity(wedding_id, 'added', 'tables', f'{added} tables')
+    flash(f'{added} tables added!', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
 
 @app.route('/wedding/<int:wedding_id>/seating-chart/assign', methods=['POST'])
 @login_required
@@ -3025,6 +3211,17 @@ def seating_assign(wedding_id):
     db.session.commit()
     flash(f'{guest.name} assigned!', 'success')
     return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/unassign/<int:guest_id>', methods=['POST'])
+@login_required
+def seating_unassign(wedding_id, guest_id):
+    guest = Guest.query.get_or_404(guest_id)
+    guest.table_id = None
+    db.session.commit()
+    flash(f'{guest.name} unassigned.', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
 
 @app.route('/wedding/<int:wedding_id>/seating-chart/bulk-assign', methods=['POST'])
 @login_required
@@ -3039,6 +3236,19 @@ def seating_bulk_assign(wedding_id):
     flash(f'{len(guest_ids)} guests assigned!', 'success')
     return redirect(url_for('seating_chart', wedding_id=wedding_id))
 
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/clear-all', methods=['POST'])
+@login_required
+def seating_clear_all(wedding_id):
+    """Remove all guest-to-table assignments."""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    for g in wedding.guests:
+        g.table_id = None
+    db.session.commit()
+    flash('All seating assignments cleared.', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+
 @app.route('/wedding/<int:wedding_id>/seating-chart/update-position', methods=['POST'])
 @login_required
 def seating_update_position(wedding_id):
@@ -3051,6 +3261,270 @@ def seating_update_position(wedding_id):
     table.y_position = y
     db.session.commit()
     return jsonify({'status': 'ok'})
+
+
+# --- Seating Preferences (together/apart) ---
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/preferences')
+@login_required
+def seating_preferences(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    preferences = SeatingPreference.query.filter_by(wedding_id=wedding_id).all()
+    attending = [g for g in wedding.guests if g.rsvp_status == 'accepted']
+    return render_template('seating/preferences.html', wedding=wedding,
+                         preferences=preferences, guests=attending)
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/preferences/add', methods=['POST'])
+@login_required
+def seating_preference_add(wedding_id):
+    guest_id = request.form.get('guest_id', type=int)
+    other_guest_id = request.form.get('other_guest_id', type=int)
+    pref_type = request.form.get('preference_type', 'together')
+    priority = request.form.get('priority', 5, type=int)
+    notes = request.form.get('notes', '')
+
+    if guest_id == other_guest_id:
+        flash('Cannot create a preference for the same guest.', 'warning')
+        return redirect(url_for('seating_preferences', wedding_id=wedding_id))
+
+    # Check for duplicate
+    existing = SeatingPreference.query.filter_by(
+        wedding_id=wedding_id, guest_id=guest_id, other_guest_id=other_guest_id
+    ).first()
+    if existing:
+        existing.preference_type = pref_type
+        existing.priority = priority
+        existing.notes = notes
+    else:
+        pref = SeatingPreference(
+            wedding_id=wedding_id,
+            guest_id=guest_id,
+            other_guest_id=other_guest_id,
+            preference_type=pref_type,
+            priority=priority,
+            notes=notes
+        )
+        db.session.add(pref)
+    db.session.commit()
+    guest = Guest.query.get(guest_id)
+    other = Guest.query.get(other_guest_id)
+    flash(f'Preference: {guest.name} & {other.name} → {pref_type}', 'success')
+    return redirect(url_for('seating_preferences', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/preferences/<int:pref_id>/delete', methods=['POST'])
+@login_required
+def seating_preference_delete(wedding_id, pref_id):
+    pref = SeatingPreference.query.get_or_404(pref_id)
+    db.session.delete(pref)
+    db.session.commit()
+    flash('Preference removed.', 'success')
+    return redirect(url_for('seating_preferences', wedding_id=wedding_id))
+
+
+# --- Auto-Assign Algorithm ---
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/auto-assign', methods=['POST'])
+@login_required
+def seating_auto_assign(wedding_id):
+    """Auto-assign guests to tables using a constraint-based algorithm.
+
+    Strategy:
+    1. Group guests by household_group / side / guest_type
+    2. Honor 'together' preferences by merging groups
+    3. Honor 'apart' preferences by ensuring separation
+    4. Assign kids to kids tables first
+    5. Fill VIP/head tables first with family, then fill guest tables
+    6. Try to keep groups together at the same table
+    """
+    wedding = Wedding.query.get_or_404(wedding_id)
+    reception = wedding.reception
+    if not reception:
+        flash('No reception set up.', 'warning')
+        return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+    tables = reception.seating_tables
+    if not tables:
+        flash('Add tables before auto-assigning.', 'warning')
+        return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+    strategy = request.form.get('strategy', 'balanced')
+    only_unassigned = request.form.get('only_unassigned') == 'on'
+
+    # Get attending guests
+    if only_unassigned:
+        guests_to_assign = [g for g in wedding.guests if g.rsvp_status == 'accepted' and not g.table_id]
+    else:
+        # Clear all assignments first
+        for g in wedding.guests:
+            if g.rsvp_status == 'accepted':
+                g.table_id = None
+        guests_to_assign = [g for g in wedding.guests if g.rsvp_status == 'accepted']
+
+    if not guests_to_assign:
+        flash('No guests to assign.', 'info')
+        return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+    # Load preferences
+    prefs = SeatingPreference.query.filter_by(wedding_id=wedding_id).all()
+    together_pairs = [(p.guest_id, p.other_guest_id) for p in prefs if p.preference_type == 'together']
+    apart_pairs = [(p.guest_id, p.other_guest_id) for p in prefs if p.preference_type == 'apart']
+
+    # Build guest groups using Union-Find for "together" constraints
+    guest_ids = {g.id for g in guests_to_assign}
+    parent = {gid: gid for gid in guest_ids}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    # Merge from "together" preferences
+    for a, b in together_pairs:
+        if a in guest_ids and b in guest_ids:
+            union(a, b)
+
+    # Also merge by household_group
+    household_map = {}
+    for g in guests_to_assign:
+        if g.household_group:
+            if g.household_group in household_map:
+                union(g.id, household_map[g.household_group])
+            else:
+                household_map[g.household_group] = g.id
+
+    # Also group plus-ones with their hosts
+    name_to_id = {g.name: g.id for g in guests_to_assign}
+    for g in guests_to_assign:
+        if g.is_plus_one and g.plus_one_of and g.plus_one_of in name_to_id:
+            union(g.id, name_to_id[g.plus_one_of])
+
+    # Build actual groups
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for g in guests_to_assign:
+        groups[find(g.id)].append(g)
+
+    # Build apart-set (which group roots must not share a table)
+    apart_roots = set()
+    for a, b in apart_pairs:
+        if a in guest_ids and b in guest_ids:
+            apart_roots.add((find(a), find(b)))
+
+    # Categorize tables by role
+    role_tables = defaultdict(list)
+    for t in tables:
+        role = t.table_role or 'guest'
+        role_tables[role].append(t)
+
+    # Sort groups by traits for smart placement
+    guest_lookup = {g.id: g for g in guests_to_assign}
+
+    def group_sort_key(grp):
+        """Priority: kids first (for kids table), then family, then friends."""
+        types = [g.guest_type for g in grp]
+        if any(t == 'child' or t == 'kid' for t in types):
+            return (0, -len(grp))
+        if any(t == 'family' for t in types):
+            return (1, -len(grp))
+        if any(t == 'vip' for t in types):
+            return (2, -len(grp))
+        return (3, -len(grp))
+
+    sorted_groups = sorted(groups.values(), key=group_sort_key)
+
+    # Track assignments: table_id -> set of root group ids assigned
+    table_assignments = defaultdict(set)  # table_id -> set of group roots
+    table_counts = {}
+    for t in tables:
+        existing = len([g for g in t.assigned_guests if g.id not in guest_ids])
+        table_counts[t.id] = existing
+
+    def can_place(group_root, table, group_size):
+        """Check if placing this group at this table violates constraints."""
+        if table_counts.get(table.id, 0) + group_size > table.capacity:
+            return False
+        # Check apart constraints
+        for assigned_root in table_assignments[table.id]:
+            if (group_root, assigned_root) in apart_roots or (assigned_root, group_root) in apart_roots:
+                return False
+        return True
+
+    def place_group(grp, table):
+        root = find(grp[0].id)
+        for g in grp:
+            g.table_id = table.id
+        table_counts[table.id] = table_counts.get(table.id, 0) + len(grp)
+        table_assignments[table.id].add(root)
+
+    # Assignment pass
+    unplaced = []
+    for grp in sorted_groups:
+        root = find(grp[0].id)
+        placed = False
+
+        # Determine preferred table type
+        types = [g.guest_type for g in grp]
+        is_kids = any(t in ('child', 'kid') for t in types)
+        is_family = any(t == 'family' for t in types)
+
+        # Try role-appropriate tables first
+        preferred_roles = []
+        if is_kids and role_tables.get('kids'):
+            preferred_roles.append('kids')
+        if is_family and role_tables.get('vip'):
+            preferred_roles.append('vip')
+        preferred_roles.append('guest')  # fallback
+
+        for role in preferred_roles:
+            for table in role_tables.get(role, []):
+                if can_place(root, table, len(grp)):
+                    place_group(grp, table)
+                    placed = True
+                    break
+            if placed:
+                break
+
+        if not placed:
+            # Try any table with space
+            for table in tables:
+                if can_place(root, table, len(grp)):
+                    place_group(grp, table)
+                    placed = True
+                    break
+
+        if not placed:
+            unplaced.extend(grp)
+
+    # Try to place remaining individually
+    still_unplaced = 0
+    for g in unplaced:
+        placed = False
+        for table in tables:
+            if table_counts.get(table.id, 0) < table.capacity:
+                g.table_id = table.id
+                table_counts[table.id] = table_counts.get(table.id, 0) + 1
+                placed = True
+                break
+        if not placed:
+            still_unplaced += 1
+
+    db.session.commit()
+    assigned_count = len(guests_to_assign) - still_unplaced
+    log_activity(wedding_id, 'auto-assigned', 'seating', f'{assigned_count} guests')
+
+    msg = f'Auto-assigned {assigned_count} guests to tables!'
+    if still_unplaced:
+        msg += f' ({still_unplaced} could not be placed - not enough capacity.)'
+    flash(msg, 'success' if still_unplaced == 0 else 'warning')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
 
 # ============================================
 # POST-WEDDING TASKS GENERATION

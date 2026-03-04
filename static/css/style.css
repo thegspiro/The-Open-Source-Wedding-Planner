@@ -310,12 +310,77 @@ footer p { margin: 0; }
 .action-badge.deleted { background: #ffebee; color: #c62828; }
 
 /* Seating Chart */
-.seating-floor { position: relative; min-height: 400px; background: #fafafa; border: 2px dashed #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 2rem; }
-.seating-table-card { background: white; border-radius: 8px; padding: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 1rem; }
-.seating-table-card.over-capacity { border: 2px solid #f44336; }
-.table-capacity { font-size: 0.85rem; color: #666; }
+.seating-floor { position: relative; min-height: 500px; background: #f5f0eb; border: 2px dashed #ccc; border-radius: 12px; padding: 1rem; margin-bottom: 2rem; overflow: hidden; }
+.seating-table-card { position: absolute; cursor: grab; text-align: center; padding: 0.25rem; user-select: none; transition: box-shadow 0.2s; }
+.seating-table-card:hover { z-index: 10; }
+.seating-table-card.over-capacity .table-icon { border-color: #f44336; box-shadow: 0 0 8px rgba(244,67,54,0.4); }
+
+/* Table shapes in floor plan */
+.table-icon { width: 70px; height: 70px; border-radius: 50%; background: white; border: 3px solid #e91e63; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: transform 0.2s; }
+.table-icon:hover { transform: scale(1.1); }
+.table-shape-rectangular { border-radius: 12px; width: 100px; height: 55px; }
+.table-shape-square { border-radius: 8px; width: 65px; height: 65px; }
+.table-shape-oval { border-radius: 50%; width: 90px; height: 60px; }
+.table-shape-serpentine { border-radius: 35px; width: 110px; height: 50px; }
+.table-num { font-weight: bold; font-size: 1.1rem; color: #333; }
+.table-label { font-size: 0.7rem; color: #555; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+
+/* Table role colors */
+.table-role-head { border-color: #9c27b0; background: #f3e5f5; }
+.table-role-sweetheart { border-color: #e91e63; background: #fce4ec; }
+.table-role-vip { border-color: #ff9800; background: #fff3e0; }
+.table-role-kids { border-color: #4caf50; background: #e8f5e9; }
+.table-role-kings { border-color: #795548; background: #efebe9; }
+
+.table-capacity { font-size: 0.75rem; color: #666; }
 .table-capacity.warning { color: #f44336; font-weight: 600; }
+
+/* Seating add panels */
+.seating-add-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.seating-add-panel { background: #f9f9f9; padding: 1.25rem; border-radius: 8px; border: 1px solid #eee; }
+.seating-add-panel h3 { margin-top: 0; margin-bottom: 0.75rem; color: #e91e63; font-size: 1rem; }
+
+/* Seating detail cards grid */
+.seating-tables-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.seating-detail-card { background: white; border-radius: 8px; padding: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.08); border-left: 4px solid #e0e0e0; }
+.seating-detail-card.role-head { border-left-color: #9c27b0; }
+.seating-detail-card.role-sweetheart { border-left-color: #e91e63; }
+.seating-detail-card.role-vip { border-left-color: #ff9800; }
+.seating-detail-card.role-kids { border-left-color: #4caf50; }
+.seating-detail-card.role-kings { border-left-color: #795548; }
+.table-detail-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+.table-detail-header h3 { margin: 0; font-size: 1rem; }
+
+/* Role badges */
+.role-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: #eee; color: #666; font-weight: normal; vertical-align: middle; }
+.role-badge-head { background: #f3e5f5; color: #7b1fa2; }
+.role-badge-sweetheart { background: #fce4ec; color: #c2185b; }
+.role-badge-vip { background: #fff3e0; color: #e65100; }
+.role-badge-kids { background: #e8f5e9; color: #2e7d32; }
+.role-badge-kings { background: #efebe9; color: #4e342e; }
+
+/* Guest list within table detail */
+.table-guest-list { list-style: none; padding: 0; margin: 0.5rem 0; }
+.table-guest-list li { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px dotted #eee; font-size: 0.85rem; }
+.table-guest-list li:last-child { border-bottom: none; }
+.dietary-tag { font-size: 0.7rem; background: #fff3e0; color: #e65100; padding: 1px 4px; border-radius: 3px; margin-left: 4px; }
+.meal-tag { font-size: 0.7rem; background: #e8f5e9; color: #2e7d32; padding: 1px 4px; border-radius: 3px; margin-left: 4px; }
+.table-notes { font-size: 0.8rem; color: #888; margin: 0.5rem 0 0; }
+.table-detail-actions { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #f0f0f0; }
+
+/* Tiny button for inline delete */
+.btn-tiny { padding: 2px 6px; font-size: 0.7rem; border: none; cursor: pointer; border-radius: 3px; }
+.btn-danger.btn-tiny { background: #ffcdd2; color: #c62828; }
+.btn-danger.btn-tiny:hover { background: #ef9a9a; }
+.btn-primary.btn-tiny { background: #e91e63; color: white; }
+.btn-primary.btn-tiny:hover { background: #c2185b; }
+
 .unassigned-list { background: #fff3e0; padding: 1rem; border-radius: 8px; margin-top: 1rem; }
+
+@media (max-width: 768px) {
+    .seating-add-panels { grid-template-columns: 1fr; }
+    .seating-tables-grid { grid-template-columns: 1fr; }
+}
 
 /* Processional */
 .processional-list { display: flex; flex-direction: column; gap: 0.75rem; max-width: 500px; margin: 0 auto; }

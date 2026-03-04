@@ -4,70 +4,260 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Seating Chart</h1>
+    <h1>Seating Chart Builder</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('seating_preferences', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Preferences (Together/Apart)</a>
+        <a href="{{ url_for('print_seating', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print</a>
+    </div>
 </div>
 
+{# Stats Overview #}
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-num">{{ tables|length }}</div>
+        <div>Tables</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.total_capacity }}</div>
+        <div>Total Seats</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.total_attending }}</div>
+        <div>Attending</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.total_assigned }}</div>
+        <div>Assigned</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num {% if stats.total_unassigned > 0 %}budget-over{% endif %}">{{ stats.total_unassigned }}</div>
+        <div>Unassigned</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num {% if stats.capacity_surplus < 0 %}budget-over{% endif %}">{{ stats.capacity_surplus }}</div>
+        <div>Spare Seats</div>
+    </div>
+</div>
+
+{# Constraint Violations #}
+{% if violations %}
+<div class="budget-warnings" style="margin-bottom: 1.5rem;">
+    <h3>Seating Constraint Violations</h3>
+    {% for v in violations %}
+    <div class="budget-warning">{{ v }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# Add Tables Section #}
 <div class="module-section">
-    <h2>Tables</h2>
+    <h2>Add Tables</h2>
+
+    <div class="seating-add-panels">
+        {# Quick Add from Preset #}
+        <div class="seating-add-panel">
+            <h3>Quick Add (Single Table)</h3>
+            <form method="POST" action="{{ url_for('seating_table_add', wedding_id=wedding.id) }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Table Preset</label>
+                        <select name="preset">
+                            <option value="">-- Custom --</option>
+                            {% for key, ref in table_size_ref.items() %}
+                            <option value="{{ key }}">{{ ref.label }} (seats {{ ref.capacity }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Custom Name</label>
+                        <input type="text" name="table_name" placeholder="e.g., Rose Table">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Shape</label>
+                        <select name="table_shape">
+                            <option value="round">Round</option>
+                            <option value="rectangular">Rectangular / Banquet</option>
+                            <option value="square">Square</option>
+                            <option value="oval">Oval</option>
+                            <option value="serpentine">Serpentine</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Capacity</label>
+                        <input type="number" name="capacity" value="8" min="1" max="30">
+                    </div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select name="table_role">
+                            {% for key, label in table_roles.items() %}
+                            <option value="{{ key }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary btn-small">Add Table</button>
+            </form>
+        </div>
+
+        {# Bulk Add #}
+        <div class="seating-add-panel">
+            <h3>Bulk Setup</h3>
+            <form method="POST" action="{{ url_for('seating_tables_bulk_add', wedding_id=wedding.id) }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Number of Guest Tables</label>
+                        <input type="number" name="count" value="10" min="1" max="50">
+                    </div>
+                    <div class="form-group">
+                        <label>Table Type</label>
+                        <select name="preset">
+                            {% for key, ref in table_size_ref.items() %}
+                            <option value="{{ key }}" {% if key == 'round_60' %}selected{% endif %}>{{ ref.label }} (seats {{ ref.capacity }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><input type="checkbox" name="include_head"> Include Head Table</label>
+                    </div>
+                    <div class="form-group">
+                        <label>Head Table Seats</label>
+                        <input type="number" name="head_capacity" value="8" min="2" max="30">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><input type="checkbox" name="include_kids"> Include Kids Table</label>
+                    </div>
+                    <div class="form-group">
+                        <label>Kids Table Seats</label>
+                        <input type="number" name="kids_capacity" value="8" min="2" max="20">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary btn-small">Create Tables</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Auto-Assign Section #}
+{% if tables %}
+<div class="module-section">
+    <h2>Auto-Assign Guests</h2>
+    <p class="form-help">Automatically assign attending guests to tables. The algorithm groups households and plus-ones, honors together/apart preferences, and fills role-appropriate tables (kids to kids table, family to VIP tables, etc.).</p>
+    <form method="POST" action="{{ url_for('seating_auto_assign', wedding_id=wedding.id) }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Strategy</label>
+                <select name="strategy">
+                    <option value="balanced">Balanced (fill evenly)</option>
+                    <option value="grouped">Grouped (keep sides together)</option>
+                </select>
+            </div>
+            <div class="form-group" style="padding-top: 1.5rem;">
+                <label><input type="checkbox" name="only_unassigned" checked> Only assign unassigned guests</label>
+            </div>
+        </div>
+        <button type="submit" class="btn-primary" onclick="return confirm('This will auto-assign guests to tables. Continue?')">Auto-Assign</button>
+    </form>
+    <form method="POST" action="{{ url_for('seating_clear_all', wedding_id=wedding.id) }}" style="display: inline; margin-left: 0.5rem;">
+        <button type="submit" class="btn-danger btn-small" onclick="return confirm('Clear ALL seating assignments?')">Clear All Assignments</button>
+    </form>
+</div>
+{% endif %}
+
+{# Visual Floor Plan #}
+<div class="module-section">
+    <h2>Floor Plan <small class="form-help">(drag tables to reposition)</small></h2>
     {% if tables %}
-    <div class="seating-floor-plan" style="position: relative; min-height: 400px; border: 2px dashed #ccc; border-radius: 8px; padding: 1rem; margin-bottom: 2rem; background: #fafafa;">
+    <div class="seating-floor" id="floor-plan">
         {% for table in tables %}
-        <div class="dashboard-card" style="position: relative; display: inline-block; vertical-align: top; width: 250px; margin: 0.5rem;" data-table-id="{{ table.id }}">
-            <h3>
-                Table {{ table.table_number }}
-                {% if table.table_name %} - {{ table.table_name }}{% endif %}
-            </h3>
-            {% if table.table_shape %}
-            <p class="stat-label">{{ table.table_shape|title }} table</p>
-            {% endif %}
-
-            <div class="info-item">
-                <strong>Capacity:</strong>
-                {% set guest_count = table.assigned_guests|length %}
-                <span{% if guest_count > table.capacity %} style="color: red; font-weight: bold;"{% endif %}>
-                    {{ guest_count }} / {{ table.capacity }}
-                </span>
-                {% if guest_count > table.capacity %}
-                <br><span class="payment-status status-unpaid">Over capacity!</span>
-                {% endif %}
+        <div class="seating-table-card {% if table.assigned_guests|length > table.capacity %}over-capacity{% endif %}"
+             data-table-id="{{ table.id }}"
+             style="left: {{ table.x_position or 0 }}px; top: {{ table.y_position or 0 }}px;">
+            <div class="table-icon table-shape-{{ table.table_shape or 'round' }} table-role-{{ table.table_role or 'guest' }}">
+                <span class="table-num">{{ table.table_number }}</span>
             </div>
-
-            {% if table.assigned_guests %}
-            <div class="info-item" style="margin-top: 0.5rem;">
-                <strong>Guests:</strong>
-                <ul style="margin: 0.25rem 0; padding-left: 1.2rem;">
-                    {% for guest in table.assigned_guests %}
-                    <li>{{ guest.name }}</li>
-                    {% endfor %}
-                </ul>
+            <div class="table-label">
+                {% if table.table_name %}{{ table.table_name }}{% else %}Table {{ table.table_number }}{% endif %}
             </div>
-            {% else %}
-            <p class="empty-message">No guests assigned yet.</p>
-            {% endif %}
-
-            {% if table.notes %}
-            <div class="info-item">
-                <strong>Notes:</strong> {{ table.notes }}
+            <div class="table-capacity {% if table.assigned_guests|length > table.capacity %}warning{% endif %}">
+                {{ table.assigned_guests|length }}/{{ table.capacity }}
             </div>
-            {% endif %}
         </div>
         {% endfor %}
     </div>
     {% else %}
     <div class="empty-state">
         <h2>No Tables Set Up</h2>
-        <p>Add seating tables in your Reception settings to start building your seating chart.</p>
+        <p>Use the forms above to add tables to your floor plan.</p>
     </div>
     {% endif %}
 </div>
 
+{# Table Details #}
+{% if tables %}
+<div class="module-section">
+    <h2>Table Details</h2>
+    <div class="seating-tables-grid">
+        {% for table in tables %}
+        <div class="seating-detail-card role-{{ table.table_role or 'guest' }}">
+            <div class="table-detail-header">
+                <h3>
+                    {% if table.table_name %}{{ table.table_name }}{% else %}Table {{ table.table_number }}{% endif %}
+                    <span class="role-badge role-badge-{{ table.table_role or 'guest' }}">{{ table_roles.get(table.table_role or 'guest', 'Guest') }}</span>
+                </h3>
+                <span class="table-capacity {% if table.assigned_guests|length > table.capacity %}warning{% endif %}">
+                    {{ table.assigned_guests|length }}/{{ table.capacity }}
+                    {% if table.table_shape %} &middot; {{ table.table_shape|title }}{% endif %}
+                </span>
+            </div>
+
+            {% if table.assigned_guests %}
+            <ul class="table-guest-list">
+                {% for guest in table.assigned_guests %}
+                <li>
+                    <span class="guest-info">
+                        {{ guest.name }}
+                        {% if guest.dietary_restrictions %}<span class="dietary-tag">{{ guest.dietary_restrictions }}</span>{% endif %}
+                        {% if guest.meal_choice %}<span class="meal-tag">{{ guest.meal_choice }}</span>{% endif %}
+                    </span>
+                    <form method="POST" action="{{ url_for('seating_unassign', wedding_id=wedding.id, guest_id=guest.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-tiny">&times;</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty-message">No guests assigned</p>
+            {% endif %}
+
+            {% if table.notes %}
+            <p class="table-notes"><small>{{ table.notes }}</small></p>
+            {% endif %}
+
+            <div class="table-detail-actions">
+                <form method="POST" action="{{ url_for('seating_table_delete', wedding_id=wedding.id, table_id=table.id) }}" class="form-inline">
+                    <button type="submit" class="btn-danger btn-tiny" onclick="return confirm('Delete this table? Guests will be unassigned.')">Delete Table</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# Unassigned Guests #}
 <div class="module-section">
     <h2>Unassigned Guests ({{ unassigned_guests|length }})</h2>
     {% if unassigned_guests %}
 
     {% if tables %}
-    <div class="module-section" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-        <h3>Bulk Assign Guests</h3>
+    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+        <h3>Bulk Assign</h3>
         <form method="POST" action="{{ url_for('seating_bulk_assign', wedding_id=wedding.id) }}">
             <div class="form-group">
                 <label>Select Guests</label>
@@ -77,23 +267,24 @@
                         <input type="checkbox" name="guest_ids" value="{{ guest.id }}">
                         {{ guest.name }}
                         {% if guest.side %}<span class="stat-label"> ({{ guest.side }})</span>{% endif %}
+                        {% if guest.household_group %}<span class="stat-label"> [{{ guest.household_group }}]</span>{% endif %}
                     </label>
                     {% endfor %}
                 </div>
             </div>
             <div class="form-group">
-                <label for="bulk_table_id">Assign to Table</label>
-                <select id="bulk_table_id" name="table_id" required>
+                <label>Assign to Table</label>
+                <select name="table_id" required>
                     <option value="">-- Select Table --</option>
                     {% for table in tables %}
                     <option value="{{ table.id }}">
-                        Table {{ table.table_number }}{% if table.table_name %} - {{ table.table_name }}{% endif %}
+                        {% if table.table_name %}{{ table.table_name }}{% else %}Table {{ table.table_number }}{% endif %}
                         ({{ table.assigned_guests|length }}/{{ table.capacity }})
                     </option>
                     {% endfor %}
                 </select>
             </div>
-            <button type="submit" class="btn-primary">Assign Selected Guests</button>
+            <button type="submit" class="btn-primary">Assign Selected</button>
         </form>
     </div>
     {% endif %}
@@ -101,32 +292,36 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th>Guest Name</th>
+                <th>Guest</th>
+                <th>Type</th>
                 <th>Side</th>
+                <th>Household</th>
                 <th>Dietary</th>
-                {% if tables %}<th>Assign to Table</th>{% endif %}
+                {% if tables %}<th>Assign</th>{% endif %}
             </tr>
         </thead>
         <tbody>
             {% for guest in unassigned_guests %}
             <tr>
-                <td>{{ guest.name }}</td>
+                <td>{{ guest.name }}{% if guest.is_plus_one %} <small>(+1 of {{ guest.plus_one_of }})</small>{% endif %}</td>
+                <td>{{ guest.guest_type or '-' }}</td>
                 <td>{{ guest.side or '-' }}</td>
+                <td>{{ guest.household_group or '-' }}</td>
                 <td>{{ guest.dietary_restrictions or '-' }}</td>
                 {% if tables %}
                 <td>
                     <form method="POST" action="{{ url_for('seating_assign', wedding_id=wedding.id) }}" class="form-inline">
                         <input type="hidden" name="guest_id" value="{{ guest.id }}">
-                        <select name="table_id" required>
-                            <option value="">-- Select --</option>
+                        <select name="table_id" required style="max-width: 150px;">
+                            <option value="">--</option>
                             {% for table in tables %}
                             <option value="{{ table.id }}">
-                                Table {{ table.table_number }}{% if table.table_name %} - {{ table.table_name }}{% endif %}
+                                {% if table.table_name %}{{ table.table_name }}{% else %}T{{ table.table_number }}{% endif %}
                                 ({{ table.assigned_guests|length }}/{{ table.capacity }})
                             </option>
                             {% endfor %}
                         </select>
-                        <button type="submit" class="btn-primary btn-small">Assign</button>
+                        <button type="submit" class="btn-primary btn-tiny">Go</button>
                     </form>
                 </td>
                 {% endif %}
@@ -135,11 +330,60 @@
         </tbody>
     </table>
     {% else %}
-    <p class="empty-message">All accepted guests have been assigned to tables.</p>
+    <p class="empty-message">
+        {% if tables %}All attending guests have been assigned to tables!{% else %}Add tables first, then assign guests.{% endif %}
+    </p>
     {% endif %}
 </div>
 
 <div class="page-actions">
     <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
 </div>
+
+{# Drag-and-drop JavaScript for floor plan #}
+{% if tables %}
+<script>
+(function() {
+    var floor = document.getElementById('floor-plan');
+    if (!floor) return;
+    var dragging = null, offsetX = 0, offsetY = 0;
+
+    floor.querySelectorAll('.seating-table-card').forEach(function(card) {
+        card.addEventListener('mousedown', function(e) {
+            dragging = card;
+            var rect = card.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            card.style.zIndex = 100;
+            e.preventDefault();
+        });
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        var floorRect = floor.getBoundingClientRect();
+        var x = e.clientX - floorRect.left - offsetX;
+        var y = e.clientY - floorRect.top - offsetY;
+        x = Math.max(0, Math.min(x, floor.offsetWidth - 100));
+        y = Math.max(0, Math.min(y, floor.offsetHeight - 80));
+        dragging.style.left = x + 'px';
+        dragging.style.top = y + 'px';
+    });
+
+    document.addEventListener('mouseup', function() {
+        if (!dragging) return;
+        dragging.style.zIndex = '';
+        var tableId = dragging.dataset.tableId;
+        var x = parseInt(dragging.style.left);
+        var y = parseInt(dragging.style.top);
+        fetch('{{ url_for("seating_update_position", wedding_id=wedding.id) }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({table_id: parseInt(tableId), x: x, y: y})
+        });
+        dragging = null;
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

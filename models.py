@@ -268,13 +268,52 @@ class SeatingTable(db.Model):
     table_number = db.Column(db.String(50), nullable=False)
     table_name = db.Column(db.String(100))  # custom name (e.g., "Rose Table")
     capacity = db.Column(db.Integer, nullable=False)
-    table_shape = db.Column(db.String(50))  # round, rectangular, square
+    table_shape = db.Column(db.String(50))  # round, rectangular, square, oval, serpentine
+    table_size = db.Column(db.String(50))  # e.g., "60in", "72in", "6ft", "8ft"
+    table_role = db.Column(db.String(50))  # head, sweetheart, kings, guest, kids, vip
     x_position = db.Column(db.Float, default=0)  # for visual floor plan
     y_position = db.Column(db.Float, default=0)  # for visual floor plan
     notes = db.Column(db.Text)
 
     # Relationship
     assigned_guests = db.relationship('Guest', backref='seating_table', lazy=True)
+
+
+class SeatingPreference(db.Model):
+    """Tracks which guests should sit together or apart."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    guest_id = db.Column(db.Integer, db.ForeignKey('guest.id'), nullable=False)
+    other_guest_id = db.Column(db.Integer, db.ForeignKey('guest.id'), nullable=False)
+    preference_type = db.Column(db.String(20), nullable=False)  # 'together' or 'apart'
+    priority = db.Column(db.Integer, default=5)  # 1-10, higher = more important
+    notes = db.Column(db.String(200))
+
+    guest = db.relationship('Guest', foreign_keys=[guest_id], backref='seating_prefs_as_guest')
+    other_guest = db.relationship('Guest', foreign_keys=[other_guest_id], backref='seating_prefs_as_other')
+
+
+# Table size reference data (inches)
+TABLE_SIZE_REFERENCE = {
+    'round_48': {'shape': 'round', 'label': '48" Round', 'capacity': 6, 'diameter': 48},
+    'round_60': {'shape': 'round', 'label': '60" Round (5ft)', 'capacity': 8, 'diameter': 60},
+    'round_72': {'shape': 'round', 'label': '72" Round (6ft)', 'capacity': 10, 'diameter': 72},
+    'round_84': {'shape': 'round', 'label': '84" Round (7ft)', 'capacity': 12, 'diameter': 84},
+    'banquet_6ft': {'shape': 'rectangular', 'label': '6ft Banquet', 'capacity': 6, 'length': 72, 'width': 30},
+    'banquet_8ft': {'shape': 'rectangular', 'label': '8ft Banquet', 'capacity': 8, 'length': 96, 'width': 30},
+    'kings_8ft': {'shape': 'rectangular', 'label': "8ft King's Table", 'capacity': 10, 'length': 96, 'width': 42},
+    'square_48': {'shape': 'square', 'label': '48" Square', 'capacity': 4, 'side': 48},
+    'sweetheart': {'shape': 'round', 'label': 'Sweetheart (couple)', 'capacity': 2, 'diameter': 36},
+}
+
+TABLE_ROLES = {
+    'guest': 'Guest Table',
+    'head': 'Head Table (traditional)',
+    'sweetheart': 'Sweetheart Table (couple only)',
+    'kings': "King's Table (couple + party + SOs)",
+    'vip': 'VIP / Family Table',
+    'kids': 'Kids Table',
+}
 
 # ============================================
 # HONEYMOON MODULE
