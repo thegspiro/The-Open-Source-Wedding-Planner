@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Edit Participant - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Edit Participant: {{ participant.name }}</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('itinerary_edit_participant', wedding_id=wedding.id, participant_id=participant.id) }}">
+        <div class="form-group">
+            <label for="name">Name *</label>
+            <input type="text" id="name" name="name" value="{{ participant.name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="role">Role</label>
+            <input type="text" id="role" name="role" value="{{ participant.role or '' }}" placeholder="e.g., Bride, Best Man, Photographer">
+        </div>
+
+        <div class="form-group">
+            <label for="role_category">Category</label>
+            <select id="role_category" name="role_category">
+                <option value="couple" {% if participant.role_category == 'couple' %}selected{% endif %}>Couple</option>
+                <option value="family" {% if participant.role_category == 'family' %}selected{% endif %}>Family Member</option>
+                <option value="wedding_party" {% if participant.role_category == 'wedding_party' %}selected{% endif %}>Wedding Party</option>
+                <option value="handler" {% if participant.role_category == 'handler' %}selected{% endif %}>Handler / Coordinator</option>
+                <option value="vendor" {% if participant.role_category == 'vendor' %}selected{% endif %}>Vendor</option>
+                <option value="other" {% if participant.role_category == 'other' %}selected{% endif %}>Other</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="phone">Phone</label>
+            <input type="tel" id="phone" name="phone" value="{{ participant.phone or '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ participant.email or '' }}">
+        </div>
+
+        {% if people %}
+        <div class="form-group">
+            <label for="person_id">Link to Person (optional)</label>
+            <select id="person_id" name="person_id">
+                <option value="">-- None --</option>
+                {% for person in people %}
+                <option value="{{ person.id }}" {% if participant.person_id == person.id %}selected{% endif %}>{{ person.name }} ({{ person.title or 'Partner' }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        {% if bridal_party %}
+        <div class="form-group">
+            <label for="bridal_party_id">Link to Bridal Party Member (optional)</label>
+            <select id="bridal_party_id" name="bridal_party_id">
+                <option value="">-- None --</option>
+                {% for bp in bridal_party %}
+                <option value="{{ bp.id }}" {% if participant.bridal_party_id == bp.id %}selected{% endif %}>{{ bp.name }} ({{ bp.role or 'Party Member' }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" rows="3">{{ participant.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

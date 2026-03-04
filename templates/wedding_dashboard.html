@@ -19,7 +19,9 @@
         <h3>Day-Of Timeline</h3>
         <div class="stat-large">{{ wedding.day_of_items|length }}</div>
         <p class="stat-label">Scheduled Items</p>
+        <p class="stat-small">{{ wedding.participants|length }} participant(s)</p>
         <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">View Timeline</a>
+        <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Itineraries</a>
     </div>
 
     <div class="dashboard-card">

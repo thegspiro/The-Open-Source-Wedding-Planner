@@ -2,8 +2,15 @@
 {% block title %}Wedding Day Timeline - {{ wedding.couple_names }}{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>Wedding Day Timeline</h1>
-    <a href="{{ url_for('day_of_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Item</a>
+    <div>
+        <h1>Wedding Day Timeline</h1>
+        <p class="subtitle">Unified view of the entire wedding day</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="btn-secondary">Individual Itineraries</a>
+        <a href="{{ url_for('itinerary_handler_view', wedding_id=wedding.id) }}" class="btn-secondary">Handler View</a>
+        <a href="{{ url_for('day_of_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Item</a>
+    </div>
 </div>
 
 {% if items %}
@@ -29,9 +36,16 @@
                 <span>Who: {{ item.who }}</span>
                 {% endif %}
                 {% if item.category %}
-                <span>{{ item.category }}</span>
+                <span class="category-badge {{ item.category }}">{{ item.category|title }}</span>
                 {% endif %}
             </div>
+            {% if item.assigned_participants %}
+            <div class="timeline-participants">
+                {% for p in item.assigned_participants %}
+                <a href="{{ url_for('itinerary_individual', wedding_id=wedding.id, participant_id=p.id) }}" class="participant-tag {{ p.role_category or 'other' }}">{{ p.name }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
             <div class="form-actions">
                 <a href="{{ url_for('day_of_edit', wedding_id=wedding.id, item_id=item.id) }}" class="btn-primary btn-small">Edit</a>
                 <form method="POST" action="{{ url_for('day_of_delete', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline">

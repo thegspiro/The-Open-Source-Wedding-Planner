@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ participant.name }}'s Itinerary - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{{ participant.name }}'s Itinerary</h1>
+        <p class="subtitle">{{ participant.role or 'Participant' }} {% if participant.role_category %} &middot; {{ participant.role_category|replace('_', ' ')|title }}{% endif %}</p>
+    </div>
+    <div class="header-actions">
+        {% if participant.phone %}
+        <span class="contact-info">{{ participant.phone }}</span>
+        {% endif %}
+        <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="btn-secondary">All Participants</a>
+    </div>
+</div>
+
+{% if participant.notes %}
+<div class="alert alert-info">
+    <strong>Notes:</strong> {{ participant.notes }}
+</div>
+{% endif %}
+
+{% if items %}
+<div class="itinerary-timeline">
+    {% set current_category = namespace(value='') %}
+    {% for item in items %}
+    {% if item.category and item.category != current_category.value %}
+    {% set current_category.value = item.category %}
+    <div class="itinerary-category-header">
+        <span class="category-badge {{ item.category }}">{{ item.category|title }}</span>
+    </div>
+    {% endif %}
+    <div class="itinerary-item">
+        <div class="itinerary-time">
+            {% if item.time %}
+            <span class="time-display">{{ item.time.strftime('%I:%M %p') }}</span>
+            {% else %}
+            <span class="time-display time-tbd">TBD</span>
+            {% endif %}
+        </div>
+        <div class="itinerary-details">
+            <h3>{{ item.title }}</h3>
+            {% if item.description %}
+            <p>{{ item.description }}</p>
+            {% endif %}
+            {% if item.location %}
+            <p class="itinerary-location">{{ item.location }}</p>
+            {% endif %}
+            {% if item.assigned_participants|length > 1 %}
+            <p class="itinerary-also-with">
+                Also with:
+                {% for p in item.assigned_participants if p.id != participant.id %}
+                {{ p.name }}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Timeline Items Assigned</h2>
+    <p>{{ participant.name }} has no timeline items yet. Assign items from the <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}">Day-Of Timeline</a>.</p>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; All Participants</a>
+    <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-secondary">Day-Of Timeline</a>
+</div>
+{% endblock %}

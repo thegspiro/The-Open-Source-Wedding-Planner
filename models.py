@@ -672,6 +672,47 @@ class HairMakeup(db.Model):
     wedding = db.relationship('Wedding', backref=db.backref('hair_makeup', lazy=True, cascade='all, delete-orphan'))
 
 # ============================================
+# WEDDING PARTICIPANT & ITINERARY MODULE
+# ============================================
+
+class WeddingParticipant(db.Model):
+    """Any individual with a role on the wedding day - couples, family, party, vendors, handlers."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    name = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(100))  # bride, groom, mother_of_bride, best_man, photographer, coordinator, etc.
+    role_category = db.Column(db.String(50))  # couple, family, wedding_party, vendor, handler
+    phone = db.Column(db.String(50))
+    email = db.Column(db.String(120))
+    notes = db.Column(db.Text)
+
+    # Optional links to existing records
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'))
+    bridal_party_id = db.Column(db.Integer, db.ForeignKey('bridal_party_member.id'))
+
+    person = db.relationship('Person', backref='participant_records', foreign_keys=[person_id])
+    bridal_party_member = db.relationship('BridalPartyMember', backref='participant_records', foreign_keys=[bridal_party_id])
+
+    wedding = db.relationship('Wedding', backref=db.backref('participants', lazy=True, cascade='all, delete-orphan'))
+
+
+# Association table for many-to-many between timeline items and participants
+timeline_assignments = db.Table('timeline_assignments',
+    db.Column('timeline_item_id', db.Integer, db.ForeignKey('day_of_timeline_item.id'), primary_key=True),
+    db.Column('participant_id', db.Integer, db.ForeignKey('wedding_participant.id'), primary_key=True)
+)
+
+# Add relationship to DayOfTimelineItem
+DayOfTimelineItem.assigned_participants = db.relationship(
+    'WeddingParticipant',
+    secondary=timeline_assignments,
+    backref=db.backref('timeline_items', lazy=True),
+    lazy=True
+)
+
+
+# ============================================
 # TRADITIONAL ELEMENTS LIBRARY
 # ============================================
 

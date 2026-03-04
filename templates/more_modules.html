@@ -19,6 +19,12 @@
         <p class="stat-label">Master wedding day schedule</p>
     </a>
 
+    <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🗓️</div>
+        <h3>Individual Itineraries</h3>
+        <p class="stat-label">Per-person schedules & handler view</p>
+    </a>
+
     <a href="{{ url_for('ceremony_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">💒</div>
         <h3>Ceremony</h3>

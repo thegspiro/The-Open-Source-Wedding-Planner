@@ -7,7 +7,8 @@ from models import (
     Budget, BudgetExpense, Vendor, RegistryItem, Attire, TraditionalElement,
     User, WeddingAccess,
     DayOfTimelineItem, PhotoShot, Song, FloralItem, Invitation,
-    RehearsalDinner, Accommodation, MarriageLicense, HairMakeup
+    RehearsalDinner, Accommodation, MarriageLicense, HairMakeup,
+    WeddingParticipant, timeline_assignments
 )
 from datetime import datetime, timedelta
 import os
@@ -1570,12 +1571,14 @@ def person_delete(wedding_id, person_id):
 def day_of_view(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     items = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
-    return render_template('day_of/view.html', wedding=wedding, items=items)
+    participants = wedding.participants
+    return render_template('day_of/view.html', wedding=wedding, items=items, participants=participants)
 
 @app.route('/wedding/<int:wedding_id>/day-of/add', methods=['GET', 'POST'])
 @login_required
 def day_of_add(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
+    participants = wedding.participants
     if request.method == 'POST':
         item = DayOfTimelineItem(
             wedding_id=wedding_id,
@@ -1589,16 +1592,24 @@ def day_of_add(wedding_id):
         if request.form.get('time'):
             item.time = datetime.strptime(request.form.get('time'), '%H:%M').time()
         db.session.add(item)
+        db.session.flush()
+        # Assign participants
+        participant_ids = request.form.getlist('participants')
+        for pid in participant_ids:
+            participant = WeddingParticipant.query.get(int(pid))
+            if participant:
+                item.assigned_participants.append(participant)
         db.session.commit()
         flash('Timeline item added!', 'success')
         return redirect(url_for('day_of_view', wedding_id=wedding_id))
-    return render_template('day_of/add.html', wedding=wedding)
+    return render_template('day_of/add.html', wedding=wedding, participants=participants)
 
 @app.route('/wedding/<int:wedding_id>/day-of/<int:item_id>/edit', methods=['GET', 'POST'])
 @login_required
 def day_of_edit(wedding_id, item_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     item = DayOfTimelineItem.query.get_or_404(item_id)
+    participants = wedding.participants
     if request.method == 'POST':
         item.title = request.form.get('title')
         item.description = request.form.get('description')
@@ -1610,10 +1621,17 @@ def day_of_edit(wedding_id, item_id):
             item.time = datetime.strptime(request.form.get('time'), '%H:%M').time()
         else:
             item.time = None
+        # Update participant assignments
+        item.assigned_participants.clear()
+        participant_ids = request.form.getlist('participants')
+        for pid in participant_ids:
+            participant = WeddingParticipant.query.get(int(pid))
+            if participant:
+                item.assigned_participants.append(participant)
         db.session.commit()
         flash('Timeline item updated!', 'success')
         return redirect(url_for('day_of_view', wedding_id=wedding_id))
-    return render_template('day_of/edit.html', wedding=wedding, item=item)
+    return render_template('day_of/edit.html', wedding=wedding, item=item, participants=participants)
 
 @app.route('/wedding/<int:wedding_id>/day-of/<int:item_id>/delete', methods=['POST'])
 @login_required
@@ -1623,6 +1641,147 @@ def day_of_delete(wedding_id, item_id):
     db.session.commit()
     flash('Timeline item removed.', 'success')
     return redirect(url_for('day_of_view', wedding_id=wedding_id))
+
+# ============================================
+# INDIVIDUAL ITINERARY ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/itinerary')
+@login_required
+def itinerary_participants(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    participants = wedding.participants
+    # Group by role_category
+    categories = {}
+    for p in participants:
+        cat = p.role_category or 'other'
+        categories.setdefault(cat, []).append(p)
+    return render_template('itinerary/participants.html', wedding=wedding,
+                           participants=participants, categories=categories)
+
+@app.route('/wedding/<int:wedding_id>/itinerary/add-participant', methods=['GET', 'POST'])
+@login_required
+def itinerary_add_participant(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        participant = WeddingParticipant(
+            wedding_id=wedding_id,
+            name=request.form.get('name'),
+            role=request.form.get('role'),
+            role_category=request.form.get('role_category'),
+            phone=request.form.get('phone'),
+            email=request.form.get('email'),
+            notes=request.form.get('notes')
+        )
+        # Link to existing Person if selected
+        person_id = request.form.get('person_id', type=int)
+        if person_id:
+            participant.person_id = person_id
+        # Link to bridal party member if selected
+        bp_id = request.form.get('bridal_party_id', type=int)
+        if bp_id:
+            participant.bridal_party_id = bp_id
+        db.session.add(participant)
+        db.session.commit()
+        flash('Participant added!', 'success')
+        return redirect(url_for('itinerary_participants', wedding_id=wedding_id))
+    return render_template('itinerary/add_participant.html', wedding=wedding,
+                           people=wedding.people, bridal_party=wedding.bridal_party)
+
+@app.route('/wedding/<int:wedding_id>/itinerary/participant/<int:participant_id>/edit', methods=['GET', 'POST'])
+@login_required
+def itinerary_edit_participant(wedding_id, participant_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    participant = WeddingParticipant.query.get_or_404(participant_id)
+    if request.method == 'POST':
+        participant.name = request.form.get('name')
+        participant.role = request.form.get('role')
+        participant.role_category = request.form.get('role_category')
+        participant.phone = request.form.get('phone')
+        participant.email = request.form.get('email')
+        participant.notes = request.form.get('notes')
+        person_id = request.form.get('person_id', type=int)
+        participant.person_id = person_id if person_id else None
+        bp_id = request.form.get('bridal_party_id', type=int)
+        participant.bridal_party_id = bp_id if bp_id else None
+        db.session.commit()
+        flash('Participant updated!', 'success')
+        return redirect(url_for('itinerary_participants', wedding_id=wedding_id))
+    return render_template('itinerary/edit_participant.html', wedding=wedding,
+                           participant=participant, people=wedding.people,
+                           bridal_party=wedding.bridal_party)
+
+@app.route('/wedding/<int:wedding_id>/itinerary/participant/<int:participant_id>/delete', methods=['POST'])
+@login_required
+def itinerary_delete_participant(wedding_id, participant_id):
+    participant = WeddingParticipant.query.get_or_404(participant_id)
+    db.session.delete(participant)
+    db.session.commit()
+    flash('Participant removed.', 'success')
+    return redirect(url_for('itinerary_participants', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/itinerary/participant/<int:participant_id>')
+@login_required
+def itinerary_individual(wedding_id, participant_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    participant = WeddingParticipant.query.get_or_404(participant_id)
+    # Get this person's timeline items, sorted by time
+    items = sorted(participant.timeline_items,
+                   key=lambda x: (x.order, x.time or datetime.min.time()))
+    return render_template('itinerary/individual.html', wedding=wedding,
+                           participant=participant, items=items)
+
+@app.route('/wedding/<int:wedding_id>/itinerary/handler-view')
+@login_required
+def itinerary_handler_view(wedding_id):
+    """Handler view showing all participants and where they should be at each time."""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    items = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
+    participants = wedding.participants
+    return render_template('itinerary/handler_view.html', wedding=wedding,
+                           items=items, participants=participants)
+
+@app.route('/wedding/<int:wedding_id>/itinerary/import-people', methods=['POST'])
+@login_required
+def itinerary_import_people(wedding_id):
+    """Quickly import people and bridal party members as participants."""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    imported = 0
+    # Import people getting married
+    for person in wedding.people:
+        existing = WeddingParticipant.query.filter_by(
+            wedding_id=wedding_id, person_id=person.id).first()
+        if not existing:
+            participant = WeddingParticipant(
+                wedding_id=wedding_id,
+                name=person.name,
+                role=person.title or 'Partner',
+                role_category='couple',
+                email=person.email,
+                phone=person.phone,
+                person_id=person.id
+            )
+            db.session.add(participant)
+            imported += 1
+    # Import bridal party
+    for bp in wedding.bridal_party:
+        existing = WeddingParticipant.query.filter_by(
+            wedding_id=wedding_id, bridal_party_id=bp.id).first()
+        if not existing:
+            participant = WeddingParticipant(
+                wedding_id=wedding_id,
+                name=bp.name,
+                role=bp.role or 'Wedding Party',
+                role_category='wedding_party',
+                email=bp.email,
+                phone=bp.phone,
+                bridal_party_id=bp.id
+            )
+            db.session.add(participant)
+            imported += 1
+    db.session.commit()
+    flash(f'{imported} participant(s) imported!', 'success')
+    return redirect(url_for('itinerary_participants', wedding_id=wedding_id))
 
 # ============================================
 # PHOTOGRAPHY ROUTES

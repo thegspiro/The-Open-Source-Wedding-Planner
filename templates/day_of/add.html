@@ -48,6 +48,26 @@
             <input type="number" id="order" name="order" min="1">
         </div>
 
+        {% if participants %}
+        <div class="form-group">
+            <label>Assign Participants</label>
+            <p class="form-help">Select who should be present for this timeline item. <a href="{{ url_for('itinerary_add_participant', wedding_id=wedding.id) }}">Add more participants</a></p>
+            <div class="checkbox-grid">
+                {% for p in participants %}
+                <label class="checkbox-item">
+                    <input type="checkbox" name="participants" value="{{ p.id }}">
+                    <span>{{ p.name }} <small>({{ p.role or p.role_category or 'Participant' }})</small></span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="form-group">
+            <label>Assign Participants</label>
+            <p class="form-help">No participants set up yet. <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}">Add participants</a> to assign individual itineraries.</p>
+        </div>
+        {% endif %}
+
         <div class="form-actions">
             <button type="submit" class="btn-primary">Add Item</button>
             <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
