@@ -13,7 +13,7 @@
     <div class="task-card priority-{{ task.priority }}">
         <div class="task-header">
             <div><h3>{{ task.title }}</h3><span class="priority-badge priority-{{ task.priority }}">{{ task.priority }}</span></div>
-            <a href="{{ url_for('task_toggle', task_id=task.id) }}" class="btn-success">✓</a>
+            <form method="POST" action="{{ url_for('task_toggle', task_id=task.id) }}" style="display:inline;"><button type="submit" class="btn-success">✓</button></form>
         </div>
         {% if task.description %}<p>{{ task.description }}</p>{% endif %}
         <div class="task-footer">
@@ -32,7 +32,7 @@
     <div class="task-card task-completed">
         <div class="task-header">
             <h3>{{ task.title }}</h3>
-            <a href="{{ url_for('task_toggle', task_id=task.id) }}" class="btn-secondary">↺</a>
+            <form method="POST" action="{{ url_for('task_toggle', task_id=task.id) }}" style="display:inline;"><button type="submit" class="btn-secondary">↺</button></form>
         </div>
     </div>
     {% endfor %}
