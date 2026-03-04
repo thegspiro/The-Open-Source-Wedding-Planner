@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Invitations & Stationery - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Invitations & Stationery</h1>
+    <a href="{{ url_for('invitations_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Item</a>
+</div>
+
+{% if items %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Type</th>
+            <th>Designer</th>
+            <th>Quantity</th>
+            <th>Cost</th>
+            <th>Send By</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.item_type|replace('_', ' ')|title }}</td>
+            <td>{{ item.designer or '-' }}</td>
+            <td>{{ item.quantity or '-' }}</td>
+            <td>{{ '$%.2f'|format(item.cost) if item.cost else '-' }}</td>
+            <td>{{ item.send_by_date.strftime('%B %d, %Y') if item.send_by_date else '-' }}</td>
+            <td>
+                {% if item.status == 'sent' %}
+                <span class="rsvp-accepted">Sent</span>
+                {% elif item.status == 'received' %}
+                <span class="rsvp-accepted">Received</span>
+                {% elif item.status == 'ordered' %}
+                <span class="rsvp-pending">Ordered</span>
+                {% elif item.status == 'designing' %}
+                <span class="rsvp-pending">In Progress</span>
+                {% elif item.status == 'not_started' %}
+                <span class="rsvp-declined">Not Started</span>
+                {% else %}
+                <span class="rsvp-pending">{{ item.status|replace('_', ' ')|title if item.status else 'Not Started' }}</span>
+                {% endif %}
+            </td>
+            <td>
+                <form method="POST" action="{{ url_for('invitations_delete', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline">
+                    <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this item?')">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <h2>No Stationery Items Yet</h2>
+    <p>Start tracking your wedding invitations, programs, menus, and other stationery.</p>
+    <a href="{{ url_for('invitations_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Item</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

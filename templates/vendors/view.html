@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Vendors - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Vendors</h1>
+    <a href="{{ url_for('vendor_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Vendor</a>
+</div>
+
+{% if vendors %}
+<div class="dashboard-grid">
+    {% for vendor in vendors %}
+    <div class="dashboard-card">
+        <h3>{{ vendor.business_name }}</h3>
+        <p class="stat-label">{{ vendor.category }}</p>
+
+        <div class="info-grid">
+            {% if vendor.contact_name %}
+            <div class="info-item">
+                <strong>Contact:</strong> {{ vendor.contact_name }}
+            </div>
+            {% endif %}
+            {% if vendor.email %}
+            <div class="info-item">
+                <strong>Email:</strong> {{ vendor.email }}
+            </div>
+            {% endif %}
+            {% if vendor.phone %}
+            <div class="info-item">
+                <strong>Phone:</strong> {{ vendor.phone }}
+            </div>
+            {% endif %}
+            {% if vendor.website %}
+            <div class="info-item">
+                <strong>Website:</strong> <a href="{{ vendor.website }}" target="_blank">{{ vendor.website }}</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="vendor-status">
+            {% if vendor.contract_signed %}
+            <span class="rsvp-accepted">Contract Signed</span>
+            {% else %}
+            <span class="rsvp-pending">No Contract</span>
+            {% endif %}
+        </div>
+
+        {% if vendor.total_cost %}
+        <p class="stat-label">Total Cost: ${{ "{:,.2f}".format(vendor.total_cost) }}</p>
+        {% endif %}
+        {% if vendor.deposit_amount %}
+        <p class="stat-small">Deposit: ${{ "{:,.2f}".format(vendor.deposit_amount) }}
+            {% if vendor.deposit_paid %}
+            <span class="rsvp-accepted">Paid</span>
+            {% else %}
+            <span class="rsvp-pending">Unpaid</span>
+            {% endif %}
+        </p>
+        {% endif %}
+
+        <div class="form-actions">
+            <a href="{{ url_for('vendor_edit', wedding_id=wedding.id, vendor_id=vendor.id) }}" class="btn-primary btn-small">Edit</a>
+            <form method="POST" action="{{ url_for('vendor_delete', wedding_id=wedding.id, vendor_id=vendor.id) }}" class="form-inline">
+                <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this vendor?')">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Vendors Yet</h2>
+    <p>Start adding vendors to keep track of all your wedding service providers.</p>
+    <a href="{{ url_for('vendor_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Vendor</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

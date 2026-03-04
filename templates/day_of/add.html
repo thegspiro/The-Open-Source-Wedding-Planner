@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Add Timeline Item - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Add Timeline Item</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('day_of_add', wedding_id=wedding.id) }}">
+        <div class="form-group">
+            <label for="time">Time</label>
+            <input type="time" id="time" name="time">
+        </div>
+
+        <div class="form-group">
+            <label for="title">Title *</label>
+            <input type="text" id="title" name="title" required>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="3"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="location">Location</label>
+            <input type="text" id="location" name="location">
+        </div>
+
+        <div class="form-group">
+            <label for="who">Who</label>
+            <input type="text" id="who" name="who">
+        </div>
+
+        <div class="form-group">
+            <label for="category">Category</label>
+            <select id="category" name="category">
+                <option value="prep">Prep</option>
+                <option value="ceremony">Ceremony</option>
+                <option value="photos">Photos</option>
+                <option value="reception">Reception</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="order">Order</label>
+            <input type="number" id="order" name="order" min="1">
+        </div>
+
+        {% if participants %}
+        <div class="form-group">
+            <label>Assign Participants</label>
+            <p class="form-help">Select who should be present for this timeline item. <a href="{{ url_for('itinerary_add_participant', wedding_id=wedding.id) }}">Add more participants</a></p>
+            <div class="checkbox-grid">
+                {% for p in participants %}
+                <label class="checkbox-item">
+                    <input type="checkbox" name="participants" value="{{ p.id }}">
+                    <span>{{ p.name }} <small>({{ p.role or p.role_category or 'Participant' }})</small></span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="form-group">
+            <label>Assign Participants</label>
+            <p class="form-help">No participants set up yet. <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}">Add participants</a> to assign individual itineraries.</p>
+        </div>
+        {% endif %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Item</button>
+            <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

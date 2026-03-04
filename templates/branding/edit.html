@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Edit Branding - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Edit Wedding Style & Branding</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('branding_edit', wedding_id=wedding.id) }}">
+        <div class="module-section">
+            <h2>Colors</h2>
+
+            <div class="form-group">
+                <label for="primary_color">Primary Color</label>
+                <input type="color" id="primary_color" name="primary_color" value="{{ branding.primary_color or '#e91e63' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="secondary_color">Secondary Color</label>
+                <input type="color" id="secondary_color" name="secondary_color" value="{{ branding.secondary_color or '#ffffff' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="accent_color">Accent Color</label>
+                <input type="color" id="accent_color" name="accent_color" value="{{ branding.accent_color or '#ffffff' }}">
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h2>Typography</h2>
+
+            <div class="form-group">
+                <label for="primary_font">Primary Font</label>
+                <input type="text" id="primary_font" name="primary_font" value="{{ branding.primary_font or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="secondary_font">Secondary Font</label>
+                <input type="text" id="secondary_font" name="secondary_font" value="{{ branding.secondary_font or '' }}">
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h2>Style</h2>
+
+            <div class="form-group">
+                <label for="monogram_text">Monogram Text</label>
+                <input type="text" id="monogram_text" name="monogram_text" value="{{ branding.monogram_text or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="overall_style">Overall Style</label>
+                <select id="overall_style" name="overall_style">
+                    <option value="">-- Select --</option>
+                    <option value="modern" {% if branding.overall_style == 'modern' %}selected{% endif %}>Modern</option>
+                    <option value="rustic" {% if branding.overall_style == 'rustic' %}selected{% endif %}>Rustic</option>
+                    <option value="classic" {% if branding.overall_style == 'classic' %}selected{% endif %}>Classic</option>
+                    <option value="bohemian" {% if branding.overall_style == 'bohemian' %}selected{% endif %}>Bohemian</option>
+                    <option value="vintage" {% if branding.overall_style == 'vintage' %}selected{% endif %}>Vintage</option>
+                    <option value="minimalist" {% if branding.overall_style == 'minimalist' %}selected{% endif %}>Minimalist</option>
+                    <option value="glamorous" {% if branding.overall_style == 'glamorous' %}selected{% endif %}>Glamorous</option>
+                    <option value="romantic" {% if branding.overall_style == 'romantic' %}selected{% endif %}>Romantic</option>
+                    <option value="other" {% if branding.overall_style == 'other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="mood">Mood</label>
+                <textarea id="mood" name="mood" rows="3">{{ branding.mood or '' }}</textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('branding_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

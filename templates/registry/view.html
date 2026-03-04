@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Gift Registry - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Gift Registry</h1>
+    <a href="{{ url_for('registry_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Item</a>
+</div>
+
+{% if items %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th>Store</th>
+            <th>Price</th>
+            <th>Requested</th>
+            <th>Purchased</th>
+            <th>Purchased By</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.item_name }}</td>
+            <td>{{ item.store or '-' }}</td>
+            <td>{{ "${:,.2f}".format(item.price) if item.price else '-' }}</td>
+            <td>{{ item.quantity_requested or 1 }}</td>
+            <td>{{ item.quantity_purchased or 0 }}</td>
+            <td>{{ item.purchased_by or '-' }}</td>
+            <td>
+                <a href="{{ url_for('registry_edit', wedding_id=wedding.id, item_id=item.id) }}" class="btn-primary btn-small">Edit</a>
+                <form method="POST" action="{{ url_for('registry_delete', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline">
+                    <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this registry item?')">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <h2>No Registry Items Yet</h2>
+    <p>Start building your gift registry by adding items you would love to receive.</p>
+    <a href="{{ url_for('registry_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Item</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

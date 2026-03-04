@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Honeymoon - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Honeymoon</h1>
+    {% if honeymoon %}
+    <a href="{{ url_for('honeymoon_edit', wedding_id=wedding.id) }}" class="btn-primary">Edit Details</a>
+    {% endif %}
+</div>
+
+{% if honeymoon %}
+<div class="module-section">
+    <h2>Trip Details</h2>
+    <div class="info-grid">
+        {% if honeymoon.destination %}
+        <div class="info-item">
+            <strong>Destination:</strong> {{ honeymoon.destination }}
+        </div>
+        {% endif %}
+        {% if honeymoon.start_date or honeymoon.end_date %}
+        <div class="info-item">
+            <strong>Dates:</strong>
+            {{ honeymoon.start_date.strftime('%b %d, %Y') if honeymoon.start_date else 'TBD' }}
+            -
+            {{ honeymoon.end_date.strftime('%b %d, %Y') if honeymoon.end_date else 'TBD' }}
+        </div>
+        {% endif %}
+        {% if honeymoon.budget %}
+        <div class="info-item">
+            <strong>Budget:</strong> ${{ "{:,.2f}".format(honeymoon.budget) }}
+        </div>
+        {% endif %}
+        {% if honeymoon.airline %}
+        <div class="info-item">
+            <strong>Airline:</strong> {{ honeymoon.airline }}
+        </div>
+        {% endif %}
+        {% if honeymoon.flight_confirmation %}
+        <div class="info-item">
+            <strong>Flight Confirmation:</strong> {{ honeymoon.flight_confirmation }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Packing List</h2>
+    <form method="POST" action="{{ url_for('honeymoon_packing_add', wedding_id=wedding.id) }}" class="form-container">
+        <div class="form-group">
+            <label for="item_name">Add Item *</label>
+            <input type="text" id="item_name" name="item_name" required>
+        </div>
+        <div class="form-group">
+            <label for="category">Category</label>
+            <select id="category" name="category">
+                <option value="clothing">Clothing</option>
+                <option value="toiletries">Toiletries</option>
+                <option value="documents">Documents</option>
+                <option value="electronics">Electronics</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary btn-small">Add to List</button>
+        </div>
+    </form>
+
+    {% if packing_items %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Category</th>
+                <th>Packed</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for packing_item in packing_items %}
+            <tr>
+                <td>{{ packing_item.item_name }}</td>
+                <td>{{ packing_item.category or '-' }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('honeymoon_packing_toggle', wedding_id=wedding.id, item_id=packing_item.id) }}" class="form-inline">
+                        <button type="submit" class="btn-small {% if packing_item.packed %}btn-primary{% else %}btn-secondary{% endif %}">
+                            {% if packing_item.packed %}Packed{% else %}Not Packed{% endif %}
+                        </button>
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('honeymoon_packing_delete', wedding_id=wedding.id, item_id=packing_item.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-small" onclick="return confirm('Remove this packing item?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">No packing items added yet. Use the form above to start your packing list.</p>
+    {% endif %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Honeymoon Details Yet</h2>
+    <p>Start planning your honeymoon by adding your trip details.</p>
+    <a href="{{ url_for('honeymoon_edit', wedding_id=wedding.id) }}" class="btn-primary">+ Add Honeymoon Details</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

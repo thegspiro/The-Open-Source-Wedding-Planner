@@ -1,11 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}Weddings - Wedding Organizer{% endblock %}
+{% block title %}
+{% if user.user_type == 'professional' %}My Clients{% elif user.user_type == 'friend' %}Weddings I'm Helping With{% else %}My Wedding{% endif %} - Wedding Organizer
+{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1>All Weddings</h1>
-    <a href="{{ url_for('new_wedding') }}" class="btn-primary">+ Add New Wedding</a>
+    {% if user.user_type == 'professional' %}
+        <h1>My Client Weddings</h1>
+    {% elif user.user_type == 'friend' %}
+        <h1>Weddings I'm Helping With</h1>
+    {% else %}
+        <h1>My Wedding</h1>
+    {% endif %}
+
+    {% if user.user_type != 'self' or not weddings %}
+        <a href="{{ url_for('new_wedding') }}" class="btn-primary">+ Add New Wedding</a>
+    {% endif %}
 </div>
 
 {% if weddings %}
@@ -29,9 +40,19 @@
     </div>
 {% else %}
     <div class="empty-state">
-        <h2>No weddings yet!</h2>
-        <p>Start by creating your first wedding to organize.</p>
-        <a href="{{ url_for('new_wedding') }}" class="btn-primary">Create Your First Wedding</a>
+        {% if user.user_type == 'professional' %}
+            <h2>No client weddings yet</h2>
+            <p>Add your first client wedding to start organizing.</p>
+        {% elif user.user_type == 'friend' %}
+            <h2>No weddings yet</h2>
+            <p>Add a wedding you're helping plan to get started.</p>
+        {% else %}
+            <h2>Let's plan your wedding!</h2>
+            <p>Create your wedding to start organizing every detail in one place.</p>
+        {% endif %}
+        <a href="{{ url_for('new_wedding') }}" class="btn-primary">
+            {% if user.user_type == 'self' %}Create My Wedding{% else %}Add a Wedding{% endif %}
+        </a>
     </div>
 {% endif %}
 {% endblock %}

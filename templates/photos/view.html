@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Photography Shot List - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Photography Shot List</h1>
+    <a href="{{ url_for('photos_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Shot</a>
+</div>
+
+{% if shots %}
+{% set categories = ['getting_ready', 'ceremony', 'portraits', 'reception', 'detail'] %}
+{% set category_labels = {'getting_ready': 'Getting Ready', 'ceremony': 'Ceremony', 'portraits': 'Portraits', 'reception': 'Reception', 'detail': 'Detail'} %}
+
+{% for category in categories %}
+{% set category_shots = shots|selectattr('category', 'equalto', category)|list %}
+{% if category_shots %}
+<div class="module-section">
+    <h2>{{ category_labels[category] }}</h2>
+    <div class="dashboard-grid">
+        {% for shot in category_shots %}
+        <div class="dashboard-card">
+            <p>{{ shot.description }}</p>
+            {% if shot.people %}
+            <p><strong>People:</strong> {{ shot.people }}</p>
+            {% endif %}
+            {% if shot.priority %}
+            <span class="{% if shot.priority == 'must_have' %}rsvp-accepted{% else %}rsvp-pending{% endif %}">
+                {{ shot.priority|replace('_', ' ')|title }}
+            </span>
+            {% endif %}
+            {% if shot.notes %}
+            <p><strong>Notes:</strong> {{ shot.notes }}</p>
+            {% endif %}
+            <div class="form-actions">
+                <form method="POST" action="{{ url_for('photos_toggle', wedding_id=wedding.id, shot_id=shot.id) }}" class="form-inline">
+                    <button type="submit" class="btn-small {% if shot.captured %}btn-primary{% else %}btn-secondary{% endif %}">
+                        {% if shot.captured %}Captured{% else %}Not Captured{% endif %}
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('photos_delete', wedding_id=wedding.id, shot_id=shot.id) }}" class="form-inline">
+                    <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this shot?')">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% else %}
+<div class="empty-state">
+    <h2>No Shots in Your List Yet</h2>
+    <p>Start building your photography shot list to make sure every important moment is captured.</p>
+    <a href="{{ url_for('photos_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Shot</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

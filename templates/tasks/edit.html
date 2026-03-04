@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Edit Task - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Edit Task: {{ task.title }}</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('task_edit', wedding_id=wedding.id, task_id=task.id) }}">
+        <div class="module-section">
+            <h2>Task Details</h2>
+
+            <div class="form-group">
+                <label for="title">Title *</label>
+                <input type="text" id="title" name="title" value="{{ task.title }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" rows="3">{{ task.description or '' }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="due_date">Due Date *</label>
+                <input type="date" id="due_date" name="due_date" value="{{ task.due_date.strftime('%Y-%m-%d') if task.due_date else '' }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="priority">Priority</label>
+                <select id="priority" name="priority">
+                    <option value="low" {% if task.priority == 'low' %}selected{% endif %}>Low</option>
+                    <option value="medium" {% if task.priority == 'medium' or not task.priority %}selected{% endif %}>Medium</option>
+                    <option value="high" {% if task.priority == 'high' %}selected{% endif %}>High</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="category">Category</label>
+                <input type="text" id="category" name="category" value="{{ task.category or '' }}" placeholder="ceremony, reception, etc.">
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('tasks_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

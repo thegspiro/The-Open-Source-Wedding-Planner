@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Marriage License - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Edit Marriage License</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('license_edit', wedding_id=wedding.id) }}">
+        <div class="form-group">
+            <label>County</label>
+            <input type="text" name="county" value="{{ license_info.county or '' if license_info else '' }}" placeholder="e.g., Los Angeles County">
+        </div>
+        <div class="form-group">
+            <label>State</label>
+            <input type="text" name="state" value="{{ license_info.state or '' if license_info else '' }}" placeholder="e.g., California">
+        </div>
+        <div class="form-group">
+            <label>Application Date</label>
+            <input type="date" name="application_date" value="{{ license_info.application_date.strftime('%Y-%m-%d') if license_info and license_info.application_date else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Pickup Date</label>
+            <input type="date" name="pickup_date" value="{{ license_info.pickup_date.strftime('%Y-%m-%d') if license_info and license_info.pickup_date else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Expiration Date</label>
+            <input type="date" name="expiration_date" value="{{ license_info.expiration_date.strftime('%Y-%m-%d') if license_info and license_info.expiration_date else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Filing Deadline</label>
+            <input type="date" name="filing_deadline" value="{{ license_info.filing_deadline.strftime('%Y-%m-%d') if license_info and license_info.filing_deadline else '' }}">
+        </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="filed" {% if license_info and license_info.filed %}checked{% endif %}>
+                Filed
+            </label>
+        </div>
+        <div class="form-group">
+            <label>Filed Date</label>
+            <input type="date" name="filed_date" value="{{ license_info.filed_date.strftime('%Y-%m-%d') if license_info and license_info.filed_date else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Documents Needed</label>
+            <textarea name="documents_needed" rows="4" placeholder="One document per line, e.g.:&#10;Valid photo ID&#10;Birth certificate&#10;Social Security number">{{ license_info.documents_needed or '' if license_info else '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label>Cost ($)</label>
+            <input type="number" name="cost" step="0.01" min="0" value="{{ license_info.cost or '' if license_info else '' }}" placeholder="e.g., 90.00">
+        </div>
+        <div class="form-group">
+            <label>Waiting Period (days)</label>
+            <input type="number" name="waiting_period_days" min="0" value="{{ license_info.waiting_period_days or '' if license_info else '' }}" placeholder="e.g., 3">
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="3" placeholder="Any additional details...">{{ license_info.notes or '' if license_info else '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('license_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

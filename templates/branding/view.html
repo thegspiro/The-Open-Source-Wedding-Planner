@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Wedding Style & Branding - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Wedding Style & Branding</h1>
+    {% if branding %}
+    <a href="{{ url_for('branding_edit', wedding_id=wedding.id) }}" class="btn-primary">Edit Branding</a>
+    {% endif %}
+</div>
+
+{% if branding %}
+<div class="module-section">
+    <h2>Colors</h2>
+    <div class="info-grid">
+        {% if branding.primary_color %}
+        <div class="info-item">
+            <strong>Primary Color:</strong>
+            <span class="color-swatch" style="background-color: {{ branding.primary_color }};"></span>
+            {{ branding.primary_color }}
+        </div>
+        {% endif %}
+        {% if branding.secondary_color %}
+        <div class="info-item">
+            <strong>Secondary Color:</strong>
+            <span class="color-swatch" style="background-color: {{ branding.secondary_color }};"></span>
+            {{ branding.secondary_color }}
+        </div>
+        {% endif %}
+        {% if branding.accent_color %}
+        <div class="info-item">
+            <strong>Accent Color:</strong>
+            <span class="color-swatch" style="background-color: {{ branding.accent_color }};"></span>
+            {{ branding.accent_color }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Typography</h2>
+    <div class="info-grid">
+        {% if branding.primary_font %}
+        <div class="info-item">
+            <strong>Primary Font:</strong> {{ branding.primary_font }}
+        </div>
+        {% endif %}
+        {% if branding.secondary_font %}
+        <div class="info-item">
+            <strong>Secondary Font:</strong> {{ branding.secondary_font }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Style</h2>
+    <div class="info-grid">
+        {% if branding.overall_style %}
+        <div class="info-item">
+            <strong>Overall Style:</strong> {{ branding.overall_style }}
+        </div>
+        {% endif %}
+        {% if branding.mood %}
+        <div class="info-item">
+            <strong>Mood:</strong> {{ branding.mood }}
+        </div>
+        {% endif %}
+        {% if branding.monogram_text %}
+        <div class="info-item">
+            <strong>Monogram:</strong> {{ branding.monogram_text }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Branding Details Yet</h2>
+    <p>Define your wedding style, colors, and typography to keep your branding consistent.</p>
+    <a href="{{ url_for('branding_edit', wedding_id=wedding.id) }}" class="btn-primary">+ Set Up Wedding Branding</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}Budget - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Budget</h1>
+</div>
+
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-num">${{ "{:,.0f}".format(stats.budget_total) }}</div>
+        <div>Total Budget</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">${{ "{:,.0f}".format(stats.all_costs) }}</div>
+        <div>All Costs</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">${{ "{:,.0f}".format(stats.all_paid) }}</div>
+        <div>Total Paid</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num {% if stats.remaining < 0 %}budget-over{% endif %}">${{ "{:,.0f}".format(stats.remaining) }}</div>
+        <div>Remaining</div>
+    </div>
+</div>
+
+{% if stats.budget_total > 0 %}
+<div class="budget-progress-section">
+    <div class="progress-bar budget-bar">
+        {% set pct = ((stats.all_paid / stats.budget_total) * 100)|int %}
+        <div class="progress-fill {% if pct > 100 %}budget-over-fill{% endif %}" style="width: {{ [pct, 100]|min }}%"></div>
+    </div>
+    <div class="budget-progress-labels">
+        <span>${{ "{:,.0f}".format(stats.all_paid) }} spent</span>
+        <span>{{ pct }}% of budget</span>
+        <span>${{ "{:,.0f}".format(stats.budget_total) }} total</span>
+    </div>
+</div>
+{% endif %}
+
+<div class="module-section">
+    <h2>Update Total Budget</h2>
+    <form method="POST" action="{{ url_for('budget_update', wedding_id=wedding.id) }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Total Budget ($)</label>
+                <input type="number" name="total_budget" step="0.01" min="0" value="{{ budget.total_budget if budget else '' }}" placeholder="e.g., 25000" required>
+            </div>
+        </div>
+        <button type="submit" class="btn-primary">Update Budget</button>
+    </form>
+</div>
+
+<div class="module-section">
+    <div class="section-header">
+        <h2>Add Expense</h2>
+    </div>
+    <form method="POST" action="{{ url_for('budget_expense_add', wedding_id=wedding.id) }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Category *</label>
+                <select name="category" required>
+                    <option value="">-- Select --</option>
+                    <option value="venue">Venue</option>
+                    <option value="catering">Catering</option>
+                    <option value="photography">Photography</option>
+                    <option value="videography">Videography</option>
+                    <option value="flowers">Flowers & Decor</option>
+                    <option value="music">Music & Entertainment</option>
+                    <option value="attire">Attire</option>
+                    <option value="hair_makeup">Hair & Makeup</option>
+                    <option value="stationery">Stationery & Invitations</option>
+                    <option value="transportation">Transportation</option>
+                    <option value="accommodations">Accommodations</option>
+                    <option value="gifts">Gifts</option>
+                    <option value="favors">Favors</option>
+                    <option value="rehearsal">Rehearsal Dinner</option>
+                    <option value="honeymoon">Honeymoon</option>
+                    <option value="legal">Legal & License</option>
+                    <option value="tips">Tips & Gratuities</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Item Name *</label>
+                <input type="text" name="item_name" required placeholder="e.g., Photographer deposit">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Estimated Cost ($)</label>
+                <input type="number" name="estimated_cost" step="0.01" min="0" placeholder="e.g., 3000">
+            </div>
+            <div class="form-group">
+                <label>Actual Cost ($)</label>
+                <input type="number" name="actual_cost" step="0.01" min="0">
+            </div>
+            <div class="form-group">
+                <label>Paid Amount ($)</label>
+                <input type="number" name="paid_amount" step="0.01" min="0">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Payment Due Date</label>
+                <input type="date" name="payment_due_date">
+            </div>
+            <div class="form-group">
+                <label>Payment Status</label>
+                <select name="payment_status">
+                    <option value="unpaid">Unpaid</option>
+                    <option value="deposit">Deposit</option>
+                    <option value="partial">Partial</option>
+                    <option value="paid">Paid</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Covered By</label>
+                <input type="text" name="covered_by" placeholder="e.g., Bride's parents, Uncle Jim">
+                <p class="form-help">Name of person purchasing this on the couple's behalf (leave blank if couple is paying).</p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="2" placeholder="Optional notes"></textarea>
+        </div>
+        <button type="submit" class="btn-primary">Add Expense</button>
+    </form>
+</div>
+
+<div class="module-section">
+    <div class="section-header">
+        <h2>Budget Expenses</h2>
+    </div>
+    <div class="budget-breakdown">
+        <div class="budget-subsection">
+            <div class="stat-small">Expenses: ${{ "{:,.0f}".format(stats.estimated) }} estimated &middot; ${{ "{:,.0f}".format(stats.actual) }} actual &middot; ${{ "{:,.0f}".format(stats.paid) }} paid</div>
+        </div>
+    </div>
+    {% if expenses %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>Item</th>
+                <th>Estimated</th>
+                <th>Actual</th>
+                <th>Paid</th>
+                <th>Covered By</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+            <tr>
+                <td><span class="category-badge">{{ expense.category|replace('_', ' ')|title }}</span></td>
+                <td>{{ expense.item_name }}{% if expense.notes %}<br><small class="expense-note">{{ expense.notes }}</small>{% endif %}</td>
+                <td>${{ "{:,.2f}".format(expense.estimated_cost) if expense.estimated_cost else '-' }}</td>
+                <td>${{ "{:,.2f}".format(expense.actual_cost) if expense.actual_cost else '-' }}</td>
+                <td>${{ "{:,.2f}".format(expense.paid_amount) if expense.paid_amount else '-' }}</td>
+                <td>{% if expense.covered_by %}<span class="covered-by-tag">{{ expense.covered_by }}</span>{% else %}-{% endif %}</td>
+                <td>
+                    <span class="payment-status status-{{ expense.payment_status or 'unpaid' }}">{{ (expense.payment_status or 'unpaid')|replace('_', ' ')|title }}</span>
+                </td>
+                <td>
+                    <a href="{{ url_for('budget_expense_edit', wedding_id=wedding.id, expense_id=expense.id) }}" class="btn-primary btn-small">Edit</a>
+                    <form method="POST" action="{{ url_for('budget_expense_delete', wedding_id=wedding.id, expense_id=expense.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this expense?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-message">No expenses added yet. Use the form above to add your first expense.</p>
+    {% endif %}
+</div>
+
+{% if module_costs %}
+<div class="module-section">
+    <div class="section-header">
+        <h2>Costs from Other Modules</h2>
+    </div>
+    <p class="form-help">These costs are pulled automatically from other planning modules. Edit them in their respective modules.</p>
+    <div class="budget-breakdown">
+        <div class="budget-subsection">
+            <div class="stat-small">Module costs: ${{ "{:,.0f}".format(stats.module_total_cost) }} total &middot; ${{ "{:,.0f}".format(stats.module_total_paid) }} paid</div>
+        </div>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Source</th>
+                <th>Item</th>
+                <th>Cost</th>
+                <th>Paid</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mc in module_costs %}
+            <tr>
+                <td><span class="category-badge">{{ mc.source }}</span></td>
+                <td>{{ mc.item }}</td>
+                <td>${{ "{:,.2f}".format(mc.cost) }}</td>
+                <td>${{ "{:,.2f}".format(mc.paid) }}</td>
+                <td><a href="{{ mc.link }}" class="btn-secondary btn-small">View</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

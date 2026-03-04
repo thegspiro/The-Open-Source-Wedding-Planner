@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Rehearsal Dinner - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Edit Rehearsal Dinner</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('rehearsal_edit', wedding_id=wedding.id) }}">
+        <div class="form-group">
+            <label>Date</label>
+            <input type="date" name="date" value="{{ rehearsal.date.strftime('%Y-%m-%d') if rehearsal and rehearsal.date else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Start Time</label>
+            <input type="time" name="start_time" value="{{ rehearsal.start_time.strftime('%H:%M') if rehearsal and rehearsal.start_time else '' }}">
+        </div>
+        <div class="form-group">
+            <label>End Time</label>
+            <input type="time" name="end_time" value="{{ rehearsal.end_time.strftime('%H:%M') if rehearsal and rehearsal.end_time else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Venue Name</label>
+            <input type="text" name="venue_name" value="{{ rehearsal.venue_name or '' if rehearsal else '' }}" placeholder="e.g., The Italian Place">
+        </div>
+        <div class="form-group">
+            <label>Venue Address</label>
+            <textarea name="venue_address" rows="2" placeholder="Full address">{{ rehearsal.venue_address or '' if rehearsal else '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label>Venue Contact</label>
+            <input type="text" name="venue_contact" value="{{ rehearsal.venue_contact or '' if rehearsal else '' }}" placeholder="Contact name">
+        </div>
+        <div class="form-group">
+            <label>Venue Phone</label>
+            <input type="text" name="venue_phone" value="{{ rehearsal.venue_phone or '' if rehearsal else '' }}" placeholder="Phone number">
+        </div>
+        <div class="form-group">
+            <label>Expected Guest Count</label>
+            <input type="number" name="expected_guest_count" min="0" value="{{ rehearsal.expected_guest_count or '' if rehearsal else '' }}" placeholder="e.g., 30">
+        </div>
+        <div class="form-group">
+            <label>Menu Notes</label>
+            <textarea name="menu_notes" rows="3" placeholder="Menu details, dietary accommodations, etc.">{{ rehearsal.menu_notes or '' if rehearsal else '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="3" placeholder="Any additional details...">{{ rehearsal.notes or '' if rehearsal else '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('rehearsal_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

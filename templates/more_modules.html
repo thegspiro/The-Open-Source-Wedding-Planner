@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}More Modules - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>All Planning Modules</h1>
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">Back to Dashboard</a>
+</div>
+
+<div class="dashboard-grid">
+    <a href="{{ url_for('people_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">💑</div>
+        <h3>People</h3>
+        <p class="stat-label">People getting married</p>
+    </a>
+
+    <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">📅</div>
+        <h3>Day-Of Timeline</h3>
+        <p class="stat-label">Master wedding day schedule</p>
+    </a>
+
+    <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🗓️</div>
+        <h3>Individual Itineraries</h3>
+        <p class="stat-label">Per-person schedules & handler view</p>
+    </a>
+
+    <a href="{{ url_for('ceremony_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">💒</div>
+        <h3>Ceremony</h3>
+        <p class="stat-label">Ceremony details & timeline</p>
+    </a>
+
+    <a href="{{ url_for('reception_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🎉</div>
+        <h3>Reception</h3>
+        <p class="stat-label">Venue, menu, seating & more</p>
+    </a>
+
+    <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">👥</div>
+        <h3>Guests</h3>
+        <p class="stat-label">Guest list & RSVPs</p>
+    </a>
+
+    <a href="{{ url_for('bridal_party_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">👰</div>
+        <h3>Wedding Party</h3>
+        <p class="stat-label">Bridal party members</p>
+    </a>
+
+    <a href="{{ url_for('vendors_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🤝</div>
+        <h3>Vendors</h3>
+        <p class="stat-label">Vendor contacts & contracts</p>
+    </a>
+
+    <a href="{{ url_for('budget_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">💰</div>
+        <h3>Budget</h3>
+        <p class="stat-label">Budget & expense tracking</p>
+    </a>
+
+    <a href="{{ url_for('tasks_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">📋</div>
+        <h3>Tasks</h3>
+        <p class="stat-label">Planning checklist</p>
+    </a>
+
+    <a href="{{ url_for('photos_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">📸</div>
+        <h3>Photography</h3>
+        <p class="stat-label">Shot list & photo planning</p>
+    </a>
+
+    <a href="{{ url_for('music_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🎵</div>
+        <h3>Music</h3>
+        <p class="stat-label">Playlist & song selections</p>
+    </a>
+
+    <a href="{{ url_for('flowers_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">💐</div>
+        <h3>Flowers & Decor</h3>
+        <p class="stat-label">Floral arrangements & decor</p>
+    </a>
+
+    <a href="{{ url_for('attire_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">👗</div>
+        <h3>Attire</h3>
+        <p class="stat-label">Wedding outfits & fittings</p>
+    </a>
+
+    <a href="{{ url_for('invitations_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">✉️</div>
+        <h3>Invitations</h3>
+        <p class="stat-label">Stationery & mailings</p>
+    </a>
+
+    <a href="{{ url_for('registry_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🎁</div>
+        <h3>Registry</h3>
+        <p class="stat-label">Gift registry tracking</p>
+    </a>
+
+    <a href="{{ url_for('hair_makeup_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">💇</div>
+        <h3>Hair & Makeup</h3>
+        <p class="stat-label">Beauty appointments</p>
+    </a>
+
+    <a href="{{ url_for('honeymoon_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">✈️</div>
+        <h3>Honeymoon</h3>
+        <p class="stat-label">Travel & packing</p>
+    </a>
+
+    <a href="{{ url_for('rehearsal_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🎭</div>
+        <h3>Rehearsal Dinner</h3>
+        <p class="stat-label">Pre-wedding dinner plans</p>
+    </a>
+
+    <a href="{{ url_for('accommodations_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🏨</div>
+        <h3>Accommodations</h3>
+        <p class="stat-label">Hotels & transportation</p>
+    </a>
+
+    <a href="{{ url_for('license_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">📜</div>
+        <h3>Marriage License</h3>
+        <p class="stat-label">Legal requirements</p>
+    </a>
+
+    <a href="{{ url_for('branding_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🎨</div>
+        <h3>Style & Branding</h3>
+        <p class="stat-label">Colors, fonts & mood</p>
+    </a>
+
+    <a href="{{ url_for('traditional_elements') }}" class="dashboard-card module-link">
+        <div class="card-icon">📖</div>
+        <h3>Traditional Elements</h3>
+        <p class="stat-label">Browse wedding traditions</p>
+    </a>
+</div>
+{% endblock %}

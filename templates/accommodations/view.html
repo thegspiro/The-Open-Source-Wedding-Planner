@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Accommodations & Transportation - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Accommodations & Transportation</h1>
+    <a href="{{ url_for('accommodations_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Item</a>
+</div>
+
+{% if items %}
+<div class="dashboard-grid">
+    {% for item in items %}
+    <div class="dashboard-card">
+        <h3>{{ item.name }}</h3>
+        <span class="rsvp-accepted">{{ item.accommodation_type|replace('_', ' ')|title }}</span>
+
+        <div class="info-grid">
+            {% if item.address %}
+            <div class="info-item">
+                <strong>Address:</strong> {{ item.address }}
+            </div>
+            {% endif %}
+            {% if item.phone %}
+            <div class="info-item">
+                <strong>Phone:</strong> {{ item.phone }}
+            </div>
+            {% endif %}
+            {% if item.website %}
+            <div class="info-item">
+                <strong>Website:</strong> <a href="{{ item.website }}" target="_blank">{{ item.website }}</a>
+            </div>
+            {% endif %}
+            {% if item.block_code %}
+            <div class="info-item">
+                <strong>Block Code:</strong> {{ item.block_code }}
+            </div>
+            {% endif %}
+            {% if item.rate %}
+            <div class="info-item">
+                <strong>Rate:</strong> {{ item.rate }}
+            </div>
+            {% endif %}
+            {% if item.deadline %}
+            <div class="info-item">
+                <strong>Deadline:</strong> {{ item.deadline.strftime('%B %d, %Y') }}
+            </div>
+            {% endif %}
+            {% if item.notes %}
+            <div class="info-item">
+                <strong>Notes:</strong> {{ item.notes }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <form method="POST" action="{{ url_for('accommodations_delete', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline">
+                <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this item?')">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Accommodations Yet</h2>
+    <p>Add hotel blocks, recommended hotels, transportation, and parking information for your guests.</p>
+    <a href="{{ url_for('accommodations_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Item</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

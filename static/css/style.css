@@ -142,6 +142,147 @@ main { min-height: calc(100vh - 200px); padding: 2rem 0; }
 footer { background: #333; color: white; text-align: center; padding: 2rem 0; margin-top: 3rem; }
 footer p { margin: 0; }
 
+/* Auth Pages */
+.auth-page { display: flex; justify-content: center; padding: 2rem 0; }
+.auth-container { max-width: 600px; width: 100%; background: white; padding: 2.5rem; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+.auth-container h1 { color: #e91e63; margin-bottom: 0.5rem; text-align: center; }
+.auth-subtitle { color: #666; text-align: center; margin-bottom: 2rem; }
+.auth-link { text-align: center; margin-top: 1.5rem; color: #666; }
+.auth-link a { color: #e91e63; font-weight: 500; text-decoration: none; }
+.auth-link a:hover { text-decoration: underline; }
+
+/* User Type Cards (Registration) */
+.user-type-cards { display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; }
+.user-type-card { cursor: pointer; }
+.user-type-card input[type="radio"] { display: none; }
+.user-type-content { border: 2px solid #ddd; border-radius: 8px; padding: 1.2rem; transition: all 0.3s; display: flex; align-items: center; gap: 1rem; }
+.user-type-content:hover { border-color: #e91e63; background: #fff5f8; }
+.user-type-card input[type="radio"]:checked + .user-type-content { border-color: #e91e63; background: #fce4ec; box-shadow: 0 0 0 2px rgba(233,30,99,0.2); }
+.user-type-icon { font-size: 2rem; flex-shrink: 0; }
+.user-type-content h3 { color: #333; margin-bottom: 0.3rem; font-size: 1.05rem; }
+.user-type-content p { color: #666; font-size: 0.9rem; margin: 0; }
+
+/* User Nav Info */
+.user-info { display: flex; align-items: center; gap: 0.5rem; }
+.user-name { color: white; font-weight: 500; }
+.user-type-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+.badge-professional { background: #ffc107; color: #333; }
+.badge-friend { background: #8bc34a; color: white; }
+.badge-self { background: #03a9f4; color: white; }
+.btn-logout { opacity: 0.8; }
+.btn-logout:hover { opacity: 1; }
+
+/* Module Link Cards */
+.module-link { text-decoration: none; color: inherit; cursor: pointer; }
+.module-link:hover { transform: translateY(-5px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+/* Color Swatches */
+.color-swatch { width: 40px; height: 40px; border-radius: 4px; border: 1px solid #ddd; display: inline-block; vertical-align: middle; margin-right: 0.5rem; }
+.color-swatches { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+.color-swatch-item { display: flex; align-items: center; gap: 0.5rem; }
+
+/* Category Badges */
+.category-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: 500; background: #f0f0f0; color: #555; }
+.category-badge.prep { background: #e3f2fd; color: #1565c0; }
+.category-badge.ceremony { background: #fce4ec; color: #c62828; }
+.category-badge.photos { background: #f3e5f5; color: #6a1b9a; }
+.category-badge.reception { background: #e8f5e9; color: #2e7d32; }
+.category-badge.must_have { background: #fff3e0; color: #e65100; }
+.category-badge.nice_to_have { background: #f5f5f5; color: #757575; }
+
+/* Budget Page */
+.budget-over { color: #c62828; }
+.budget-bar { height: 12px; margin: 0.5rem 0; }
+.budget-over-fill { background: #c62828; }
+.budget-progress-section { margin-bottom: 1.5rem; }
+.budget-progress-labels { display: flex; justify-content: space-between; font-size: 0.85rem; color: #666; }
+.budget-breakdown { margin-bottom: 1rem; }
+.budget-subsection { margin-bottom: 0.5rem; }
+.expense-note { color: #888; font-size: 0.8rem; }
+.covered-by-tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.8rem; font-weight: 500; background: #f3e5f5; color: #6a1b9a; }
+.payment-status { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.8rem; font-weight: 500; }
+.payment-status.status-paid { background: #e8f5e9; color: #2e7d32; }
+.payment-status.status-unpaid { background: #fce4ec; color: #c62828; }
+.payment-status.status-deposit { background: #fff3e0; color: #e65100; }
+.payment-status.status-partial { background: #e3f2fd; color: #1565c0; }
+
+/* Header Actions */
+.header-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.subtitle { color: #666; font-size: 1rem; margin-top: 0.25rem; }
+
+/* Checkbox Grid for Participant Assignment */
+.checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem; margin-top: 0.5rem; }
+.checkbox-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+.checkbox-item:hover { background: #fce4ec; }
+.checkbox-item input[type="checkbox"] { accent-color: #e91e63; }
+.checkbox-item small { color: #888; }
+.form-help { font-size: 0.85rem; color: #888; margin-bottom: 0.5rem; }
+.form-help a { color: #e91e63; }
+
+/* Participant Tags on Timeline Items */
+.timeline-participants { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.participant-tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.75rem; text-decoration: none; font-weight: 500; }
+.participant-tag.couple { background: #fce4ec; color: #c62828; }
+.participant-tag.family { background: #e8eaf6; color: #283593; }
+.participant-tag.wedding_party { background: #f3e5f5; color: #6a1b9a; }
+.participant-tag.handler { background: #e0f2f1; color: #00695c; }
+.participant-tag.vendor { background: #fff3e0; color: #e65100; }
+.participant-tag.other { background: #f5f5f5; color: #555; }
+
+/* Participant List Page */
+.itinerary-actions-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.participant-category { margin-bottom: 2rem; }
+.participant-category h2 { font-size: 1.3rem; color: #444; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee; }
+.participant-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.participant-card { background: white; border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 0.75rem; }
+.participant-info h3 { color: #e91e63; margin-bottom: 0.25rem; }
+.participant-role { color: #666; font-size: 0.9rem; }
+.participant-contact { font-size: 0.85rem; color: #888; display: flex; flex-direction: column; gap: 0.15rem; }
+.participant-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-top: auto; }
+.contact-info { color: #888; font-size: 0.9rem; }
+
+/* Individual Itinerary View */
+.itinerary-timeline { max-width: 800px; }
+.itinerary-category-header { margin: 1.5rem 0 0.75rem; }
+.itinerary-item { display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid #eee; }
+.itinerary-time { min-width: 100px; text-align: right; }
+.time-display { font-weight: 600; color: #e91e63; font-size: 1rem; }
+.time-tbd { color: #999; font-style: italic; }
+.itinerary-details h3 { font-size: 1.1rem; color: #333; margin-bottom: 0.25rem; }
+.itinerary-details p { color: #666; font-size: 0.9rem; margin-bottom: 0.25rem; }
+.itinerary-location { color: #888; font-style: italic; }
+.itinerary-location::before { content: "📍 "; }
+.itinerary-also-with { color: #999; font-size: 0.85rem; font-style: italic; }
+
+/* Handler View */
+.handler-timeline { display: flex; flex-direction: column; gap: 1rem; }
+.handler-block { background: white; border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.handler-time-header { display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 0.5rem; }
+.handler-time { min-width: 100px; }
+.handler-event h3 { font-size: 1.1rem; color: #333; }
+.handler-location { color: #888; font-size: 0.9rem; font-style: italic; }
+.handler-location::before { content: "📍 "; }
+.handler-description { color: #666; font-size: 0.9rem; margin-bottom: 0.75rem; }
+.handler-people { margin-top: 0.5rem; font-size: 0.9rem; }
+.handler-people strong { color: #444; }
+.handler-people-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+.handler-person-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.75rem; border-radius: 16px; text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: opacity 0.2s; }
+.handler-person-chip:hover { opacity: 0.8; }
+.handler-person-chip.couple { background: #fce4ec; color: #c62828; }
+.handler-person-chip.family { background: #e8eaf6; color: #283593; }
+.handler-person-chip.wedding_party { background: #f3e5f5; color: #6a1b9a; }
+.handler-person-chip.handler { background: #e0f2f1; color: #00695c; }
+.handler-person-chip.vendor { background: #fff3e0; color: #e65100; }
+.handler-person-chip.other { background: #f5f5f5; color: #555; }
+.chip-role { font-size: 0.75rem; opacity: 0.7; }
+.handler-unassigned { color: #999; }
+.handler-summary { margin-top: 2rem; }
+.handler-summary h2 { color: #444; margin-bottom: 1rem; }
+.handler-summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; }
+.handler-summary-card { background: white; border-radius: 6px; padding: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+.handler-summary-card h4 a { color: #e91e63; text-decoration: none; }
+.handler-summary-card h4 a:hover { text-decoration: underline; }
+
 /* Responsive */
 @media (max-width: 768px) {
     .page-header { flex-direction: column; align-items: flex-start; }
@@ -150,4 +291,9 @@ footer p { margin: 0; }
     .dashboard-grid { grid-template-columns: 1fr; }
     .wedding-grid { grid-template-columns: 1fr; }
     .task-header { flex-direction: column; gap: 1rem; }
+    .header-actions { flex-direction: column; align-items: flex-start; }
+    .participant-grid { grid-template-columns: 1fr; }
+    .handler-time-header { flex-direction: column; }
+    .handler-summary-grid { grid-template-columns: 1fr 1fr; }
+    .checkbox-grid { grid-template-columns: 1fr; }
 }

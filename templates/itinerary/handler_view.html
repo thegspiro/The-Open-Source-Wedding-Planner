@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Handler View - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Handler View</h1>
+        <p class="subtitle">Where everyone needs to be at each moment</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="btn-secondary">All Participants</a>
+        <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-secondary">Full Timeline</a>
+    </div>
+</div>
+
+{% if items %}
+<div class="handler-timeline">
+    {% for item in items %}
+    <div class="handler-block">
+        <div class="handler-time-header">
+            <div class="handler-time">
+                {% if item.time %}
+                <span class="time-display">{{ item.time.strftime('%I:%M %p') }}</span>
+                {% else %}
+                <span class="time-display time-tbd">TBD</span>
+                {% endif %}
+            </div>
+            <div class="handler-event">
+                <h3>{{ item.title }}</h3>
+                {% if item.location %}
+                <span class="handler-location">{{ item.location }}</span>
+                {% endif %}
+                {% if item.category %}
+                <span class="category-badge {{ item.category }}">{{ item.category|title }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% if item.description %}
+        <p class="handler-description">{{ item.description }}</p>
+        {% endif %}
+        {% if item.assigned_participants %}
+        <div class="handler-people">
+            <strong>Who should be here:</strong>
+            <div class="handler-people-list">
+                {% for p in item.assigned_participants %}
+                <a href="{{ url_for('itinerary_individual', wedding_id=wedding.id, participant_id=p.id) }}" class="handler-person-chip {{ p.role_category or 'other' }}">
+                    {{ p.name }}
+                    {% if p.role %}<span class="chip-role">{{ p.role }}</span>{% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% elif item.who %}
+        <div class="handler-people">
+            <strong>Who:</strong> {{ item.who }}
+        </div>
+        {% else %}
+        <div class="handler-people handler-unassigned">
+            <em>No participants assigned</em>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+{% if participants %}
+<div class="handler-summary">
+    <h2>Participant Quick Reference</h2>
+    <div class="handler-summary-grid">
+        {% for p in participants %}
+        <div class="handler-summary-card">
+            <h4><a href="{{ url_for('itinerary_individual', wedding_id=wedding.id, participant_id=p.id) }}">{{ p.name }}</a></h4>
+            <p class="participant-role">{{ p.role or 'Participant' }}</p>
+            {% if p.phone %}<p class="stat-small">{{ p.phone }}</p>{% endif %}
+            <p class="stat-small">{{ p.timeline_items|length }} item(s)</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <h2>No Timeline Items Yet</h2>
+    <p>Add items to the <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}">Day-Of Timeline</a> first, then assign participants.</p>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; All Participants</a>
+</div>
+{% endblock %}

@@ -1,7 +1,36 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
+
+# ============================================
+# USER & ACCESS MODELS
+# ============================================
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    user_type = db.Column(db.String(20), nullable=False)  # 'professional', 'friend', 'self'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    wedding_access = db.relationship('WeddingAccess', backref='user', lazy=True, cascade='all, delete-orphan')
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
+class WeddingAccess(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='owner')  # 'owner', 'planner', 'viewer'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ============================================
 # MAIN WEDDING MODEL
@@ -33,6 +62,7 @@ class Wedding(db.Model):
     vendors = db.relationship('Vendor', backref='wedding', lazy=True, cascade='all, delete-orphan')
     registry_items = db.relationship('RegistryItem', backref='wedding', lazy=True, cascade='all, delete-orphan')
     attire = db.relationship('Attire', backref='wedding', lazy=True, cascade='all, delete-orphan')
+    access_list = db.relationship('WeddingAccess', backref='wedding', lazy=True, cascade='all, delete-orphan')
 
 # ============================================
 # PERSON MODEL (People Getting Married)
@@ -297,6 +327,7 @@ class BridalPartyMember(db.Model):
     
     # Gift Tracking
     gift_idea = db.Column(db.Text)
+    gift_cost = db.Column(db.Float)
     gift_purchased = db.Column(db.Boolean, default=False)
     gift_given = db.Column(db.Boolean, default=False)
     
@@ -382,6 +413,7 @@ class BudgetExpense(db.Model):
     paid_amount = db.Column(db.Float, default=0)
     payment_due_date = db.Column(db.Date)
     payment_status = db.Column(db.String(50))  # unpaid, deposit, partial, paid
+    covered_by = db.Column(db.String(200))  # name of person purchasing on couple's behalf
     notes = db.Column(db.Text)
 
 # ============================================
@@ -468,6 +500,220 @@ class Attire(db.Model):
     
     # Relationship
     person = db.relationship('Person', backref='attire_items', foreign_keys=[person_id])
+
+# ============================================
+# DAY-OF TIMELINE MODULE
+# ============================================
+
+class DayOfTimelineItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    time = db.Column(db.Time)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    location = db.Column(db.String(200))
+    who = db.Column(db.String(500))  # who is involved
+    category = db.Column(db.String(50))  # prep, ceremony, photos, reception, other
+    order = db.Column(db.Integer, default=0)
+
+    wedding = db.relationship('Wedding', backref=db.backref('day_of_items', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# PHOTOGRAPHY MODULE
+# ============================================
+
+class PhotoShot(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    category = db.Column(db.String(50))  # getting_ready, ceremony, portraits, reception, detail
+    description = db.Column(db.String(500), nullable=False)
+    people = db.Column(db.String(500))  # who should be in the shot
+    priority = db.Column(db.String(20), default='nice_to_have')  # must_have, nice_to_have
+    captured = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('photo_shots', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# MUSIC & PLAYLIST MODULE
+# ============================================
+
+class Song(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    title = db.Column(db.String(200), nullable=False)
+    artist = db.Column(db.String(200))
+    moment = db.Column(db.String(100))  # processional, first_dance, dinner, dancing, do_not_play, etc.
+    notes = db.Column(db.Text)
+    order = db.Column(db.Integer, default=0)
+
+    wedding = db.relationship('Wedding', backref=db.backref('songs', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# FLOWERS & DECOR MODULE
+# ============================================
+
+class FloralItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    item_type = db.Column(db.String(100), nullable=False)  # bouquet, boutonniere, centerpiece, arch, corsage, etc.
+    recipient = db.Column(db.String(200))  # who it's for
+    flowers = db.Column(db.Text)  # flower types
+    colors = db.Column(db.String(200))
+    quantity = db.Column(db.Integer, default=1)
+    cost = db.Column(db.Float)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('floral_items', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# INVITATIONS & STATIONERY MODULE
+# ============================================
+
+class Invitation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    item_type = db.Column(db.String(100), nullable=False)  # save_the_date, invitation, rsvp_card, program, menu_card, thank_you, place_card
+    designer = db.Column(db.String(200))
+    quantity = db.Column(db.Integer)
+    cost = db.Column(db.Float)
+    order_date = db.Column(db.Date)
+    arrival_date = db.Column(db.Date)
+    send_by_date = db.Column(db.Date)
+    status = db.Column(db.String(50), default='not_started')  # not_started, designing, ordered, received, sent
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('invitations', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# REHEARSAL DINNER MODULE
+# ============================================
+
+class RehearsalDinner(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    date = db.Column(db.Date)
+    start_time = db.Column(db.Time)
+    end_time = db.Column(db.Time)
+    venue_name = db.Column(db.String(200))
+    venue_address = db.Column(db.Text)
+    venue_contact = db.Column(db.String(120))
+    venue_phone = db.Column(db.String(50))
+    expected_guest_count = db.Column(db.Integer)
+    menu_notes = db.Column(db.Text)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('rehearsal_dinner', uselist=False, cascade='all, delete-orphan'))
+
+# ============================================
+# GUEST ACCOMMODATIONS MODULE
+# ============================================
+
+class Accommodation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    accommodation_type = db.Column(db.String(50), nullable=False)  # hotel_block, recommended, transportation, parking
+    name = db.Column(db.String(200), nullable=False)
+    address = db.Column(db.Text)
+    phone = db.Column(db.String(50))
+    website = db.Column(db.String(500))
+    block_code = db.Column(db.String(100))  # for hotel blocks
+    rate = db.Column(db.String(100))  # nightly rate or shuttle cost
+    deadline = db.Column(db.Date)  # booking deadline
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('accommodations', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# MARRIAGE LICENSE MODULE
+# ============================================
+
+class MarriageLicense(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    county = db.Column(db.String(200))
+    state = db.Column(db.String(100))
+    application_date = db.Column(db.Date)
+    pickup_date = db.Column(db.Date)
+    expiration_date = db.Column(db.Date)
+    filing_deadline = db.Column(db.Date)
+    filed = db.Column(db.Boolean, default=False)
+    filed_date = db.Column(db.Date)
+    documents_needed = db.Column(db.Text)  # JSON list
+    cost = db.Column(db.Float)
+    waiting_period_days = db.Column(db.Integer)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('marriage_license', uselist=False, cascade='all, delete-orphan'))
+
+# ============================================
+# HAIR & MAKEUP MODULE
+# ============================================
+
+class HairMakeup(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    person_name = db.Column(db.String(200), nullable=False)
+    service_type = db.Column(db.String(50))  # hair, makeup, both
+    appointment_time = db.Column(db.Time)
+    stylist_name = db.Column(db.String(200))
+    style_notes = db.Column(db.Text)
+    trial_date = db.Column(db.Date)
+    trial_completed = db.Column(db.Boolean, default=False)
+    cost = db.Column(db.Float)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('hair_makeup', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# WEDDING PARTICIPANT & ITINERARY MODULE
+# ============================================
+
+class WeddingParticipant(db.Model):
+    """Any individual with a role on the wedding day - couples, family, party, vendors, handlers."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    name = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(100))  # bride, groom, mother_of_bride, best_man, photographer, coordinator, etc.
+    role_category = db.Column(db.String(50))  # couple, family, wedding_party, vendor, handler
+    phone = db.Column(db.String(50))
+    email = db.Column(db.String(120))
+    notes = db.Column(db.Text)
+
+    # Optional links to existing records
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'))
+    bridal_party_id = db.Column(db.Integer, db.ForeignKey('bridal_party_member.id'))
+
+    person = db.relationship('Person', backref='participant_records', foreign_keys=[person_id])
+    bridal_party_member = db.relationship('BridalPartyMember', backref='participant_records', foreign_keys=[bridal_party_id])
+
+    wedding = db.relationship('Wedding', backref=db.backref('participants', lazy=True, cascade='all, delete-orphan'))
+
+
+# Association table for many-to-many between timeline items and participants
+timeline_assignments = db.Table('timeline_assignments',
+    db.Column('timeline_item_id', db.Integer, db.ForeignKey('day_of_timeline_item.id'), primary_key=True),
+    db.Column('participant_id', db.Integer, db.ForeignKey('wedding_participant.id'), primary_key=True)
+)
+
+# Add relationship to DayOfTimelineItem
+DayOfTimelineItem.assigned_participants = db.relationship(
+    'WeddingParticipant',
+    secondary=timeline_assignments,
+    backref=db.backref('timeline_items', lazy=True),
+    lazy=True
+)
+
 
 # ============================================
 # TRADITIONAL ELEMENTS LIBRARY

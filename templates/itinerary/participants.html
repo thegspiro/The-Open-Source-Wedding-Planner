@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Itinerary Participants - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Individual Itineraries</h1>
+        <p class="subtitle">Manage who needs a timeline for the wedding day</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('itinerary_handler_view', wedding_id=wedding.id) }}" class="btn-secondary">Handler View</a>
+        <a href="{{ url_for('itinerary_add_participant', wedding_id=wedding.id) }}" class="btn-primary">+ Add Participant</a>
+    </div>
+</div>
+
+{% if participants %}
+<div class="itinerary-actions-bar">
+    <form method="POST" action="{{ url_for('itinerary_import_people', wedding_id=wedding.id) }}" class="form-inline">
+        <button type="submit" class="btn-secondary btn-small">Import People & Bridal Party</button>
+    </form>
+    <span class="stat-small">{{ participants|length }} participant(s) total</span>
+</div>
+
+{% set category_labels = {
+    'couple': 'Couple',
+    'family': 'Family Members',
+    'wedding_party': 'Wedding Party',
+    'vendor': 'Vendors',
+    'handler': 'Handlers & Coordinators',
+    'other': 'Other'
+} %}
+
+{% set category_icons = {
+    'couple': '💍',
+    'family': '👨‍👩‍👧‍👦',
+    'wedding_party': '👰',
+    'vendor': '🤝',
+    'handler': '📋',
+    'other': '👤'
+} %}
+
+{% set display_order = ['couple', 'family', 'wedding_party', 'handler', 'vendor', 'other'] %}
+
+{% for cat in display_order %}
+{% if cat in categories %}
+<div class="participant-category">
+    <h2>{{ category_icons.get(cat, '👤') }} {{ category_labels.get(cat, cat|title) }}</h2>
+    <div class="participant-grid">
+        {% for p in categories[cat] %}
+        <div class="participant-card">
+            <div class="participant-info">
+                <h3>{{ p.name }}</h3>
+                <p class="participant-role">{{ p.role or 'No role set' }}</p>
+                {% if p.phone or p.email %}
+                <div class="participant-contact">
+                    {% if p.phone %}<span>{{ p.phone }}</span>{% endif %}
+                    {% if p.email %}<span>{{ p.email }}</span>{% endif %}
+                </div>
+                {% endif %}
+                <p class="stat-small">{{ p.timeline_items|length }} timeline item(s)</p>
+            </div>
+            <div class="participant-actions">
+                <a href="{{ url_for('itinerary_individual', wedding_id=wedding.id, participant_id=p.id) }}" class="btn-primary btn-small">View Itinerary</a>
+                <a href="{{ url_for('itinerary_edit_participant', wedding_id=wedding.id, participant_id=p.id) }}" class="btn-secondary btn-small">Edit</a>
+                <form method="POST" action="{{ url_for('itinerary_delete_participant', wedding_id=wedding.id, participant_id=p.id) }}" class="form-inline">
+                    <button type="submit" class="btn-danger btn-small" onclick="return confirm('Remove this participant?')">Remove</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% else %}
+<div class="empty-state">
+    <h2>No Participants Yet</h2>
+    <p>Add the individuals who need a personal timeline for the wedding day - the couple, family, bridal party, vendors, and coordinators.</p>
+    <div class="action-buttons">
+        <a href="{{ url_for('itinerary_add_participant', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Participant</a>
+        <form method="POST" action="{{ url_for('itinerary_import_people', wedding_id=wedding.id) }}" class="form-inline">
+            <button type="submit" class="btn-secondary">Import from People & Bridal Party</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Day-Of Timeline</a>
+</div>
+{% endblock %}

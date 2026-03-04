@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Ceremony - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Ceremony</h1>
+</div>
+
+<div class="form-container">
+    <div class="module-section">
+        <p>Ceremony details are managed through the edit page.</p>
+        <div class="form-actions">
+            <a href="{{ url_for('ceremony_edit', wedding_id=wedding.id) }}" class="btn-primary">Go to Edit Ceremony</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
