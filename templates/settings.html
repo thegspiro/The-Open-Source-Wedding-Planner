@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}Settings - Wedding Organizer{% endblock %}
+{% block content %}
+<div style="max-width: 700px; margin: 0 auto;">
+    <div class="page-header">
+        <h1>Settings</h1>
+        <a href="{{ url_for('index') }}" class="btn-secondary btn-small">Back to Weddings</a>
+    </div>
+
+    <form method="POST">
+        <!-- Profile -->
+        <div class="module-section">
+            <h2 style="font-size: 1.15rem;">Profile</h2>
+            <div class="form-group">
+                <label>Display Name</label>
+                <input type="text" name="name" value="{{ user.name }}" required>
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" value="{{ user.email }}" disabled style="opacity: 0.6; cursor: not-allowed;">
+                <p style="font-size: 0.82rem; color: var(--color-text-muted); margin-top: 0.25rem;">Email cannot be changed.</p>
+            </div>
+        </div>
+
+        <!-- Color Theme -->
+        <div class="module-section">
+            <h2 style="font-size: 1.15rem;">Color Theme</h2>
+            <p style="color: var(--color-text-light); font-size: 0.9rem; margin-bottom: 1.25rem;">Choose a color palette that suits your style.</p>
+
+            <div class="theme-grid">
+                <label class="theme-card">
+                    <input type="radio" name="theme" value="rose" {{ 'checked' if user.theme == 'rose' or not user.theme }}>
+                    <div class="theme-preview theme-rose">
+                        <div class="theme-swatches">
+                            <span style="background: #b76e79;"></span>
+                            <span style="background: #d4a0a8;"></span>
+                            <span style="background: #c9956b;"></span>
+                            <span style="background: #fdf2f4;"></span>
+                        </div>
+                        <div class="theme-name">Rose</div>
+                        <div class="theme-desc">Warm blush and rose gold tones</div>
+                    </div>
+                </label>
+
+                <label class="theme-card">
+                    <input type="radio" name="theme" value="sage" {{ 'checked' if user.theme == 'sage' }}>
+                    <div class="theme-preview theme-sage">
+                        <div class="theme-swatches">
+                            <span style="background: #7a9e7e;"></span>
+                            <span style="background: #a3c4a7;"></span>
+                            <span style="background: #b5a67d;"></span>
+                            <span style="background: #f0f5f1;"></span>
+                        </div>
+                        <div class="theme-name">Sage</div>
+                        <div class="theme-desc">Natural green and earthy tones</div>
+                    </div>
+                </label>
+
+                <label class="theme-card">
+                    <input type="radio" name="theme" value="ocean" {{ 'checked' if user.theme == 'ocean' }}>
+                    <div class="theme-preview theme-ocean">
+                        <div class="theme-swatches">
+                            <span style="background: #5b8fa8;"></span>
+                            <span style="background: #8ab8ce;"></span>
+                            <span style="background: #c49a6c;"></span>
+                            <span style="background: #eef5f8;"></span>
+                        </div>
+                        <div class="theme-name">Ocean</div>
+                        <div class="theme-desc">Cool blue and coastal tones</div>
+                    </div>
+                </label>
+
+                <label class="theme-card">
+                    <input type="radio" name="theme" value="lavender" {{ 'checked' if user.theme == 'lavender' }}>
+                    <div class="theme-preview theme-lavender">
+                        <div class="theme-swatches">
+                            <span style="background: #8e7aae;"></span>
+                            <span style="background: #b5a5cc;"></span>
+                            <span style="background: #c9956b;"></span>
+                            <span style="background: #f3f0f7;"></span>
+                        </div>
+                        <div class="theme-name">Lavender</div>
+                        <div class="theme-desc">Soft purple and romantic tones</div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Light / Dark Mode -->
+        <div class="module-section">
+            <h2 style="font-size: 1.15rem;">Appearance</h2>
+            <p style="color: var(--color-text-light); font-size: 0.9rem; margin-bottom: 1.25rem;">Switch between light and dark mode.</p>
+
+            <div class="mode-toggle">
+                <label class="mode-card">
+                    <input type="radio" name="dark_mode" value="" {{ 'checked' if not user.dark_mode }} onchange="this.form.querySelector('[name=dark_mode_hidden]').disabled=false;">
+                    <div class="mode-preview light-preview">
+                        <div class="mode-mockup">
+                            <div class="mock-bar" style="background: #f0ece8;"></div>
+                            <div class="mock-content">
+                                <div class="mock-card" style="background: #ffffff; border: 1px solid #e8e4e0;"></div>
+                                <div class="mock-card" style="background: #ffffff; border: 1px solid #e8e4e0;"></div>
+                            </div>
+                        </div>
+                        <div class="mode-name">Light</div>
+                    </div>
+                </label>
+
+                <label class="mode-card">
+                    <input type="radio" name="dark_mode" value="on" {{ 'checked' if user.dark_mode }}>
+                    <div class="mode-preview dark-preview">
+                        <div class="mode-mockup" style="background: #1c1917;">
+                            <div class="mock-bar" style="background: #292524;"></div>
+                            <div class="mock-content">
+                                <div class="mock-card" style="background: #292524; border: 1px solid #44403c;"></div>
+                                <div class="mock-card" style="background: #292524; border: 1px solid #44403c;"></div>
+                            </div>
+                        </div>
+                        <div class="mode-name">Dark</div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 1.5rem;">
+            <button type="submit" class="btn-primary" style="padding: 0.75rem 2.5rem; font-size: 1rem;">Save Settings</button>
+        </div>
+    </form>
+</div>
+
+<style>
+/* Theme selection grid */
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.theme-card {
+    cursor: pointer;
+    display: block;
+}
+
+.theme-card input[type="radio"] {
+    display: none;
+}
+
+.theme-preview {
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.theme-preview:hover {
+    border-color: var(--color-primary-light);
+}
+
+.theme-card input[type="radio"]:checked + .theme-preview {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(183,110,121,0.15);
+    background: var(--color-primary-bg);
+}
+
+.theme-swatches {
+    display: flex;
+    gap: 0.35rem;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+}
+
+.theme-swatches span {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: block;
+    border: 2px solid rgba(255,255,255,0.8);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.theme-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-text);
+    margin-bottom: 0.15rem;
+}
+
+.theme-desc {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+}
+
+/* Mode toggle */
+.mode-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    max-width: 400px;
+}
+
+.mode-card {
+    cursor: pointer;
+    display: block;
+}
+
+.mode-card input[type="radio"] {
+    display: none;
+}
+
+.mode-preview {
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.mode-preview:hover {
+    border-color: var(--color-primary-light);
+}
+
+.mode-card input[type="radio"]:checked + .mode-preview {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(183,110,121,0.15);
+}
+
+.mode-mockup {
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    background: #faf9f7;
+    height: 80px;
+}
+
+.mock-bar {
+    height: 16px;
+    border-radius: 0;
+}
+
+.mock-content {
+    display: flex;
+    gap: 6px;
+    padding: 8px;
+}
+
+.mock-card {
+    flex: 1;
+    height: 40px;
+    border-radius: 4px;
+}
+
+.mode-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-text);
+}
+
+@media (max-width: 480px) {
+    .theme-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+{% endblock %}
