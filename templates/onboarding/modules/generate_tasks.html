@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Generate Planning Tasks - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div class="page-header">
+        <div>
+            <h1>Generate Your Planning Checklist</h1>
+            <p class="subtitle">
+                Your wedding is {{ months_until }} month{{ 's' if months_until != 1 else '' }} away.
+                We've prepared a timeline of tasks to keep you on track.
+            </p>
+        </div>
+        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Back to Setup</a>
+    </div>
+
+    {% if existing_milestones > 0 %}
+    <div class="alert alert-info">
+        You already have {{ existing_milestones }} milestone tasks. Adding more will create new tasks alongside your existing ones.
+    </div>
+    {% endif %}
+
+    <form method="POST">
+        <!-- Quick action buttons -->
+        <div class="module-section" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <strong>Quick Select:</strong>
+                    <span style="color: var(--color-text-light); font-size: 0.9rem;">Choose which tasks to add</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="button" onclick="selectAll()" class="btn-secondary btn-small">Select All</button>
+                    <button type="button" onclick="selectNone()" class="btn-secondary btn-small">Select None</button>
+                    <button type="button" onclick="selectRelevant()" class="btn-primary btn-small">Select Relevant</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task groups by time period -->
+        {% for period in period_order %}
+        {% if period in task_groups %}
+        {% set tasks = task_groups[period] %}
+        <div class="module-section" style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="font-size: 1.1rem; margin-bottom: 0;">{{ period }}</h2>
+                <span style="font-size: 0.82rem; color: var(--color-text-muted);">{{ tasks|length }} tasks</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                {% for task in tasks %}
+                <label style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.65rem 0.75rem; border: 1px solid var(--color-border-light); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s; {% if task.is_overdue %}background: var(--color-warning-bg); border-color: #e8dcc4;{% endif %}"
+                       onmouseover="this.style.borderColor='var(--color-primary-light)'" onmouseout="this.style.borderColor='{% if task.is_overdue %}#e8dcc4{% else %}var(--color-border-light){% endif %}'">
+                    <input type="checkbox" name="task_ids" value="{{ task.idx }}"
+                           class="task-checkbox"
+                           data-overdue="{{ 'true' if task.is_overdue else 'false' }}"
+                           data-months="{{ task.months_before }}"
+                           {% if not task.is_overdue %}checked{% endif %}
+                           style="accent-color: var(--color-primary); margin-top: 0.2rem; flex-shrink: 0;">
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-weight: 500;">{{ task.title }}</span>
+                            <span class="priority-badge priority-{{ task.priority }}">{{ task.priority }}</span>
+                            <span class="category-badge">{{ task.category }}</span>
+                            {% if task.is_overdue %}
+                            <span style="font-size: 0.72rem; color: var(--color-warning); font-weight: 600;">OVERDUE - will be set 1 week from now</span>
+                            {% endif %}
+                        </div>
+                        <p style="color: var(--color-text-light); font-size: 0.82rem; margin-top: 0.15rem;">{{ task.description }}</p>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <div style="text-align: center; padding: 2rem; background: var(--color-bg-card); border-radius: var(--radius-lg); border: 1px solid var(--color-border-light);">
+            <p style="color: var(--color-text-light); margin-bottom: 1rem;">
+                Selected tasks will be added to your task list with due dates calculated from your wedding date.
+            </p>
+            <button type="submit" class="btn-primary" style="padding: 0.75rem 2.5rem; font-size: 1rem;">
+                Add Selected Tasks to My List
+            </button>
+            <div style="margin-top: 0.75rem;">
+                <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" style="color: var(--color-text-muted); font-size: 0.9rem;">Skip for Now</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function selectAll() {
+    document.querySelectorAll('.task-checkbox').forEach(function(cb) { cb.checked = true; });
+}
+function selectNone() {
+    document.querySelectorAll('.task-checkbox').forEach(function(cb) { cb.checked = false; });
+}
+function selectRelevant() {
+    // Select tasks that are not overdue (i.e., still in the future)
+    document.querySelectorAll('.task-checkbox').forEach(function(cb) {
+        cb.checked = cb.dataset.overdue !== 'true';
+    });
+}
+</script>
+{% endblock %}

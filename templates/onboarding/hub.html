@@ -5,125 +5,183 @@
 {% block content %}
 <div class="onboarding-hub">
     <div class="hub-header">
-        <h1>Welcome! Let's Set Up Your Wedding</h1>
-        <p class="hub-subtitle">Jump to any section you'd like to set up. You can skip around freely and come back anytime!</p>
+        <h1>Let's Set Up Your Wedding</h1>
+        <p class="hub-subtitle">Walk through each section at your own pace. Complete the big decisions first, then dive into the details whenever you're ready.</p>
     </div>
 
     <div class="progress-summary">
         <div class="progress-item">
             <div class="progress-number">{{ modules_completed|length }}</div>
-            <div class="progress-label">Modules Complete</div>
+            <div class="progress-label">Sections Complete</div>
         </div>
         <div class="progress-item">
-            <div class="progress-number">{{ 8 - modules_completed|length }}</div>
-            <div class="progress-label">Still To Go</div>
+            <div class="progress-bar-wide">
+                <div class="progress-fill-wide" style="width: {{ (modules_completed|length / 6 * 100)|int }}%"></div>
+            </div>
+            <div class="progress-label">{{ (modules_completed|length / 6 * 100)|int }}% through setup</div>
         </div>
         <div class="progress-item">
-            <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-success">Skip Setup & Start Planning →</a>
+            <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">Skip to Dashboard</a>
         </div>
+    </div>
+
+    <!-- Step indicator -->
+    <div class="step-flow">
+        <div class="step-dot {% if 'people' in modules_completed %}done{% endif %}">1</div>
+        <div class="step-line {% if 'people' in modules_completed %}done{% endif %}"></div>
+        <div class="step-dot {% if 'ceremony' in modules_completed %}done{% endif %}">2</div>
+        <div class="step-line {% if 'ceremony' in modules_completed %}done{% endif %}"></div>
+        <div class="step-dot {% if 'reception' in modules_completed %}done{% endif %}">3</div>
+        <div class="step-line {% if 'reception' in modules_completed %}done{% endif %}"></div>
+        <div class="step-dot {% if 'budget' in modules_completed %}done{% endif %}">4</div>
+        <div class="step-line {% if 'budget' in modules_completed %}done{% endif %}"></div>
+        <div class="step-dot {% if 'guests' in modules_completed %}done{% endif %}">5</div>
+        <div class="step-line {% if 'guests' in modules_completed %}done{% endif %}"></div>
+        <div class="step-dot">6</div>
+    </div>
+    <div class="step-labels">
+        <span>People</span><span></span><span>Ceremony</span><span></span><span>Reception</span><span></span><span>Budget</span><span></span><span>Guests</span><span></span><span>Tasks</span>
     </div>
 
     <div class="module-grid">
-        <!-- People Module -->
+        <!-- 1. People Module -->
         <div class="module-card {% if 'people' in modules_completed %}completed{% endif %}">
-            <div class="module-icon">👥</div>
+            <div class="module-card-header">
+                <div class="module-icon">👥</div>
+                <div class="module-step">Step 1</div>
+            </div>
             <h3>People Getting Married</h3>
-            <p>Tell us about who's getting married and choose how to organize your wedding</p>
+            <p>Tell us about who's getting married and choose how to organize your wedding.</p>
             {% if 'people' in modules_completed %}
-            <div class="status-badge complete">✓ Complete</div>
+            <div class="status-badge complete">Complete</div>
             <a href="{{ url_for('onboarding_people', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Edit</a>
             {% else %}
-            <a href="{{ url_for('onboarding_people', wedding_id=wedding.id) }}" class="btn-primary">Start Setup →</a>
+            <a href="{{ url_for('onboarding_people', wedding_id=wedding.id) }}" class="btn-primary">Start Setup</a>
             {% endif %}
         </div>
 
-        <!-- Ceremony Module -->
+        <!-- 2. Ceremony Module -->
         <div class="module-card {% if 'ceremony' in modules_completed %}completed{% endif %}">
-            <div class="module-icon">💒</div>
+            <div class="module-card-header">
+                <div class="module-icon">💒</div>
+                <div class="module-step">Step 2</div>
+            </div>
             <h3>Ceremony</h3>
-            <p>Plan your ceremony with templates or build it step-by-step</p>
+            <p>Plan your ceremony with templates or build it step-by-step.</p>
             <div class="module-features">
-                <span>✓ Venue & timing</span>
-                <span>✓ Timeline builder</span>
-                <span>✓ Music & readings</span>
+                <span>Venue &amp; timing</span>
+                <span>Timeline builder</span>
+                <span>Music &amp; readings</span>
             </div>
             {% if 'ceremony' in modules_completed %}
-            <div class="status-badge complete">✓ Complete</div>
+            <div class="status-badge complete">Complete</div>
             <a href="{{ url_for('onboarding_ceremony_start', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Edit</a>
             {% else %}
-            <a href="{{ url_for('onboarding_ceremony_start', wedding_id=wedding.id) }}" class="btn-primary">Start Setup →</a>
+            <a href="{{ url_for('onboarding_ceremony_start', wedding_id=wedding.id) }}" class="btn-primary">Start Setup</a>
             {% endif %}
         </div>
 
-        <!-- Reception Module -->
+        <!-- 3. Reception Module -->
         <div class="module-card {% if 'reception' in modules_completed %}completed{% endif %}">
-            <div class="module-icon">🎉</div>
+            <div class="module-card-header">
+                <div class="module-icon">🎉</div>
+                <div class="module-step">Step 3</div>
+            </div>
             <h3>Reception</h3>
-            <p>Choose a reception style and customize your celebration</p>
+            <p>Choose a reception style and customize your celebration.</p>
             <div class="module-features">
-                <span>✓ Venue & catering</span>
-                <span>✓ Timeline</span>
-                <span>✓ Music & entertainment</span>
+                <span>6 style templates</span>
+                <span>Auto-built timeline</span>
+                <span>Venue &amp; catering</span>
             </div>
             {% if 'reception' in modules_completed %}
-            <div class="status-badge complete">✓ Complete</div>
+            <div class="status-badge complete">Complete</div>
             <a href="{{ url_for('onboarding_reception_start', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Edit</a>
             {% else %}
-            <a href="{{ url_for('onboarding_reception_start', wedding_id=wedding.id) }}" class="btn-primary">Start Setup →</a>
+            <a href="{{ url_for('onboarding_reception_start', wedding_id=wedding.id) }}" class="btn-primary">Start Setup</a>
             {% endif %}
         </div>
 
-        <!-- Budget Module -->
+        <!-- 4. Budget Module -->
         <div class="module-card {% if 'budget' in modules_completed %}completed{% endif %}">
-            <div class="module-icon">💰</div>
+            <div class="module-card-header">
+                <div class="module-icon">💰</div>
+                <div class="module-step">Step 4</div>
+            </div>
             <h3>Budget</h3>
-            <p>Set your budget and get recommended expense allocations</p>
+            <p>Set your budget with a template or custom amount and get expense categories set up.</p>
             <div class="module-features">
-                <span>✓ Budget templates</span>
-                <span>✓ Expense categories</span>
-                <span>✓ Payment tracking</span>
+                <span>4 budget tiers</span>
+                <span>Auto expense categories</span>
+                <span>Custom budget option</span>
             </div>
             {% if 'budget' in modules_completed %}
-            <div class="status-badge complete">✓ Complete</div>
+            <div class="status-badge complete">Complete</div>
             <a href="{{ url_for('onboarding_budget_start', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Edit</a>
             {% else %}
-            <a href="{{ url_for('onboarding_budget_start', wedding_id=wedding.id) }}" class="btn-primary">Start Setup →</a>
+            <a href="{{ url_for('onboarding_budget_start', wedding_id=wedding.id) }}" class="btn-primary">Start Setup</a>
             {% endif %}
         </div>
 
-        <!-- Guests Module -->
+        <!-- 5. Guests Module -->
         <div class="module-card {% if 'guests' in modules_completed %}completed{% endif %}">
-            <div class="module-icon">📋</div>
+            <div class="module-card-header">
+                <div class="module-icon">📋</div>
+                <div class="module-step">Step 5</div>
+            </div>
             <h3>Guest List</h3>
-            <p>Start your guest list and set up RSVP tracking</p>
+            <p>Start your guest list with an estimate and a few key names.</p>
+            <div class="module-features">
+                <span>Estimated headcount</span>
+                <span>Quick-add VIPs</span>
+                <span>Add rest later</span>
+            </div>
             {% if 'guests' in modules_completed %}
-            <div class="status-badge complete">✓ Complete</div>
+            <div class="status-badge complete">Complete</div>
             <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">View Guests</a>
             {% else %}
-            <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}" class="btn-primary">Add Guests →</a>
+            <a href="{{ url_for('onboarding_guests_start', wedding_id=wedding.id) }}" class="btn-primary">Start Setup</a>
             {% endif %}
         </div>
 
-        <!-- Other modules can be accessed from dashboard -->
-        <div class="module-card optional">
-            <div class="module-icon">✨</div>
-            <h3>Additional Modules</h3>
-            <p>Vendors, Tasks, Wedding Party, and more are available from your dashboard!</p>
-            <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary btn-small">View Dashboard</a>
+        <!-- 6. Auto-generate Tasks -->
+        <div class="module-card highlight">
+            <div class="module-card-header">
+                <div class="module-icon">✅</div>
+                <div class="module-step">Step 6</div>
+            </div>
+            <h3>Planning Checklist</h3>
+            <p>Auto-generate a complete planning timeline with 40+ tasks, all scheduled based on your wedding date.</p>
+            <div class="module-features">
+                <span>40+ milestone tasks</span>
+                <span>Auto-calculated due dates</span>
+                <span>Choose what's relevant</span>
+            </div>
+            <a href="{{ url_for('onboarding_generate_tasks', wedding_id=wedding.id) }}" class="btn-primary">Generate My Checklist</a>
         </div>
     </div>
 
+    <!-- Additional modules callout -->
+    <div class="module-section" style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">✨</div>
+        <h2 style="font-size: 1.15rem; margin-bottom: 0.5rem;">There's So Much More</h2>
+        <p style="color: var(--color-text-light); max-width: 500px; margin: 0 auto 1rem;">
+            Once you're done with setup, your dashboard gives you access to 30+ planning modules - photography, music, flowers, attire, seating charts, and more.
+        </p>
+        <a href="{{ url_for('more_modules', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Browse All Modules</a>
+    </div>
+
     <div class="hub-actions">
-        <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-large btn-success">Done - Go to Dashboard →</a>
-        <p class="help-text">You can always come back to setup more modules later</p>
+        <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-primary btn-large">Done - Go to Dashboard</a>
+        <p class="help-text">You can always come back to set up more modules later from the dashboard.</p>
     </div>
 
     {% if modules_completed|length > 0 %}
     <div class="reset-section">
         <form method="POST" action="{{ url_for('onboarding_reset', wedding_id=wedding.id) }}">
-            <p class="reset-label">Reset Onboarding Progress?</p>
-            <p class="reset-description">This will clear your module completion status so you can redo the setup. Your wedding data (people, ceremony details, etc.) will be kept.</p>
-            <button type="submit" class="btn-reset" onclick="return confirm('Are you sure you want to reset your onboarding progress?')">Reset Progress</button>
+            <p class="reset-label">Need to start over?</p>
+            <p class="reset-description">This resets module completion status only. Your wedding data is kept.</p>
+            <button type="submit" class="btn-reset" onclick="return confirm('Reset your onboarding progress?')">Reset Progress</button>
         </form>
     </div>
     {% endif %}
@@ -131,180 +189,275 @@
 
 <style>
 .onboarding-hub {
-    max-width: 1200px;
+    max-width: 1100px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 1rem;
 }
 
 .hub-header {
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
 }
 
 .hub-header h1 {
-    color: #e91e63;
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
+    font-family: var(--font-heading);
+    color: var(--color-text);
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
 }
 
 .hub-subtitle {
-    font-size: 1.2rem;
-    color: #666;
+    font-size: 1.05rem;
+    color: var(--color-text-light);
+    max-width: 600px;
+    margin: 0 auto;
 }
 
 .progress-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: auto 1fr auto;
     gap: 2rem;
-    margin-bottom: 3rem;
-    padding: 2rem;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.25rem 2rem;
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border-light);
 }
 
-.progress-item {
-    text-align: center;
-}
-
+.progress-item { text-align: center; }
 .progress-number {
-    font-size: 3rem;
-    font-weight: bold;
-    color: #e91e63;
-    margin-bottom: 0.5rem;
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    line-height: 1;
+}
+.progress-label {
+    color: var(--color-text-light);
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
 }
 
-.progress-label {
-    color: #666;
-    font-size: 1rem;
+.progress-bar-wide {
+    width: 100%;
+    height: 8px;
+    background: var(--color-border-light);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.progress-fill-wide {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary-light), var(--color-primary));
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    min-width: 4px;
+}
+
+.step-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+    padding: 0 2rem;
+}
+
+.step-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--color-border-light);
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.82rem;
+    flex-shrink: 0;
+    transition: all 0.3s;
+}
+.step-dot.done {
+    background: var(--color-success);
+    color: white;
+}
+.step-line {
+    height: 3px;
+    flex: 1;
+    background: var(--color-border-light);
+    transition: background 0.3s;
+}
+.step-line.done {
+    background: var(--color-success);
+}
+
+.step-labels {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+    padding: 0 1rem;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+.step-labels span {
+    flex: 1;
+    text-align: center;
 }
 
 .module-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 2rem;
-    margin-bottom: 3rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
 }
 
 .module-card {
-    background: white;
-    border-radius: 12px;
-    padding: 2rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border-left: 4px solid #e91e63;
-    transition: transform 0.3s, box-shadow 0.3s;
-    position: relative;
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border-light);
+    border-left: 4px solid var(--color-primary-light);
+    transition: all 0.25s ease;
 }
 
 .module-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
 .module-card.completed {
-    border-left-color: #4caf50;
-    background: #f8fff9;
+    border-left-color: var(--color-success);
+    background: #fafdf9;
 }
 
-.module-card.optional {
-    border-left-color: #9e9e9e;
-    background: #fafafa;
+.module-card.highlight {
+    border-left-color: var(--color-accent);
+    background: #fdfaf5;
 }
 
-.module-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-}
-
-.module-card h3 {
-    color: #333;
-    font-size: 1.4rem;
+.module-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     margin-bottom: 0.5rem;
 }
 
+.module-icon { font-size: 2.25rem; }
+
+.module-step {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+    background: var(--color-bg);
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-xl);
+}
+
+.module-card h3 {
+    font-family: var(--font-heading);
+    color: var(--color-text);
+    font-size: 1.2rem;
+    margin-bottom: 0.35rem;
+}
+
 .module-card p {
-    color: #666;
-    margin-bottom: 1rem;
-    min-height: 3rem;
+    color: var(--color-text-light);
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 
 .module-features {
     display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    margin: 1rem 0;
-    font-size: 0.9rem;
-    color: #555;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.75rem 0;
+}
+.module-features span {
+    font-size: 0.78rem;
+    color: var(--color-text-light);
+    background: var(--color-bg);
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border-light);
 }
 
 .status-badge {
     display: inline-block;
-    padding: 0.4rem 1rem;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    margin-bottom: 1rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-xl);
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
 }
 
 .status-badge.complete {
-    background: #e8f5e9;
-    color: #4caf50;
+    background: var(--color-success-bg);
+    color: var(--color-success);
 }
 
 .hub-actions {
     text-align: center;
     padding: 2rem;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border-light);
 }
 
 .btn-large {
-    font-size: 1.3rem;
-    padding: 1rem 2.5rem;
+    font-size: 1.15rem;
+    padding: 0.85rem 2.5rem;
 }
 
 .help-text {
-    margin-top: 1rem;
-    color: #999;
-    font-style: italic;
+    margin-top: 0.75rem;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
 }
 
 .reset-section {
     text-align: center;
     margin-top: 2rem;
-    padding: 1.5rem;
-    background: #fce4ec;
-    border-radius: 12px;
-    border: 1px solid #f8bbd0;
+    padding: 1.25rem;
+    background: var(--color-danger-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid #e8c4c4;
 }
 
 .reset-label {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 600;
-    color: #b71c1c;
-    margin-bottom: 0.5rem;
+    color: var(--color-danger);
+    margin-bottom: 0.3rem;
 }
 
 .reset-description {
-    font-size: 0.9rem;
-    color: #4a4a4a;
-    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--color-text-light);
+    margin-bottom: 0.75rem;
 }
 
 .btn-reset {
-    padding: 0.5rem 1.2rem;
-    background: #c62828;
+    padding: 0.4rem 1rem;
+    background: var(--color-danger);
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 0.9rem;
-    transition: background 0.3s;
+    font-size: 0.85rem;
+    font-family: var(--font-body);
+    transition: background 0.2s;
 }
+.btn-reset:hover { background: #b04a4a; }
 
-.btn-reset:hover {
-    background: #b71c1c;
+@media (max-width: 768px) {
+    .progress-summary { grid-template-columns: 1fr; gap: 1rem; }
+    .module-grid { grid-template-columns: 1fr; }
+    .step-flow { padding: 0; }
+    .step-labels { font-size: 0.65rem; }
 }
 </style>
 {% endblock %}

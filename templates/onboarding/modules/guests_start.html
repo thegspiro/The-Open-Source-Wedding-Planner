@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Guest List Setup - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div style="max-width: 700px; margin: 0 auto;">
+    <div class="page-header">
+        <h1>Start Your Guest List</h1>
+        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Back to Setup</a>
+    </div>
+
+    <div class="form-container" style="max-width: 100%;">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
+            <p style="color: var(--color-text-light);">Start with an estimate and add a few key names. You can add everyone else later.</p>
+        </div>
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Estimated Total Guest Count</label>
+                <input type="number" name="estimated_count" placeholder="e.g., 120" min="1" max="2000">
+                <p style="font-size: 0.82rem; color: var(--color-text-muted); margin-top: 0.3rem;">
+                    A rough number is fine - this helps with venue and catering planning.
+                </p>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--color-border-light); margin: 1.5rem 0;">
+
+            <h3 style="font-family: var(--font-heading); margin-bottom: 0.5rem;">Add Key Guests (optional)</h3>
+            <p style="color: var(--color-text-light); font-size: 0.9rem; margin-bottom: 1rem;">
+                Start with VIPs - parents, wedding party, closest family. You can add the full list anytime.
+            </p>
+
+            <div id="guest-rows">
+                {% for i in range(5) %}
+                <div class="form-row" style="margin-bottom: 0.5rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <input type="text" name="guest_name" placeholder="Guest name">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <select name="guest_side">
+                            <option value="">Side (optional)</option>
+                            {% for person in people %}
+                            <option value="{{ person.name }}'s">{{ person.name }}'s side</option>
+                            {% endfor %}
+                            <option value="mutual">Mutual</option>
+                        </select>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <button type="button" onclick="addGuestRow()" class="btn-secondary btn-small" style="margin: 0.75rem 0;">+ Add More Rows</button>
+
+            <div class="form-actions" style="justify-content: center; margin-top: 1.5rem;">
+                <button type="submit" class="btn-primary" style="padding: 0.7rem 2rem;">Save &amp; Continue</button>
+                <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary">Skip for Now</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function addGuestRow() {
+    var container = document.getElementById('guest-rows');
+    var sides = `<option value="">Side (optional)</option>{% for person in people %}<option value="{{ person.name }}'s">{{ person.name }}'s side</option>{% endfor %}<option value="mutual">Mutual</option>`;
+    var row = document.createElement('div');
+    row.className = 'form-row';
+    row.style.marginBottom = '0.5rem';
+    row.innerHTML = '<div class="form-group" style="margin-bottom:0;"><input type="text" name="guest_name" placeholder="Guest name"></div><div class="form-group" style="margin-bottom:0;"><select name="guest_side">' + sides + '</select></div>';
+    container.appendChild(row);
+}
+</script>
+{% endblock %}

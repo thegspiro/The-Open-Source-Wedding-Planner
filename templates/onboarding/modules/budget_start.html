@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Set Your Budget - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div class="page-header">
+        <div>
+            <h1>Set Your Budget</h1>
+            <p class="subtitle">Choose a budget tier to get recommended expense categories, or set a custom amount.</p>
+        </div>
+        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Back to Setup</a>
+    </div>
+
+    <!-- Budget tier cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+        {% for key, tmpl in templates.items() %}
+        <form method="POST" style="display: contents;">
+            <input type="hidden" name="template_key" value="{{ key }}">
+            <button type="submit" style="all: unset; cursor: pointer; display: block; width: 100%;">
+                <div class="dashboard-card" style="text-align: left; padding: 1.5rem;">
+                    <div style="font-size: 1.75rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.25rem;">
+                        ${{ "{:,.0f}".format(tmpl.total) }}
+                    </div>
+                    <div style="font-weight: 600; margin-bottom: 0.3rem;">{{ tmpl.name.split('(')[0].strip() }}</div>
+                    <div style="font-size: 0.85rem; color: var(--color-text-light); margin-bottom: 0.75rem;">
+                        {{ tmpl.guest_count }} guests &middot; {{ tmpl.description }}
+                    </div>
+                    <details style="font-size: 0.82rem;">
+                        <summary style="cursor: pointer; color: var(--color-primary); font-weight: 500;">View breakdown</summary>
+                        <div style="margin-top: 0.5rem;">
+                            {% for exp in tmpl.expenses %}
+                            <div style="display: flex; justify-content: space-between; padding: 0.2rem 0; border-bottom: 1px dotted var(--color-border-light);">
+                                <span>{{ exp.category }}</span>
+                                <span style="color: var(--color-text-light);">${{ "{:,.0f}".format(exp.amount) }} ({{ exp.percentage }}%)</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </details>
+                </div>
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+
+    <!-- Custom budget -->
+    <div class="module-section">
+        <h2 style="font-size: 1.1rem;">Or Set a Custom Budget</h2>
+        <p style="color: var(--color-text-light); font-size: 0.9rem; margin-bottom: 1rem;">Enter your own total budget. You can add expense categories manually later.</p>
+        <form method="POST" style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+            <input type="hidden" name="template_key" value="custom">
+            <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+                <label>Total Budget ($)</label>
+                <input type="number" name="custom_budget" placeholder="e.g., 25000" step="100" min="0">
+            </div>
+            <button type="submit" class="btn-primary" style="margin-bottom: 0;">Set Custom Budget</button>
+        </form>
+    </div>
+
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary">Skip for Now</a>
+    </div>
+</div>
+{% endblock %}
