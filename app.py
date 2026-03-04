@@ -854,9 +854,18 @@ def check_reminders():
         
         time_module.sleep(3600)  # Check every hour
 
+def start_reminder_thread():
+    """Start the background reminder thread (once per process)."""
+    reminder_thread = threading.Thread(target=check_reminders, daemon=True)
+    reminder_thread.start()
+
+# Start reminder thread:
+# - Under gunicorn: __name__ != '__main__', start immediately
+# - Under `python app.py` with debug/reloader: only in the reloader child process
+if __name__ != '__main__':
+    start_reminder_thread()
+
 if __name__ == '__main__':
-    # Only start reminder thread once (avoid duplicate under Flask reloader)
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
-        reminder_thread = threading.Thread(target=check_reminders, daemon=True)
-        reminder_thread.start()
+        start_reminder_thread()
     app.run(host='0.0.0.0', port=5000, debug=True)
