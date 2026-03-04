@@ -656,17 +656,294 @@ def onboarding_people(wedding_id):
     # Otherwise redirect to step 1
     return redirect(url_for('onboarding_step1', wedding_id=wedding_id))
 
-# Placeholder routes for other modules (to be built out)
-@app.route('/wedding/<int:wedding_id>/onboarding/reception/start')
+# ============================================
+# RECEPTION ONBOARDING
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/onboarding/reception/start', methods=['GET', 'POST'])
 @login_required
 def onboarding_reception_start(wedding_id):
-    flash('Reception onboarding coming soon!', 'info')
-    return redirect(url_for('onboarding_hub', wedding_id=wedding_id))
+    """Reception onboarding - choose a reception style"""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    from templates_data import RECEPTION_TEMPLATES
 
-@app.route('/wedding/<int:wedding_id>/onboarding/budget/start')
+    if request.method == 'POST':
+        template_key = request.form.get('template_key')
+        template = RECEPTION_TEMPLATES.get(template_key)
+        if not template:
+            flash('Please select a reception style.', 'error')
+            return redirect(url_for('onboarding_reception_start', wedding_id=wedding_id))
+
+        reception = wedding.reception
+        if template_key == 'no_reception':
+            prefs = json.loads(wedding.onboarding_preferences or '{}')
+            prefs['reception_style'] = 'none'
+            wedding.onboarding_preferences = json.dumps(prefs)
+            modules = json.loads(wedding.modules_completed or '[]')
+            if 'reception' not in modules:
+                modules.append('reception')
+                wedding.modules_completed = json.dumps(modules)
+            db.session.commit()
+            flash('Got it - no formal reception. You can always add one later!', 'success')
+            return redirect(url_for('onboarding_hub', wedding_id=wedding_id))
+
+        if 'timeline' in template:
+            ReceptionTimelineItem.query.filter_by(reception_id=reception.id).delete()
+            for item in template['timeline']:
+                timeline_item = ReceptionTimelineItem(
+                    reception_id=reception.id,
+                    order=item['order'],
+                    item_name=item['name'],
+                    duration_seconds=item.get('duration', 0),
+                    description=item.get('description', '')
+                )
+                db.session.add(timeline_item)
+
+        prefs = json.loads(wedding.onboarding_preferences or '{}')
+        prefs['reception_style'] = template_key
+        wedding.onboarding_preferences = json.dumps(prefs)
+        db.session.commit()
+
+        return redirect(url_for('onboarding_reception_customize', wedding_id=wedding_id))
+
+    return render_template('onboarding/modules/reception_start.html',
+                         wedding=wedding, templates=RECEPTION_TEMPLATES)
+
+
+@app.route('/wedding/<int:wedding_id>/onboarding/reception/customize', methods=['GET', 'POST'])
+@login_required
+def onboarding_reception_customize(wedding_id):
+    """Customize reception details after choosing a style"""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    reception = wedding.reception
+
+    if request.method == 'POST':
+        reception.venue_name = request.form.get('venue_name')
+        reception.venue_address = request.form.get('venue_address')
+        if request.form.get('expected_guest_count'):
+            reception.expected_guest_count = int(request.form.get('expected_guest_count'))
+        if request.form.get('start_time'):
+            reception.start_time = datetime.strptime(request.form.get('start_time'), '%H:%M').time()
+
+        db.session.commit()
+
+        modules = json.loads(wedding.modules_completed or '[]')
+        if 'reception' not in modules:
+            modules.append('reception')
+            wedding.modules_completed = json.dumps(modules)
+            db.session.commit()
+
+        flash('Reception setup complete!', 'success')
+        return redirect(url_for('onboarding_hub', wedding_id=wedding_id))
+
+    timeline_items = sorted(reception.timeline_items, key=lambda x: x.order) if reception else []
+    return render_template('onboarding/modules/reception_customize.html',
+                         wedding=wedding, reception=reception, timeline_items=timeline_items)
+
+
+# ============================================
+# BUDGET ONBOARDING
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/onboarding/budget/start', methods=['GET', 'POST'])
 @login_required
 def onboarding_budget_start(wedding_id):
-    flash('Budget onboarding coming soon!', 'info')
+    """Budget onboarding - pick a budget tier or set custom"""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    from templates_data import BUDGET_TEMPLATES
+
+    if request.method == 'POST':
+        template_key = request.form.get('template_key')
+        custom_budget = request.form.get('custom_budget')
+
+        budget = wedding.budget
+
+        if template_key and template_key != 'custom':
+            template = BUDGET_TEMPLATES.get(template_key)
+            if template:
+                budget.total_budget = template['total']
+                BudgetExpense.query.filter_by(budget_id=budget.id).delete()
+                for exp in template.get('expenses', []):
+                    expense = BudgetExpense(
+                        budget_id=budget.id,
+                        item_name=exp['category'] + ' (estimated)',
+                        estimated_cost=exp['amount'],
+                        category=exp['category'],
+                        payment_status='unpaid'
+                    )
+                    db.session.add(expense)
+
+                prefs = json.loads(wedding.onboarding_preferences or '{}')
+                prefs['budget_tier'] = template_key
+                wedding.onboarding_preferences = json.dumps(prefs)
+        elif custom_budget:
+            try:
+                budget.total_budget = float(custom_budget)
+            except ValueError:
+                flash('Please enter a valid number for your budget.', 'error')
+                return redirect(url_for('onboarding_budget_start', wedding_id=wedding_id))
+            prefs = json.loads(wedding.onboarding_preferences or '{}')
+            prefs['budget_tier'] = 'custom'
+            wedding.onboarding_preferences = json.dumps(prefs)
+
+        modules = json.loads(wedding.modules_completed or '[]')
+        if 'budget' not in modules:
+            modules.append('budget')
+            wedding.modules_completed = json.dumps(modules)
+
+        db.session.commit()
+        flash('Budget setup complete!', 'success')
+        return redirect(url_for('onboarding_hub', wedding_id=wedding_id))
+
+    return render_template('onboarding/modules/budget_start.html',
+                         wedding=wedding, templates=BUDGET_TEMPLATES)
+
+
+# ============================================
+# GUEST LIST ONBOARDING
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/onboarding/guests/start', methods=['GET', 'POST'])
+@login_required
+def onboarding_guests_start(wedding_id):
+    """Guest list quick-setup - estimate count and add key guests"""
+    wedding = Wedding.query.get_or_404(wedding_id)
+
+    if request.method == 'POST':
+        estimated_count = request.form.get('estimated_count')
+        prefs = json.loads(wedding.onboarding_preferences or '{}')
+        prefs['estimated_guest_count'] = int(estimated_count) if estimated_count else 0
+        wedding.onboarding_preferences = json.dumps(prefs)
+
+        guest_names = request.form.getlist('guest_name')
+        guest_sides = request.form.getlist('guest_side')
+        for i, name in enumerate(guest_names):
+            name = name.strip()
+            if name:
+                side = guest_sides[i] if i < len(guest_sides) else ''
+                guest = Guest(
+                    wedding_id=wedding_id,
+                    name=name,
+                    side=side,
+                    rsvp_status='pending'
+                )
+                db.session.add(guest)
+
+        modules = json.loads(wedding.modules_completed or '[]')
+        if 'guests' not in modules:
+            modules.append('guests')
+            wedding.modules_completed = json.dumps(modules)
+
+        db.session.commit()
+        flash('Guest list started! You can add more guests anytime.', 'success')
+        return redirect(url_for('onboarding_hub', wedding_id=wedding_id))
+
+    people = wedding.people
+    return render_template('onboarding/modules/guests_start.html',
+                         wedding=wedding, people=people)
+
+
+# ============================================
+# AUTO-GENERATE PLANNING TASKS
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/onboarding/generate-tasks', methods=['GET', 'POST'])
+@login_required
+def onboarding_generate_tasks(wedding_id):
+    """Generate planning milestone tasks based on wedding date"""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    from templates_data import PLANNING_MILESTONE_TASKS
+
+    if request.method == 'POST':
+        selected_tasks = request.form.getlist('task_ids')
+        wedding_date = wedding.wedding_date
+        today_dt = date.today()
+        count = 0
+
+        for idx_str in selected_tasks:
+            idx = int(idx_str)
+            if idx < len(PLANNING_MILESTONE_TASKS):
+                title, description, category, priority, months_before = PLANNING_MILESTONE_TASKS[idx]
+                due_date = wedding_date - timedelta(days=months_before * 30)
+                if due_date.date() < today_dt:
+                    due_date = datetime.combine(today_dt + timedelta(days=7), datetime.min.time())
+
+                task = Task(
+                    wedding_id=wedding_id,
+                    title=title,
+                    description=description,
+                    due_date=due_date,
+                    priority=priority,
+                    category=category,
+                    months_before=months_before,
+                    is_milestone=True
+                )
+                db.session.add(task)
+                count += 1
+
+        prefs = json.loads(wedding.onboarding_preferences or '{}')
+        prefs['tasks_generated'] = True
+        wedding.onboarding_preferences = json.dumps(prefs)
+
+        db.session.commit()
+        flash(f'{count} planning tasks added to your task list!', 'success')
+        return redirect(url_for('onboarding_hub', wedding_id=wedding_id))
+
+    wedding_date = wedding.wedding_date
+    today_dt = date.today()
+    months_until = max(0, (wedding_date.year - today_dt.year) * 12 + wedding_date.month - today_dt.month)
+
+    task_groups = {}
+    period_order = ['12+ Months Before', '10-11 Months Before', '8-9 Months Before',
+                    '6-7 Months Before', '4-5 Months Before', '2-3 Months Before', 'Final Month']
+    for idx, (title, description, category, priority, months_before) in enumerate(PLANNING_MILESTONE_TASKS):
+        if months_before <= 1:
+            period = 'Final Month'
+        elif months_before <= 3:
+            period = '2-3 Months Before'
+        elif months_before <= 5:
+            period = '4-5 Months Before'
+        elif months_before <= 7:
+            period = '6-7 Months Before'
+        elif months_before <= 9:
+            period = '8-9 Months Before'
+        elif months_before <= 11:
+            period = '10-11 Months Before'
+        else:
+            period = '12+ Months Before'
+
+        if period not in task_groups:
+            task_groups[period] = []
+
+        due_date = wedding_date - timedelta(days=months_before * 30)
+        is_overdue = due_date.date() < today_dt
+
+        task_groups[period].append({
+            'idx': idx,
+            'title': title,
+            'description': description,
+            'category': category,
+            'priority': priority,
+            'months_before': months_before,
+            'is_overdue': is_overdue,
+        })
+
+    existing_milestones = Task.query.filter_by(wedding_id=wedding_id, is_milestone=True).count()
+
+    return render_template('onboarding/modules/generate_tasks.html',
+                         wedding=wedding,
+                         task_groups=task_groups,
+                         period_order=period_order,
+                         months_until=months_until,
+                         existing_milestones=existing_milestones)
+
+@app.route('/wedding/<int:wedding_id>/onboarding/reset', methods=['POST'])
+def onboarding_reset(wedding_id):
+    """Reset onboarding progress so user can redo setup modules"""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding.modules_completed = json.dumps([])
+    db.session.commit()
+    flash('Onboarding progress has been reset. You can set up modules again.', 'info')
     return redirect(url_for('onboarding_hub', wedding_id=wedding_id))
 
 @app.route('/wedding/<int:wedding_id>')

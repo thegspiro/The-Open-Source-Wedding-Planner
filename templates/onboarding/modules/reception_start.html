@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Reception Style - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    <div class="page-header">
+        <div>
+            <h1>Choose Your Reception Style</h1>
+            <p class="subtitle">Pick a style that matches your vision. This will set up a timeline template you can customize.</p>
+        </div>
+        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Back to Setup</a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for key, tmpl in templates.items() %}
+        <form method="POST" style="display: contents;">
+            <input type="hidden" name="template_key" value="{{ key }}">
+            <button type="submit" style="all: unset; cursor: pointer; display: block; width: 100%;">
+                <div class="module-section" style="transition: all 0.2s; border: 2px solid transparent; {% if key == 'no_reception' %}opacity: 0.7;{% endif %}">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                        <div style="flex: 1;">
+                            <h2 style="font-size: 1.15rem; margin-bottom: 0.4rem;">{{ tmpl.name }}</h2>
+                            <p style="color: var(--color-text-light); margin-bottom: 0.5rem;">{{ tmpl.description }}</p>
+                            {% if tmpl.get('tags') %}
+                            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                                {% for tag in tmpl.tags %}
+                                <span class="category-badge">{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div style="text-align: right; flex-shrink: 0;">
+                            {% if tmpl.get('typical_duration') and tmpl.typical_duration > 0 %}
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-primary);">{{ (tmpl.typical_duration / 60)|int }}h</div>
+                            <div style="font-size: 0.82rem; color: var(--color-text-muted);">typical duration</div>
+                            {% endif %}
+                            {% if tmpl.get('catering_style') %}
+                            <div style="margin-top: 0.5rem;">
+                                <span class="category-badge ceremony">{{ tmpl.catering_style }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if tmpl.get('timeline') %}
+                    <details style="margin-top: 0.75rem;">
+                        <summary style="cursor: pointer; color: var(--color-primary); font-weight: 500; font-size: 0.9rem;">View timeline ({{ tmpl.timeline|length }} events)</summary>
+                        <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem;">
+                            {% for item in tmpl.timeline %}
+                            <div style="display: flex; gap: 0.75rem; padding: 0.35rem 0; border-bottom: 1px solid var(--color-border-light); font-size: 0.88rem;">
+                                <span style="color: var(--color-primary); font-weight: 600; min-width: 20px;">{{ item.order }}.</span>
+                                <span style="font-weight: 500;">{{ item.name }}</span>
+                                <span style="color: var(--color-text-muted); margin-left: auto;">{{ (item.duration / 60)|int }}min</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </details>
+                    {% endif %}
+                    {% if tmpl.get('note') %}
+                    <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--color-text-muted); font-style: italic;">{{ tmpl.note }}</p>
+                    {% endif %}
+                </div>
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary">Skip for Now</a>
+    </div>
+</div>
+{% endblock %}
