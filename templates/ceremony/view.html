@@ -5,107 +5,111 @@
 {% block content %}
 <div class="page-header">
     <h1>Ceremony Details</h1>
-    <a href="{{ url_for('ceremony_edit', wedding_id=wedding.id) }}" class="btn-primary">Edit Details</a>
-</div>
-
-<div class="module-section">
-    <h2>Venue & Timing</h2>
-    <div class="info-grid">
-        <div class="info-item">
-            <strong>Venue:</strong> {{ ceremony.venue_name or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Address:</strong> {{ ceremony.venue_address or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Time:</strong> {{ ceremony.start_time.strftime('%I:%M %p') if ceremony.start_time else 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Duration:</strong> {{ ceremony.duration_minutes }} minutes
-        </div>
+    <div class="header-actions">
+        <a href="{{ url_for('ceremony_edit', wedding_id=wedding.id) }}" class="btn-primary">Edit Details</a>
+        <a href="{{ url_for('ceremony_vows', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Vows</a>
+        <a href="{{ url_for('ceremony_script', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Script</a>
+        <a href="{{ url_for('processional_order', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Processional</a>
     </div>
 </div>
 
-<div class="module-section">
-    <h2>Officiant</h2>
-    <div class="info-grid">
-        <div class="info-item">
-            <strong>Name:</strong> {{ ceremony.officiant_name or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Type:</strong> {{ ceremony.officiant_type or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Contact:</strong> {{ ceremony.officiant_contact or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Phone:</strong> {{ ceremony.officiant_phone or 'Not set' }}
-        </div>
-    </div>
+<!-- Tabs -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(event, 'details-tab')">Details</button>
+    <button class="tab-btn" onclick="switchTab(event, 'timeline-tab')">Timeline <span class="tab-count">{{ timeline_items|length }}</span></button>
+    {% if ceremony.has_special_readings %}<button class="tab-btn" onclick="switchTab(event, 'readings-tab')">Readings</button>{% endif %}
 </div>
 
-<div class="module-section">
-    <h2>Music</h2>
-    <div class="info-grid">
-        <div class="info-item">
-            <strong>Processional:</strong> {{ ceremony.processional_song or 'Not selected' }}
+<!-- Tab: Details -->
+<div class="tab-panel active" id="details-tab">
+    <div class="info-cards-grid">
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">📍</span>
+                <h3>Venue & Timing</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Venue</span><span class="detail-value {% if not ceremony.venue_name %}not-set{% endif %}">{{ ceremony.venue_name or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Address</span><span class="detail-value {% if not ceremony.venue_address %}not-set{% endif %}">{{ ceremony.venue_address or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value {% if not ceremony.start_time %}not-set{% endif %}">{{ ceremony.start_time.strftime('%I:%M %p') if ceremony.start_time else 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Duration</span><span class="detail-value">{{ ceremony.duration_minutes }} minutes</span></div>
         </div>
-        <div class="info-item">
-            <strong>Recessional:</strong> {{ ceremony.recessional_song or 'Not selected' }}
+
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">🙏</span>
+                <h3>Officiant</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value {% if not ceremony.officiant_name %}not-set{% endif %}">{{ ceremony.officiant_name or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Type</span><span class="detail-value {% if not ceremony.officiant_type %}not-set{% endif %}">{{ ceremony.officiant_type or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value {% if not ceremony.officiant_contact %}not-set{% endif %}">{{ ceremony.officiant_contact or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value {% if not ceremony.officiant_phone %}not-set{% endif %}">{{ ceremony.officiant_phone or 'Not set' }}</span></div>
         </div>
+
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">🎵</span>
+                <h3>Music</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Processional</span><span class="detail-value {% if not ceremony.processional_song %}not-set{% endif %}">{{ ceremony.processional_song or 'Not selected' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Recessional</span><span class="detail-value {% if not ceremony.recessional_song %}not-set{% endif %}">{{ ceremony.recessional_song or 'Not selected' }}</span></div>
+            {% if ceremony.has_unity_ceremony %}
+            <div class="detail-row"><span class="detail-label">Unity Song</span><span class="detail-value {% if not ceremony.unity_ceremony_song %}not-set{% endif %}">{{ ceremony.unity_ceremony_song or 'Not selected' }}</span></div>
+            {% endif %}
+        </div>
+
         {% if ceremony.has_unity_ceremony %}
-        <div class="info-item">
-            <strong>Unity Ceremony:</strong> {{ ceremony.unity_ceremony_song or 'Not selected' }}
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">🕯️</span>
+                <h3>Unity Ceremony</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Type</span><span class="detail-value">{{ ceremony.unity_ceremony_type }}</span></div>
         </div>
         {% endif %}
     </div>
 </div>
 
-{% if ceremony.has_unity_ceremony %}
-<div class="module-section">
-    <h2>Unity Ceremony</h2>
-    <p><strong>Type:</strong> {{ ceremony.unity_ceremony_type }}</p>
-</div>
-{% endif %}
-
-<div class="module-section">
-    <div class="section-header">
-        <h2>Ceremony Timeline</h2>
-        <button onclick="document.getElementById('timeline-form').style.display='block'" class="btn-primary btn-small">+ Add Item</button>
+<!-- Tab: Timeline -->
+<div class="tab-panel" id="timeline-tab">
+    <div style="margin-bottom: 1rem;">
+        <button onclick="document.getElementById('timeline-form').style.display=document.getElementById('timeline-form').style.display==='none'?'block':'none'; this.querySelector('.toggle-arrow').classList.toggle('open')" class="collapsible-toggle">
+            <span class="toggle-arrow">&#9654;</span> Add Timeline Item
+        </button>
     </div>
-    
-    <div id="timeline-form" class="form-card" style="display: none;">
-        <h3>Add Timeline Item</h3>
-        <form method="POST" action="{{ url_for('ceremony_timeline_add', wedding_id=wedding.id) }}">
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Order</label>
-                    <input type="number" name="order" required min="1" value="{{ timeline_items|length + 1 }}">
+
+    <div id="timeline-form" style="display: none;">
+        <div class="info-card" style="margin-bottom: 1.5rem;">
+            <form method="POST" action="{{ url_for('ceremony_timeline_add', wedding_id=wedding.id) }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Order</label>
+                        <input type="number" name="order" required min="1" value="{{ timeline_items|length + 1 }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Item Name *</label>
+                        <input type="text" name="item_name" required placeholder="e.g., Processional">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Duration (seconds)</label>
+                        <input type="number" name="duration_seconds" placeholder="e.g., 180">
+                    </div>
+                    <div class="form-group">
+                        <label>Participants</label>
+                        <input type="text" name="participants" placeholder="e.g., Bridal party">
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label>Item Name *</label>
-                    <input type="text" name="item_name" required placeholder="e.g., Processional">
+                    <label>Description</label>
+                    <textarea name="description" rows="2"></textarea>
                 </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Duration (seconds)</label>
-                    <input type="number" name="duration_seconds" placeholder="e.g., 180">
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Add Item</button>
+                    <button type="button" onclick="document.getElementById('timeline-form').style.display='none'" class="btn-secondary">Cancel</button>
                 </div>
-                <div class="form-group">
-                    <label>Participants</label>
-                    <input type="text" name="participants" placeholder="e.g., Bridal party">
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea name="description" rows="2"></textarea>
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn-primary">Add Item</button>
-                <button type="button" onclick="document.getElementById('timeline-form').style.display='none'" class="btn-secondary">Cancel</button>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 
     {% if timeline_items %}
@@ -133,20 +137,23 @@
     {% endif %}
 </div>
 
+<!-- Tab: Readings -->
 {% if ceremony.has_special_readings %}
-<div class="module-section">
-    <div class="section-header">
-        <h2>Readings</h2>
-    </div>
+<div class="tab-panel" id="readings-tab">
     {% if readings %}
-    <div class="readings-list">
+    <div class="info-cards-grid">
         {% for reading in readings %}
-        <div class="reading-card">
-            <h4>{{ reading.title }}</h4>
-            <p><strong>Author:</strong> {{ reading.author }}</p>
-            <p><strong>Reader:</strong> {{ reading.reader_name }}</p>
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">📖</span>
+                <h3>{{ reading.title }}</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Author</span><span class="detail-value">{{ reading.author }}</span></div>
+            <div class="detail-row"><span class="detail-label">Reader</span><span class="detail-value">{{ reading.reader_name }}</span></div>
             {% if reading.text_content %}
-            <div class="reading-text">{{ reading.text_content }}</div>
+            <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--color-border-light); border-radius: var(--radius-sm); font-size: 0.88rem; color: var(--color-text-light); line-height: 1.6; font-style: italic;">
+                {{ reading.text_content }}
+            </div>
             {% endif %}
         </div>
         {% endfor %}
@@ -157,7 +164,16 @@
 </div>
 {% endif %}
 
-<div class="page-actions">
-    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">← Back to Dashboard</a>
+<div class="page-actions" style="margin-top: 2rem;">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
 </div>
+
+<script>
+function switchTab(e, tabId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+}
+</script>
 {% endblock %}

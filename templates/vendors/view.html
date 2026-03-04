@@ -14,90 +14,83 @@
 </div>
 
 {% if vendors %}
-<div class="dashboard-grid">
+<!-- Stats -->
+{% set contracted = vendors|selectattr('contract_signed')|list|length %}
+<div class="stats-row">
+    <div class="stat-box"><div class="stat-num">{{ vendors|length }}</div><div>Total Vendors</div></div>
+    <div class="stat-box"><div class="stat-num">{{ contracted }}</div><div>Contracted</div></div>
+    <div class="stat-box"><div class="stat-num">{{ vendors|length - contracted }}</div><div>Pending</div></div>
+    <div class="stat-box"><div class="stat-num">${{ "{:,.0f}".format(vendors|sum(attribute='total_cost', default=0)) }}</div><div>Total Cost</div></div>
+</div>
+
+<!-- Category Filter -->
+{% set vendor_categories = [] %}
+{% for v in vendors %}
+    {% if v.category and v.category not in vendor_categories %}
+        {% if vendor_categories.append(v.category) %}{% endif %}
+    {% endif %}
+{% endfor %}
+{% if vendor_categories|length > 1 %}
+<div class="tab-links">
+    <a href="{{ url_for('vendors_view', wedding_id=wedding.id) }}" class="tab-link {% if not request.args.get('cat') %}active{% endif %}">All</a>
+    {% for cat in vendor_categories|sort %}
+    <a href="{{ url_for('vendors_view', wedding_id=wedding.id, cat=cat) }}" class="tab-link {% if request.args.get('cat') == cat %}active{% endif %}">{{ cat }}</a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="info-cards-grid">
     {% for vendor in vendors %}
-    <div class="dashboard-card">
-        <h3>{{ vendor.business_name }}</h3>
-        <p class="stat-label">{{ vendor.category }}</p>
-
-        <div class="info-grid">
-            {% if vendor.contact_name %}
-            <div class="info-item">
-                <strong>Contact:</strong> {{ vendor.contact_name }}
+    {% if not request.args.get('cat') or vendor.category == request.args.get('cat') %}
+    <div class="info-card">
+        <div class="info-card-header" style="justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <h3 style="margin: 0;">{{ vendor.business_name }}</h3>
             </div>
-            {% endif %}
-            {% if vendor.email %}
-            <div class="info-item">
-                <strong>Email:</strong> {{ vendor.email }}
-            </div>
-            {% endif %}
-            {% if vendor.phone %}
-            <div class="info-item">
-                <strong>Phone:</strong> {{ vendor.phone }}
-            </div>
-            {% endif %}
-            {% if vendor.website %}
-            <div class="info-item">
-                <strong>Website:</strong> <a href="{{ vendor.website }}" target="_blank">{{ vendor.website }}</a>
-            </div>
-            {% endif %}
-        </div>
-
-        <div class="vendor-status">
             {% if vendor.contract_signed %}
-            <span class="rsvp-accepted">Contract Signed</span>
+            <span class="rsvp-chip yes" style="font-size: 0.7rem;">Contracted</span>
             {% else %}
-            <span class="rsvp-pending">No Contract</span>
+            <span class="rsvp-chip pending" style="font-size: 0.7rem;">Pending</span>
             {% endif %}
         </div>
+        <div style="margin-bottom: 0.75rem;">
+            <span class="category-badge">{{ vendor.category }}</span>
+        </div>
+
+        {% if vendor.contact_name %}
+        <div class="detail-row"><span class="detail-label">Contact</span><span class="detail-value">{{ vendor.contact_name }}</span></div>
+        {% endif %}
+        {% if vendor.email %}
+        <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">{{ vendor.email }}</span></div>
+        {% endif %}
+        {% if vendor.phone %}
+        <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">{{ vendor.phone }}</span></div>
+        {% endif %}
+        {% if vendor.website %}
+        <div class="detail-row"><span class="detail-label">Website</span><span class="detail-value"><a href="{{ vendor.website }}" target="_blank" style="color: var(--color-primary);">Visit</a></span></div>
+        {% endif %}
 
         {% if vendor.total_cost %}
-        <p class="stat-label">Total Cost: ${{ "{:,.2f}".format(vendor.total_cost) }}</p>
+        <div class="detail-row"><span class="detail-label">Total Cost</span><span class="detail-value" style="font-weight: 600;">${{ "{:,.2f}".format(vendor.total_cost) }}</span></div>
         {% endif %}
         {% if vendor.deposit_amount %}
-        <p class="stat-small">Deposit: ${{ "{:,.2f}".format(vendor.deposit_amount) }}
-            {% if vendor.deposit_paid %}
-            <span class="rsvp-accepted">Paid</span>
-            {% else %}
-            <span class="rsvp-pending">Unpaid</span>
-            {% endif %}
-        </p>
-        {% endif %}
-
-        {% if vendor.cancellation_policy %}
-        <div class="info-item">
-            <strong>Cancellation:</strong> {{ vendor.cancellation_policy[:100] }}{% if vendor.cancellation_policy|length > 100 %}...{% endif %}
-        </div>
-        {% endif %}
-        {% if vendor.backup_contact %}
-        <div class="info-item">
-            <strong>Backup:</strong> {{ vendor.backup_contact }}{% if vendor.backup_phone %} ({{ vendor.backup_phone }}){% endif %}
+        <div class="detail-row">
+            <span class="detail-label">Deposit</span>
+            <span class="detail-value">
+                ${{ "{:,.2f}".format(vendor.deposit_amount) }}
+                {% if vendor.deposit_paid %}<span class="rsvp-chip yes" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; margin-left: 0.25rem;">Paid</span>{% else %}<span class="rsvp-chip pending" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; margin-left: 0.25rem;">Due</span>{% endif %}
+            </span>
         </div>
         {% endif %}
 
         {% if vendor.rating %}
-        <div class="info-item">
-            <strong>Rating:</strong>
-            <span class="star-rating">{% for i in range(vendor.rating) %}★{% endfor %}{% for i in range(5 - vendor.rating) %}☆{% endfor %}</span>
-        </div>
-        {% endif %}
-        {% if vendor.review_notes %}
-        <div class="info-item">
-            <strong>Review:</strong> {{ vendor.review_notes[:80] }}{% if vendor.review_notes|length > 80 %}...{% endif %}
-        </div>
-        {% endif %}
-        {% if vendor.setup_instructions %}
-        <div class="info-item">
-            <strong>Setup:</strong> {{ vendor.setup_instructions[:80] }}{% if vendor.setup_instructions|length > 80 %}...{% endif %}
-        </div>
-        {% endif %}
-        {% if vendor.meals_needed %}
-        <div class="info-item">
-            <strong>Vendor Meals:</strong> {{ vendor.meals_needed }}
+        <div class="detail-row">
+            <span class="detail-label">Rating</span>
+            <span class="detail-value"><span class="star-rating">{% for i in range(vendor.rating) %}★{% endfor %}{% for i in range(5 - vendor.rating) %}☆{% endfor %}</span></span>
         </div>
         {% endif %}
 
-        <div class="form-actions">
+        <div style="display: flex; gap: 0.3rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--color-border-light);">
             <a href="{{ url_for('vendor_edit', wedding_id=wedding.id, vendor_id=vendor.id) }}" class="btn-primary btn-small">Edit</a>
             <a href="{{ url_for('vendor_notes_view', wedding_id=wedding.id, vendor_id=vendor.id) }}" class="btn-secondary btn-small">Notes ({{ vendor.communication_log|length }})</a>
             <form method="POST" action="{{ url_for('vendor_delete', wedding_id=wedding.id, vendor_id=vendor.id) }}" class="form-inline">
@@ -105,6 +98,7 @@
             </form>
         </div>
     </div>
+    {% endif %}
     {% endfor %}
 </div>
 {% else %}
