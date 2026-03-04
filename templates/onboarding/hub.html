@@ -117,6 +117,16 @@
         <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-large btn-success">Done - Go to Dashboard →</a>
         <p class="help-text">You can always come back to setup more modules later</p>
     </div>
+
+    {% if modules_completed|length > 0 %}
+    <div class="reset-section">
+        <form method="POST" action="{{ url_for('onboarding_reset', wedding_id=wedding.id) }}">
+            <p class="reset-label">Reset Onboarding Progress?</p>
+            <p class="reset-description">This will clear your module completion status so you can redo the setup. Your wedding data (people, ceremony details, etc.) will be kept.</p>
+            <button type="submit" class="btn-reset" onclick="return confirm('Are you sure you want to reset your onboarding progress?')">Reset Progress</button>
+        </form>
+    </div>
+    {% endif %}
 </div>
 
 <style>
@@ -258,6 +268,43 @@
     margin-top: 1rem;
     color: #999;
     font-style: italic;
+}
+
+.reset-section {
+    text-align: center;
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #fce4ec;
+    border-radius: 12px;
+    border: 1px solid #f8bbd0;
+}
+
+.reset-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #b71c1c;
+    margin-bottom: 0.5rem;
+}
+
+.reset-description {
+    font-size: 0.9rem;
+    color: #4a4a4a;
+    margin-bottom: 1rem;
+}
+
+.btn-reset {
+    padding: 0.5rem 1.2rem;
+    background: #c62828;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.3s;
+}
+
+.btn-reset:hover {
+    background: #b71c1c;
 }
 </style>
 {% endblock %}

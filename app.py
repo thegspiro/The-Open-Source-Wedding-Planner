@@ -473,6 +473,15 @@ def onboarding_budget_start(wedding_id):
     flash('Budget onboarding coming soon!', 'info')
     return redirect(url_for('onboarding_hub', wedding_id=wedding_id))
 
+@app.route('/wedding/<int:wedding_id>/onboarding/reset', methods=['POST'])
+def onboarding_reset(wedding_id):
+    """Reset onboarding progress so user can redo setup modules"""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding.modules_completed = json.dumps([])
+    db.session.commit()
+    flash('Onboarding progress has been reset. You can set up modules again.', 'info')
+    return redirect(url_for('onboarding_hub', wedding_id=wedding_id))
+
 @app.route('/wedding/<int:wedding_id>')
 def wedding_dashboard(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
