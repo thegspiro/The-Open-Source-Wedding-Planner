@@ -4,21 +4,28 @@ A comprehensive Docker-based wedding planning application built with Python Flas
 
 ## 🎯 Core Features
 
-### **13 Complete Modules:**
+### **20+ Complete Modules:**
 
 1. **👥 People** - Manage information about individuals getting married
 2. **📊 Dashboard** - Central hub with overview statistics
-3. **💒 Ceremony** - Complete ceremony planning with timeline builder
-4. **🎉 Reception** - Reception venue, catering, music, and timeline
-5. **👨‍👩‍👧‍👦 Guests** - Full guest list with RSVP tracking
-6. **🤝 Wedding Party** - Manage attendants and processional order
-7. **💼 Vendors** - Track all vendors, contracts, and payments
-8. **💰 Budget** - Comprehensive budget tracking
-9. **✅ Tasks** - Task management with email reminders
-10. **✈️ Honeymoon** - Itinerary planning and packing lists
-11. **🎨 Branding** - Wedding colors, fonts, and theme
-12. **👔 Attire** - Track all wedding attire and fittings
-13. **🎁 Registry** - Gift registry tracking
+3. **💒 Ceremony** - Complete ceremony planning with timeline builder, vow writing, script builder
+4. **🎉 Reception** - Reception venue, catering, music, timeline, and calculators
+5. **👨‍👩‍👧‍👦 Guests** - Full guest list with RSVP tracking, social groups, meal summary
+6. **🪑 Seating Chart** - Visual floor plan builder with drag-and-drop and auto-assign algorithm
+7. **👥 Social Groups** - Tag guests by social circles for smarter seating
+8. **🤝 Wedding Party** - Manage attendants and processional order
+9. **💼 Vendors** - Track vendors, contracts, payments, communication log, quote comparison
+10. **💰 Budget** - Budget tracking with templates, payment schedule, category limits
+11. **✅ Tasks** - Task management with email reminders, priority, and categories
+12. **✈️ Honeymoon** - Itinerary planning and packing lists
+13. **🎨 Branding** - Wedding colors, fonts, and theme
+14. **👔 Attire** - Track all wedding attire and fittings
+15. **🎁 Registry** - Gift registry tracking
+16. **🎤 Speeches** - Toast and speech management with order and duration
+17. **🎁 Favors** - Wedding favor tracking with assembly status
+18. **💌 Invitations** - Wording templates and stationery checklist
+19. **📋 RSVP Portal** - Public guest-facing RSVP with token-based access
+20. **🖨️ Print Pages** - Timeline, seating, vendor contacts, emergency contacts, shot list
 
 ---
 
@@ -114,11 +121,25 @@ docker-compose up -d --build
 
 ---
 
+### Seating Chart Builder
+- **9 table presets** from 48" round to King's table
+- **6 table roles**: head, sweetheart, King's, VIP, kids, guest
+- **Drag-and-drop floor plan** with visual table shapes
+- **Auto-assign algorithm** using Union-Find + affinity scoring
+- **Seating preferences**: "seat together" and "keep apart" constraints
+- **Social group clustering**: tag guests by real-world connections (church, work, college, etc.)
+
+---
+
 ## 📖 Documentation
 
 - **README.md** - This file
 - **QUICKSTART.md** - Quick start guide
-- **FEATURES.md** - Complete features list
+- **CHANGELOG.md** - Version history and release notes
+- **TROUBLESHOOTING.md** - Common issues and edge case fixes
+- **docs/WIKI.md** - Comprehensive feature documentation
+- **docs/TRAINING.md** - Step-by-step user training guide
+- **ONBOARDING_GUIDE.md** - Onboarding system documentation
 
 ---
 
