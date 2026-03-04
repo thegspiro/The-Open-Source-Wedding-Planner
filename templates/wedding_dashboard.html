@@ -19,6 +19,7 @@
             <input type="text" name="q" placeholder="Search everything..." class="search-input-inline">
             <button type="submit" class="btn-primary btn-small">Search</button>
         </form>
+        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Setup Wizard</a>
         <a href="{{ url_for('calendar_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Calendar</a>
         <a href="{{ url_for('index') }}" class="btn-secondary btn-small">All Weddings</a>
     </div>

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Customize Reception - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div style="max-width: 700px; margin: 0 auto;">
+    <div class="page-header">
+        <h1>Customize Your Reception</h1>
+        <a href="{{ url_for('onboarding_reception_start', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Change Style</a>
+    </div>
+
+    {% if timeline_items %}
+    <div class="module-section" style="margin-bottom: 2rem;">
+        <h2 style="font-size: 1.1rem;">Your Reception Timeline</h2>
+        <p style="color: var(--color-text-light); font-size: 0.9rem; margin-bottom: 1rem;">This was set up from your chosen template. You can edit it later from the Reception module.</p>
+        <div class="timeline-list">
+            {% for item in timeline_items %}
+            <div class="timeline-item">
+                <div class="timeline-order">{{ item.order }}</div>
+                <div class="timeline-content">
+                    <h4>{{ item.item_name }}</h4>
+                    {% if item.description %}<p style="color: var(--color-text-light); font-size: 0.88rem;">{{ item.description }}</p>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="form-container" style="max-width: 100%;">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
+            <p style="color: var(--color-text-light);">Add any details you know now. Everything is optional - you can fill in the rest later.</p>
+        </div>
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Reception Venue Name</label>
+                <input type="text" name="venue_name" value="{{ reception.venue_name or '' }}" placeholder="e.g., The Grand Ballroom">
+            </div>
+            <div class="form-group">
+                <label>Venue Address</label>
+                <input type="text" name="venue_address" value="{{ reception.venue_address or '' }}" placeholder="e.g., 123 Main Street, City, State">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Expected Guest Count</label>
+                    <input type="number" name="expected_guest_count" value="{{ reception.expected_guest_count or '' }}" placeholder="e.g., 120">
+                </div>
+                <div class="form-group">
+                    <label>Start Time</label>
+                    <input type="time" name="start_time" value="{{ reception.start_time.strftime('%H:%M') if reception.start_time else '' }}">
+                </div>
+            </div>
+            <div class="form-actions" style="justify-content: center;">
+                <button type="submit" class="btn-primary" style="padding: 0.7rem 2rem;">Complete Reception Setup</button>
+                <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary">Skip Details</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -374,3 +374,70 @@ BUDGET_TEMPLATES = {
         ]
     }
 }
+
+# ============================================
+# PLANNING MILESTONE TASKS
+# Auto-generated based on months before wedding
+# Format: (title, description, category, priority, months_before)
+# ============================================
+PLANNING_MILESTONE_TASKS = [
+    # 12+ months before
+    ('Set your wedding budget', 'Determine your total budget and how it will be divided among categories.', 'budget', 'high', 12),
+    ('Start your guest list draft', 'Create an initial list of everyone you might invite. You can refine it later.', 'guests', 'high', 12),
+    ('Research and book your venue', 'Visit venues, compare prices, and book your ceremony and reception locations.', 'vendors', 'high', 12),
+    ('Choose your wedding party', 'Decide who you want as your bridesmaids, groomsmen, or attendants.', 'wedding_party', 'medium', 12),
+    ('Start researching photographers', 'Look at portfolios, read reviews, and schedule consultations with photographers.', 'vendors', 'medium', 12),
+
+    # 10-11 months before
+    ('Book your officiant', 'Secure an officiant for your ceremony - religious leader, justice of the peace, or friend.', 'ceremony', 'high', 10),
+    ('Book your photographer', 'Sign a contract with your chosen photographer.', 'vendors', 'high', 10),
+    ('Book your caterer or confirm venue catering', 'If your venue doesn\'t include catering, find and book a caterer.', 'vendors', 'high', 10),
+    ('Start shopping for wedding attire', 'Begin looking at dresses, suits, or outfits. Allow time for ordering and alterations.', 'attire', 'medium', 10),
+    ('Research and book DJ or band', 'Listen to demos, check availability, and book your entertainment.', 'vendors', 'medium', 10),
+
+    # 8-9 months before
+    ('Book your florist', 'Share your vision and color palette with potential florists.', 'vendors', 'medium', 8),
+    ('Order your wedding attire', 'Place your order - most dresses take 4-6 months to arrive.', 'attire', 'high', 8),
+    ('Plan your honeymoon', 'Research destinations, book flights and accommodation.', 'honeymoon', 'medium', 8),
+    ('Start planning ceremony details', 'Choose readings, music, and the overall ceremony structure.', 'ceremony', 'medium', 8),
+    ('Register for gifts', 'Set up your gift registry at one or more stores.', 'gifts', 'low', 8),
+
+    # 6-7 months before
+    ('Book hair and makeup artists', 'Schedule trials and book your beauty team.', 'vendors', 'medium', 6),
+    ('Order your wedding cake', 'Schedule tastings and place your cake order.', 'vendors', 'medium', 6),
+    ('Plan your reception menu', 'Work with your caterer to finalize the menu, including dietary accommodations.', 'reception', 'medium', 6),
+    ('Book transportation', 'Arrange transportation for the wedding day (limo, shuttle, etc.).', 'vendors', 'low', 6),
+    ('Reserve hotel room blocks', 'Set up room blocks for out-of-town guests.', 'accommodations', 'medium', 6),
+
+    # 4-5 months before
+    ('Send save-the-dates', 'Mail or email save-the-date notices to all guests.', 'invitations', 'high', 5),
+    ('Order wedding invitations', 'Design and order your invitations, RSVP cards, and envelopes.', 'invitations', 'high', 5),
+    ('Plan rehearsal dinner', 'Choose a venue and menu for your rehearsal dinner.', 'reception', 'medium', 5),
+    ('Book wedding night accommodation', 'Reserve a special room for your wedding night.', 'accommodations', 'low', 5),
+    ('Schedule dress/suit fittings', 'Book fitting appointments for yourself and wedding party.', 'attire', 'medium', 4),
+
+    # 2-3 months before
+    ('Send wedding invitations', 'Mail invitations with RSVP deadline about 3 weeks before the wedding.', 'invitations', 'high', 3),
+    ('Apply for marriage license', 'Check your local requirements and apply for your marriage license.', 'legal', 'high', 3),
+    ('Write your vows', 'If writing personal vows, start drafting them now.', 'ceremony', 'medium', 3),
+    ('Create your wedding day timeline', 'Plan the hour-by-hour schedule for the entire wedding day.', 'ceremony', 'high', 2),
+    ('Finalize your seating chart', 'Assign tables and seats based on your final guest count.', 'reception', 'medium', 2),
+    ('Schedule final dress fitting', 'Final fitting should be about 2-3 weeks before the wedding.', 'attire', 'medium', 2),
+    ('Confirm all vendor details', 'Touch base with every vendor to confirm times, locations, and final details.', 'vendors', 'high', 2),
+
+    # 1 month before
+    ('Get final RSVP count', 'Follow up with guests who haven\'t responded.', 'guests', 'high', 1),
+    ('Finalize reception details with caterer', 'Give final head count and confirm menu choices.', 'reception', 'high', 1),
+    ('Create a day-of emergency kit', 'Pack a kit with safety pins, stain remover, pain relievers, tissues, etc.', 'ceremony', 'low', 1),
+    ('Break in your wedding shoes', 'Wear your shoes around the house to make them comfortable.', 'attire', 'low', 1),
+    ('Prepare wedding party gifts', 'Buy and wrap gifts for your wedding party.', 'gifts', 'medium', 1),
+    ('Prepare vendor tips and payments', 'Get cash tips ready in labeled envelopes for day-of vendors.', 'budget', 'medium', 1),
+    ('Have final hair and makeup trial', 'Do a final run-through of your wedding day look.', 'attire', 'medium', 1),
+
+    # Week of
+    ('Confirm all vendors one final time', 'Call or email every vendor with final confirmation.', 'vendors', 'high', 0),
+    ('Pack for honeymoon', 'Pack your bags so you\'re ready to leave after the wedding.', 'honeymoon', 'medium', 0),
+    ('Prepare ceremony readings and documents', 'Print readings, vows, and have your marriage license ready.', 'ceremony', 'medium', 0),
+    ('Delegate day-of responsibilities', 'Assign tasks to your wedding party and coordinator.', 'ceremony', 'high', 0),
+    ('Rehearsal and rehearsal dinner', 'Walk through the ceremony and enjoy dinner with your wedding party.', 'ceremony', 'high', 0),
+]
