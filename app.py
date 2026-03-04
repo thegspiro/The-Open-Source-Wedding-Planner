@@ -1118,6 +1118,7 @@ def budget_expense_add(wedding_id):
         actual_cost=request.form.get('actual_cost', type=float),
         paid_amount=request.form.get('paid_amount', type=float) or 0,
         payment_status=request.form.get('payment_status', 'unpaid'),
+        covered_by=request.form.get('covered_by'),
         notes=request.form.get('notes')
     )
     if request.form.get('payment_due_date'):
@@ -1141,6 +1142,7 @@ def budget_expense_edit(wedding_id, expense_id):
         if request.form.get('payment_due_date'):
             expense.payment_due_date = datetime.strptime(request.form.get('payment_due_date'), '%Y-%m-%d').date()
         expense.payment_status = request.form.get('payment_status')
+        expense.covered_by = request.form.get('covered_by')
         expense.notes = request.form.get('notes')
         db.session.commit()
         flash('Expense updated!', 'success')

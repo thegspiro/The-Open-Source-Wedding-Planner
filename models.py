@@ -413,6 +413,7 @@ class BudgetExpense(db.Model):
     paid_amount = db.Column(db.Float, default=0)
     payment_due_date = db.Column(db.Date)
     payment_status = db.Column(db.String(50))  # unpaid, deposit, partial, paid
+    covered_by = db.Column(db.String(200))  # name of person purchasing on couple's behalf
     notes = db.Column(db.Text)
 
 # ============================================

@@ -75,6 +75,12 @@
             </div>
 
             <div class="form-group">
+                <label for="covered_by">Covered By</label>
+                <input type="text" id="covered_by" name="covered_by" value="{{ expense.covered_by or '' }}" placeholder="e.g., Bride's parents, Uncle Jim">
+                <p class="form-help">Name of person purchasing this on the couple's behalf (leave blank if couple is paying).</p>
+            </div>
+
+            <div class="form-group">
                 <label for="notes">Notes</label>
                 <textarea id="notes" name="notes" rows="3">{{ expense.notes or '' }}</textarea>
             </div>
