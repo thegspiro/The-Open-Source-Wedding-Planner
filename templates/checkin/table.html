@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check In - {{ wedding.couple_names }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); min-height: 100vh;">
+    <main class="container" style="max-width: 500px; margin: 0 auto; padding: 2rem;">
+        <div class="form-container" style="text-align: center; padding: 2.5rem;">
+            <h1 style="color: #e91e63; margin-bottom: 0.5rem;">{{ wedding.couple_names }}</h1>
+            <p style="color: #666; font-size: 1.1rem; margin-bottom: 2rem;">
+                {{ wedding.wedding_date.strftime('%B %d, %Y') }}
+            </p>
+
+            {% if guest %}
+                <div style="background: #fff3e0; border-radius: 12px; padding: 2rem; margin-bottom: 1.5rem;">
+                    <p style="font-size: 1rem; color: #666; margin-bottom: 0.25rem;">Welcome,</p>
+                    <p style="font-size: 1.8rem; font-weight: 700; color: #e91e63; margin: 0;">{{ guest.name }}</p>
+                </div>
+
+                {% if table_name or table_number %}
+                <div style="background: #e8f5e9; border-radius: 12px; padding: 2rem; margin-bottom: 1.5rem;">
+                    <p style="font-size: 1rem; color: #666; margin-bottom: 0.5rem;">Your table</p>
+                    <p style="font-size: 2.5rem; font-weight: 700; color: #2e7d32; margin: 0;">
+                        {% if table_name %}{{ table_name }}{% else %}Table {{ table_number }}{% endif %}
+                    </p>
+                </div>
+                {% else %}
+                <div style="background: #e3f2fd; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <p style="color: #1565c0; margin: 0;">Table assignments are still being finalized. Please check with the hosts.</p>
+                </div>
+                {% endif %}
+
+                {% if guest.meal_choice %}
+                <div style="background: #f3e5f5; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 0.25rem;">Your meal</p>
+                    <p style="font-size: 1.2rem; color: #6a1b9a; margin: 0;">{{ guest.meal_choice }}</p>
+                </div>
+                {% endif %}
+
+            {% else %}
+                {% if searched_name %}
+                <div style="background: #fff3e0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <p style="color: #e65100; margin: 0;">
+                        We couldn't find "{{ searched_name }}" on the guest list. Please try again or check with the hosts.
+                    </p>
+                </div>
+                {% else %}
+                <div style="background: #e3f2fd; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <p style="color: #1565c0; margin: 0;">
+                        We couldn't identify you automatically. Please enter your name below.
+                    </p>
+                </div>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('guest_checkin_lookup', rsvp_token=rsvp_token) }}" style="margin-top: 1.5rem; text-align: left;">
+                    <div class="form-group">
+                        <label>Your Name</label>
+                        <input type="text" name="name" required placeholder="Enter your name as it appears on the invitation"
+                               value="{{ searched_name or '' }}" style="text-align: center; font-size: 1.1rem;">
+                    </div>
+                    <button type="submit" class="btn-primary" style="width: 100%; padding: 1rem;">Find My Table</button>
+                </form>
+            {% endif %}
+        </div>
+    </main>
+</body>
+</html>

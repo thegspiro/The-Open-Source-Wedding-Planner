@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g, Response, make_response
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g, Response, make_response, abort
 from models import (
     db, Wedding, Person, Task, Ceremony, CeremonyTimelineItem, CeremonyReading,
     Reception, ReceptionTimelineItem, MenuItem, SeatingTable, SeatingPreference, GuestGroup,
@@ -21,12 +21,13 @@ import os
 import csv
 import io
 import secrets
-from email_service import send_reminder_email
+from email_service import send_reminder_email, send_guest_email
 import threading
 import time as time_module
 import json
 import math
 from functools import wraps
+from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -34,6 +35,21 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///wedding_organizer.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+
+# Initialize security: CSRF protection, security headers, session hardening
+init_security(app)
+
+
+# Custom error handlers to prevent information leakage
+@app.errorhandler(403)
+def forbidden(e):
+    flash(str(e.description) if hasattr(e, 'description') else 'Access denied.', 'error')
+    return redirect(url_for('index'))
+
+@app.errorhandler(429)
+def too_many_requests(e):
+    flash(str(e.description) if hasattr(e, 'description') else 'Too many requests.', 'error')
+    return redirect(request.referrer or url_for('index'))
 
 # Initialize database and seed traditional elements
 with app.app_context():
@@ -237,14 +253,18 @@ def get_user_weddings(user):
 
 
 def get_wedding_or_403(wedding_id):
-    """Get a wedding, checking that the current user has access."""
-    wedding = Wedding.query.get_or_404(wedding_id)
-    user = g.user
-    if user:
-        access = WeddingAccess.query.filter_by(user_id=user.id, wedding_id=wedding_id).first()
-        if not access:
-            flash('You do not have access to this wedding.', 'error')
-            return None
+    """Get a wedding, checking that the current user has access.
+
+    Aborts with 403 if the user does not have access.
+    """
+    wedding = get_wedding_or_403(wedding_id)
+    user = g.get('user')
+    if not user:
+        abort(401)
+    access = WeddingAccess.query.filter_by(user_id=user.id, wedding_id=wedding_id).first()
+    if not access:
+        abort(403, description='You do not have access to this wedding.')
+    g.wedding_role = access.role
     return wedding
 
 
@@ -253,6 +273,7 @@ def get_wedding_or_403(wedding_id):
 # ============================================
 
 @app.route('/register', methods=['GET', 'POST'])
+@rate_limit(max_requests=10, window_seconds=3600)
 def register():
     if g.get('user'):
         return redirect(url_for('index'))
@@ -269,8 +290,9 @@ def register():
             errors.append('Name is required.')
         if not email:
             errors.append('Email is required.')
-        if not password or len(password) < 6:
-            errors.append('Password must be at least 6 characters.')
+        pw_valid, pw_error = validate_password_strength(password)
+        if not pw_valid:
+            errors.append(pw_error)
         if password != confirm_password:
             errors.append('Passwords do not match.')
         if user_type not in ('professional', 'friend', 'self'):
@@ -298,6 +320,7 @@ def register():
 
 
 @app.route('/login', methods=['GET', 'POST'])
+@rate_limit(max_requests=10, window_seconds=300)
 def login():
     if g.get('user'):
         return redirect(url_for('index'))
@@ -414,7 +437,7 @@ def new_wedding():
 @login_required
 def onboarding_step1(wedding_id):
     """Step 1: How many people are getting married?"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     
     if request.method == 'POST':
         num_people = int(request.form.get('num_people', 2))
@@ -429,7 +452,7 @@ def onboarding_step1(wedding_id):
 @login_required
 def onboarding_step2(wedding_id):
     """Step 2: Collect information about each person"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     
     num_people = session.get('onboarding_num_people', 2)
     
@@ -469,7 +492,7 @@ def onboarding_step2(wedding_id):
 @login_required
 def onboarding_step3(wedding_id):
     """Step 3: Customize terminology and preferences"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     people = Person.query.filter_by(wedding_id=wedding_id).order_by(Person.display_order).all()
     
     if request.method == 'POST':
@@ -517,7 +540,7 @@ def onboarding_step3(wedding_id):
 @login_required
 def onboarding_hub(wedding_id):
     """Central hub for module-by-module onboarding"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     modules_completed = json.loads(wedding.modules_completed or '[]')
     return render_template('onboarding/hub.html', wedding=wedding, modules_completed=modules_completed)
 
@@ -529,14 +552,14 @@ def onboarding_hub(wedding_id):
 @login_required
 def onboarding_ceremony_start(wedding_id):
     """Ceremony onboarding - choose ceremony type"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     return render_template('onboarding/modules/ceremony_start.html', wedding=wedding)
 
 @app.route('/wedding/<int:wedding_id>/onboarding/ceremony/templates', methods=['GET', 'POST'])
 @login_required
 def onboarding_ceremony_templates(wedding_id):
     """Show ceremony templates based on type selected"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     ceremony_type = request.form.get('ceremony_type') or request.args.get('ceremony_type')
     
     # Save preference
@@ -563,7 +586,7 @@ def onboarding_ceremony_templates(wedding_id):
 @login_required
 def onboarding_ceremony_template_preview(wedding_id, template_key):
     """Preview a specific ceremony template"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     from templates_data import CEREMONY_TEMPLATES
     
     template = CEREMONY_TEMPLATES.get(template_key)
@@ -580,7 +603,7 @@ def onboarding_ceremony_template_preview(wedding_id, template_key):
 @login_required
 def onboarding_ceremony_template_apply(wedding_id, template_key):
     """Apply a ceremony template"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     from templates_data import CEREMONY_TEMPLATES
     
     template = CEREMONY_TEMPLATES.get(template_key)
@@ -628,14 +651,14 @@ def onboarding_ceremony_template_apply(wedding_id, template_key):
 @login_required
 def onboarding_ceremony_custom(wedding_id):
     """Start custom ceremony setup with questions"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     return render_template('onboarding/modules/ceremony_custom_start.html', wedding=wedding)
 
 @app.route('/wedding/<int:wedding_id>/onboarding/ceremony/customize', methods=['GET', 'POST'])
 @login_required
 def onboarding_ceremony_customize(wedding_id):
     """Customize ceremony details after template or custom setup"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     ceremony = wedding.ceremony
     
     if request.method == 'POST':
@@ -674,7 +697,7 @@ def onboarding_ceremony_customize(wedding_id):
 @login_required
 def onboarding_people(wedding_id):
     """Quick people setup from hub"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     
     # If people already exist, just mark as complete and redirect
     if wedding.people:
@@ -696,7 +719,7 @@ def onboarding_people(wedding_id):
 @login_required
 def onboarding_reception_start(wedding_id):
     """Reception onboarding - choose a reception style"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     from templates_data import RECEPTION_TEMPLATES
 
     if request.method == 'POST':
@@ -746,7 +769,7 @@ def onboarding_reception_start(wedding_id):
 @login_required
 def onboarding_reception_customize(wedding_id):
     """Customize reception details after choosing a style"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     reception = wedding.reception
 
     if request.method == 'POST':
@@ -781,7 +804,7 @@ def onboarding_reception_customize(wedding_id):
 @login_required
 def onboarding_budget_start(wedding_id):
     """Budget onboarding - pick a budget tier or set custom"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     from templates_data import BUDGET_TEMPLATES
 
     if request.method == 'POST':
@@ -839,7 +862,7 @@ def onboarding_budget_start(wedding_id):
 @login_required
 def onboarding_guests_start(wedding_id):
     """Guest list quick-setup - estimate count and add key guests"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
 
     if request.method == 'POST':
         estimated_count = request.form.get('estimated_count')
@@ -883,7 +906,7 @@ def onboarding_guests_start(wedding_id):
 @login_required
 def onboarding_generate_tasks(wedding_id):
     """Generate planning milestone tasks based on wedding date"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     from templates_data import PLANNING_MILESTONE_TASKS
 
     if request.method == 'POST':
@@ -972,7 +995,7 @@ def onboarding_generate_tasks(wedding_id):
 @app.route('/wedding/<int:wedding_id>/onboarding/reset', methods=['POST'])
 def onboarding_reset(wedding_id):
     """Reset onboarding progress so user can redo setup modules"""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     wedding.modules_completed = json.dumps([])
     db.session.commit()
     flash('Onboarding progress has been reset. You can set up modules again.', 'info')
@@ -981,7 +1004,7 @@ def onboarding_reset(wedding_id):
 @app.route('/wedding/<int:wedding_id>')
 @login_required
 def wedding_dashboard(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     
     # Get summary statistics
     stats = {
@@ -1012,7 +1035,7 @@ def wedding_dashboard(wedding_id):
 @app.route('/wedding/<int:wedding_id>/delete', methods=['POST'])
 @login_required
 def delete_wedding(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     db.session.delete(wedding)
     db.session.commit()
     flash('Wedding deleted successfully!', 'success')
@@ -1022,7 +1045,7 @@ def delete_wedding(wedding_id):
 @app.route('/wedding/<int:wedding_id>/more')
 @login_required
 def more_modules(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     return render_template('more_modules.html', wedding=wedding)
 
 # Traditional Elements Library
@@ -1046,14 +1069,14 @@ def traditional_elements():
 @app.route('/wedding/<int:wedding_id>/people')
 @login_required
 def people_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     people = Person.query.filter_by(wedding_id=wedding_id).order_by(Person.display_order).all()
     return render_template('people/view.html', wedding=wedding, people=people)
 
 @app.route('/wedding/<int:wedding_id>/people/<int:person_id>/edit', methods=['GET', 'POST'])
 @login_required
 def person_edit(wedding_id, person_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     person = Person.query.get_or_404(person_id)
 
     if request.method == 'POST':
@@ -1076,7 +1099,7 @@ def person_edit(wedding_id, person_id):
 @app.route('/wedding/<int:wedding_id>/ceremony')
 @login_required
 def ceremony_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     ceremony = wedding.ceremony
     timeline_items = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony else []
     readings = sorted(ceremony.readings, key=lambda x: x.order or 999) if ceremony else []
@@ -1086,7 +1109,7 @@ def ceremony_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/ceremony/edit', methods=['GET', 'POST'])
 @login_required
 def ceremony_edit(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     ceremony = wedding.ceremony
     
     if request.method == 'POST':
@@ -1117,7 +1140,7 @@ def ceremony_edit(wedding_id):
 @app.route('/wedding/<int:wedding_id>/ceremony/timeline/add', methods=['POST'])
 @login_required
 def ceremony_timeline_add(wedding_id):
-    ceremony = Wedding.query.get_or_404(wedding_id).ceremony
+    ceremony = get_wedding_or_403(wedding_id).ceremony
     item = CeremonyTimelineItem(
         ceremony_id=ceremony.id,
         order=request.form.get('order', type=int),
@@ -1138,7 +1161,7 @@ def ceremony_timeline_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/reception')
 @login_required
 def reception_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     reception = wedding.reception
     timeline_items = sorted(reception.timeline_items, key=lambda x: x.order) if reception else []
     menu_items = reception.menu_items if reception else []
@@ -1149,7 +1172,7 @@ def reception_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/reception/edit', methods=['GET', 'POST'])
 @login_required
 def reception_edit(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     reception = wedding.reception
     
     if request.method == 'POST':
@@ -1191,7 +1214,7 @@ def reception_edit(wedding_id):
 @app.route('/wedding/<int:wedding_id>/guests')
 @login_required
 def guests_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     guests = wedding.guests
     stats = {
         'total': len(guests),
@@ -1204,7 +1227,7 @@ def guests_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/guests/add', methods=['GET', 'POST'])
 @login_required
 def guest_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         guest = Guest(
             wedding_id=wedding_id,
@@ -1216,7 +1239,8 @@ def guest_add(wedding_id):
             side=request.form.get('side'),
             dietary_restrictions=request.form.get('dietary_restrictions'),
             household_group=request.form.get('household_group'),
-            social_groups=request.form.get('social_groups')
+            social_groups=request.form.get('social_groups'),
+            guest_token=generate_token()
         )
         db.session.add(guest)
         db.session.commit()
@@ -1227,7 +1251,7 @@ def guest_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/guests/<int:guest_id>/edit', methods=['GET', 'POST'])
 @login_required
 def guest_edit(wedding_id, guest_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     guest = Guest.query.get_or_404(guest_id)
     if request.method == 'POST':
         guest.name = request.form.get('name')
@@ -1249,10 +1273,32 @@ def guest_edit(wedding_id, guest_id):
         guest.thank_you_sent = request.form.get('thank_you_sent') == 'on'
         guest.household_group = request.form.get('household_group')
         guest.social_groups = request.form.get('social_groups')
+        # Generate token if guest doesn't have one yet
+        if not guest.guest_token:
+            guest.guest_token = generate_token()
         db.session.commit()
         flash('Guest updated!', 'success')
         return redirect(url_for('guests_view', wedding_id=wedding_id))
-    return render_template('guests/edit.html', wedding=wedding, guest=guest)
+
+    # Ensure token exists for display
+    if not guest.guest_token:
+        guest.guest_token = generate_token()
+        db.session.commit()
+
+    guest_link = url_for('guest_identify', token=guest.guest_token, _external=True)
+    return render_template('guests/edit.html', wedding=wedding, guest=guest, guest_link=guest_link)
+
+@app.route('/wedding/<int:wedding_id>/guests/<int:guest_id>/regenerate-token', methods=['POST'])
+@login_required
+def guest_regenerate_token(wedding_id, guest_id):
+    """Regenerate a guest's check-in token (invalidates old link)."""
+    wedding = get_wedding_or_403(wedding_id)
+    guest = Guest.query.get_or_404(guest_id)
+    guest.guest_token = generate_token()
+    db.session.commit()
+    flash(f'Check-in link regenerated for {guest.name}.', 'success')
+    return redirect(url_for('guest_edit', wedding_id=wedding_id, guest_id=guest_id))
+
 
 @app.route('/wedding/<int:wedding_id>/guests/<int:guest_id>/delete', methods=['POST'])
 @login_required
@@ -1270,14 +1316,14 @@ def guest_delete(wedding_id, guest_id):
 @app.route('/wedding/<int:wedding_id>/bridal-party')
 @login_required
 def bridal_party_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     members = wedding.bridal_party
     return render_template('bridal_party/view.html', wedding=wedding, members=members)
 
 @app.route('/wedding/<int:wedding_id>/bridal-party/add', methods=['GET', 'POST'])
 @login_required
 def bridal_party_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         member = BridalPartyMember(
             wedding_id=wedding_id,
@@ -1297,7 +1343,7 @@ def bridal_party_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/bridal-party/<int:member_id>/edit', methods=['GET', 'POST'])
 @login_required
 def bridal_party_edit(wedding_id, member_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     member = BridalPartyMember.query.get_or_404(member_id)
     if request.method == 'POST':
         member.name = request.form.get('name')
@@ -1338,7 +1384,7 @@ def bridal_party_delete(wedding_id, member_id):
 @app.route('/wedding/<int:wedding_id>/budget')
 @login_required
 def budget_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     budget = wedding.budget
     expenses = budget.expenses if budget else []
 
@@ -1469,7 +1515,7 @@ def budget_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/budget/update', methods=['POST'])
 @login_required
 def budget_update(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if not wedding.budget:
         budget = Budget(wedding_id=wedding_id, total_budget=0)
         db.session.add(budget)
@@ -1482,7 +1528,7 @@ def budget_update(wedding_id):
 @app.route('/wedding/<int:wedding_id>/budget/expense/add', methods=['POST'])
 @login_required
 def budget_expense_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if not wedding.budget:
         budget = Budget(wedding_id=wedding_id, total_budget=0)
         db.session.add(budget)
@@ -1508,7 +1554,7 @@ def budget_expense_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/budget/expense/<int:expense_id>/edit', methods=['GET', 'POST'])
 @login_required
 def budget_expense_edit(wedding_id, expense_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     expense = BudgetExpense.query.get_or_404(expense_id)
     if request.method == 'POST':
         expense.category = request.form.get('category')
@@ -1542,14 +1588,14 @@ def budget_expense_delete(wedding_id, expense_id):
 @app.route('/wedding/<int:wedding_id>/vendors')
 @login_required
 def vendors_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     vendors = wedding.vendors
     return render_template('vendors/view.html', wedding=wedding, vendors=vendors)
 
 @app.route('/wedding/<int:wedding_id>/vendors/add', methods=['GET', 'POST'])
 @login_required
 def vendor_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         vendor = Vendor(
             wedding_id=wedding_id,
@@ -1573,7 +1619,7 @@ def vendor_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/vendors/<int:vendor_id>/edit', methods=['GET', 'POST'])
 @login_required
 def vendor_edit(wedding_id, vendor_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     vendor = Vendor.query.get_or_404(vendor_id)
     if request.method == 'POST':
         vendor.category = request.form.get('category')
@@ -1626,7 +1672,7 @@ def vendor_delete(wedding_id, vendor_id):
 @app.route('/wedding/<int:wedding_id>/tasks')
 @login_required
 def tasks_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     pending = [t for t in wedding.tasks if not t.completed]
     completed = [t for t in wedding.tasks if t.completed]
     return render_template('tasks/view.html', wedding=wedding,
@@ -1635,7 +1681,7 @@ def tasks_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/tasks/add', methods=['GET', 'POST'])
 @login_required
 def task_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         task = Task(
             wedding_id=wedding_id,
@@ -1656,7 +1702,7 @@ def task_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/tasks/<int:task_id>/edit', methods=['GET', 'POST'])
 @login_required
 def task_edit(wedding_id, task_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     task = Task.query.get_or_404(task_id)
     if request.method == 'POST':
         task.title = request.form.get('title')
@@ -1696,14 +1742,14 @@ def task_toggle(task_id):
 @app.route('/wedding/<int:wedding_id>/registry')
 @login_required
 def registry_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     items = wedding.registry_items
     return render_template('registry/view.html', wedding=wedding, items=items)
 
 @app.route('/wedding/<int:wedding_id>/registry/add', methods=['GET', 'POST'])
 @login_required
 def registry_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         item = RegistryItem(
             wedding_id=wedding_id,
@@ -1722,7 +1768,7 @@ def registry_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/registry/<int:item_id>/edit', methods=['GET', 'POST'])
 @login_required
 def registry_edit(wedding_id, item_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     item = RegistryItem.query.get_or_404(item_id)
     if request.method == 'POST':
         item.item_name = request.form.get('item_name')
@@ -1753,14 +1799,14 @@ def registry_delete(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/attire')
 @login_required
 def attire_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     items = wedding.attire
     return render_template('attire/view.html', wedding=wedding, items=items)
 
 @app.route('/wedding/<int:wedding_id>/attire/add', methods=['GET', 'POST'])
 @login_required
 def attire_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         item = Attire(
             wedding_id=wedding_id,
@@ -1784,7 +1830,7 @@ def attire_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/attire/<int:item_id>/edit', methods=['GET', 'POST'])
 @login_required
 def attire_edit(wedding_id, item_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     item = Attire.query.get_or_404(item_id)
     if request.method == 'POST':
         item.person_name = request.form.get('person_name')
@@ -1828,7 +1874,7 @@ def attire_delete(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/honeymoon')
 @login_required
 def honeymoon_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     honeymoon = wedding.honeymoon
     itinerary = sorted(honeymoon.itinerary_items, key=lambda x: x.day_number) if honeymoon else []
     packing = honeymoon.packing_items if honeymoon else []
@@ -1838,7 +1884,7 @@ def honeymoon_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/honeymoon/edit', methods=['GET', 'POST'])
 @login_required
 def honeymoon_edit(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     honeymoon = wedding.honeymoon
     if not honeymoon:
         honeymoon = Honeymoon(wedding_id=wedding_id)
@@ -1861,7 +1907,7 @@ def honeymoon_edit(wedding_id):
 @app.route('/wedding/<int:wedding_id>/honeymoon/packing/add', methods=['POST'])
 @login_required
 def honeymoon_packing_add(wedding_id):
-    honeymoon = Wedding.query.get_or_404(wedding_id).honeymoon
+    honeymoon = get_wedding_or_403(wedding_id).honeymoon
     item = PackingItem(
         honeymoon_id=honeymoon.id,
         item_name=request.form.get('item_name'),
@@ -1895,14 +1941,14 @@ def honeymoon_packing_delete(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/branding')
 @login_required
 def branding_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     branding = wedding.branding
     return render_template('branding/view.html', wedding=wedding, branding=branding)
 
 @app.route('/wedding/<int:wedding_id>/branding/edit', methods=['GET', 'POST'])
 @login_required
 def branding_edit(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     branding = wedding.branding
     if not branding:
         branding = WeddingBranding(wedding_id=wedding_id)
@@ -1929,7 +1975,7 @@ def branding_edit(wedding_id):
 @app.route('/wedding/<int:wedding_id>/reception/timeline/add', methods=['POST'])
 @login_required
 def reception_timeline_add(wedding_id):
-    reception = Wedding.query.get_or_404(wedding_id).reception
+    reception = get_wedding_or_403(wedding_id).reception
     item = ReceptionTimelineItem(
         reception_id=reception.id,
         order=request.form.get('order', type=int) or 0,
@@ -1956,7 +2002,7 @@ def reception_timeline_delete(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/reception/menu/add', methods=['POST'])
 @login_required
 def reception_menu_add(wedding_id):
-    reception = Wedding.query.get_or_404(wedding_id).reception
+    reception = get_wedding_or_403(wedding_id).reception
     item = MenuItem(
         reception_id=reception.id,
         course=request.form.get('course'),
@@ -1981,7 +2027,7 @@ def reception_menu_delete(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/reception/table/add', methods=['POST'])
 @login_required
 def reception_table_add(wedding_id):
-    reception = Wedding.query.get_or_404(wedding_id).reception
+    reception = get_wedding_or_403(wedding_id).reception
     table = SeatingTable(
         reception_id=reception.id,
         table_number=request.form.get('table_number'),
@@ -2010,7 +2056,7 @@ def reception_table_delete(wedding_id, table_id):
 @app.route('/wedding/<int:wedding_id>/ceremony/reading/add', methods=['POST'])
 @login_required
 def ceremony_reading_add(wedding_id):
-    ceremony = Wedding.query.get_or_404(wedding_id).ceremony
+    ceremony = get_wedding_or_403(wedding_id).ceremony
     reading = CeremonyReading(
         ceremony_id=ceremony.id,
         title=request.form.get('title'),
@@ -2062,7 +2108,7 @@ def person_delete(wedding_id, person_id):
 @app.route('/wedding/<int:wedding_id>/day-of')
 @login_required
 def day_of_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     items = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
     participants = wedding.participants
     return render_template('day_of/view.html', wedding=wedding, items=items, participants=participants)
@@ -2070,7 +2116,7 @@ def day_of_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/day-of/add', methods=['GET', 'POST'])
 @login_required
 def day_of_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     participants = wedding.participants
     if request.method == 'POST':
         item = DayOfTimelineItem(
@@ -2100,7 +2146,7 @@ def day_of_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/day-of/<int:item_id>/edit', methods=['GET', 'POST'])
 @login_required
 def day_of_edit(wedding_id, item_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     item = DayOfTimelineItem.query.get_or_404(item_id)
     participants = wedding.participants
     if request.method == 'POST':
@@ -2142,7 +2188,7 @@ def day_of_delete(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/itinerary')
 @login_required
 def itinerary_participants(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     participants = wedding.participants
     # Group by role_category
     categories = {}
@@ -2155,7 +2201,7 @@ def itinerary_participants(wedding_id):
 @app.route('/wedding/<int:wedding_id>/itinerary/add-participant', methods=['GET', 'POST'])
 @login_required
 def itinerary_add_participant(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         participant = WeddingParticipant(
             wedding_id=wedding_id,
@@ -2184,7 +2230,7 @@ def itinerary_add_participant(wedding_id):
 @app.route('/wedding/<int:wedding_id>/itinerary/participant/<int:participant_id>/edit', methods=['GET', 'POST'])
 @login_required
 def itinerary_edit_participant(wedding_id, participant_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     participant = WeddingParticipant.query.get_or_404(participant_id)
     if request.method == 'POST':
         participant.name = request.form.get('name')
@@ -2216,7 +2262,7 @@ def itinerary_delete_participant(wedding_id, participant_id):
 @app.route('/wedding/<int:wedding_id>/itinerary/participant/<int:participant_id>')
 @login_required
 def itinerary_individual(wedding_id, participant_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     participant = WeddingParticipant.query.get_or_404(participant_id)
     # Get this person's timeline items, sorted by time
     items = sorted(participant.timeline_items,
@@ -2228,7 +2274,7 @@ def itinerary_individual(wedding_id, participant_id):
 @login_required
 def itinerary_handler_view(wedding_id):
     """Handler view showing all participants and where they should be at each time."""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     items = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
     participants = wedding.participants
     return render_template('itinerary/handler_view.html', wedding=wedding,
@@ -2238,7 +2284,7 @@ def itinerary_handler_view(wedding_id):
 @login_required
 def itinerary_import_people(wedding_id):
     """Quickly import people and bridal party members as participants."""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     imported = 0
     # Import people getting married
     for person in wedding.people:
@@ -2283,14 +2329,14 @@ def itinerary_import_people(wedding_id):
 @app.route('/wedding/<int:wedding_id>/photos')
 @login_required
 def photos_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     shots = wedding.photo_shots
     return render_template('photos/view.html', wedding=wedding, shots=shots)
 
 @app.route('/wedding/<int:wedding_id>/photos/add', methods=['GET', 'POST'])
 @login_required
 def photos_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         shot = PhotoShot(
             wedding_id=wedding_id,
@@ -2330,14 +2376,14 @@ def photos_toggle(wedding_id, shot_id):
 @app.route('/wedding/<int:wedding_id>/music')
 @login_required
 def music_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     songs = wedding.songs
     return render_template('music/view.html', wedding=wedding, songs=songs)
 
 @app.route('/wedding/<int:wedding_id>/music/add', methods=['GET', 'POST'])
 @login_required
 def music_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         song = Song(
             wedding_id=wedding_id,
@@ -2370,14 +2416,14 @@ def music_delete(wedding_id, song_id):
 @app.route('/wedding/<int:wedding_id>/flowers')
 @login_required
 def flowers_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     items = wedding.floral_items
     return render_template('flowers/view.html', wedding=wedding, items=items)
 
 @app.route('/wedding/<int:wedding_id>/flowers/add', methods=['GET', 'POST'])
 @login_required
 def flowers_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         item = FloralItem(
             wedding_id=wedding_id,
@@ -2411,14 +2457,14 @@ def flowers_delete(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/invitations')
 @login_required
 def invitations_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     items = wedding.invitations
     return render_template('invitations/view.html', wedding=wedding, items=items)
 
 @app.route('/wedding/<int:wedding_id>/invitations/add', methods=['GET', 'POST'])
 @login_required
 def invitations_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         item = Invitation(
             wedding_id=wedding_id,
@@ -2453,14 +2499,14 @@ def invitations_delete(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/rehearsal')
 @login_required
 def rehearsal_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     rehearsal = wedding.rehearsal_dinner
     return render_template('rehearsal/view.html', wedding=wedding, rehearsal=rehearsal)
 
 @app.route('/wedding/<int:wedding_id>/rehearsal/edit', methods=['GET', 'POST'])
 @login_required
 def rehearsal_edit(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     rehearsal = wedding.rehearsal_dinner
     if not rehearsal:
         rehearsal = RehearsalDinner(wedding_id=wedding_id)
@@ -2492,14 +2538,14 @@ def rehearsal_edit(wedding_id):
 @app.route('/wedding/<int:wedding_id>/accommodations')
 @login_required
 def accommodations_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     items = wedding.accommodations
     return render_template('accommodations/view.html', wedding=wedding, items=items)
 
 @app.route('/wedding/<int:wedding_id>/accommodations/add', methods=['GET', 'POST'])
 @login_required
 def accommodations_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         item = Accommodation(
             wedding_id=wedding_id,
@@ -2539,14 +2585,14 @@ def accommodations_delete(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/license')
 @login_required
 def license_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     license_info = wedding.marriage_license
     return render_template('license/view.html', wedding=wedding, license_info=license_info)
 
 @app.route('/wedding/<int:wedding_id>/license/edit', methods=['GET', 'POST'])
 @login_required
 def license_edit(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     license_info = wedding.marriage_license
     if not license_info:
         license_info = MarriageLicense(wedding_id=wedding_id)
@@ -2582,14 +2628,14 @@ def license_edit(wedding_id):
 @app.route('/wedding/<int:wedding_id>/hair-makeup')
 @login_required
 def hair_makeup_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     appointments = wedding.hair_makeup
     return render_template('hair_makeup/view.html', wedding=wedding, appointments=appointments)
 
 @app.route('/wedding/<int:wedding_id>/hair-makeup/add', methods=['GET', 'POST'])
 @login_required
 def hair_makeup_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         appt = HairMakeup(
             wedding_id=wedding_id,
@@ -2667,7 +2713,7 @@ MILESTONE_TEMPLATES = [
 @app.route('/wedding/<int:wedding_id>/milestones/generate', methods=['POST'])
 @login_required
 def generate_milestones(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     wedding_date = wedding.wedding_date
 
     # Check if milestones already exist
@@ -2711,14 +2757,14 @@ def clear_milestones(wedding_id):
 @app.route('/wedding/<int:wedding_id>/contingency')
 @login_required
 def contingency_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     plans = wedding.contingency_plans
     return render_template('contingency/view.html', wedding=wedding, plans=plans)
 
 @app.route('/wedding/<int:wedding_id>/contingency/add', methods=['GET', 'POST'])
 @login_required
 def contingency_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         plan = ContingencyPlan(
             wedding_id=wedding_id,
@@ -2751,7 +2797,7 @@ def contingency_delete(wedding_id, plan_id):
 @app.route('/wedding/<int:wedding_id>/budget/category-limit', methods=['POST'])
 @login_required
 def budget_category_limit_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if not wedding.budget:
         budget = Budget(wedding_id=wedding_id, total_budget=0)
         db.session.add(budget)
@@ -2782,7 +2828,7 @@ def budget_category_limit_delete(wedding_id, limit_id):
 @app.route('/wedding/<int:wedding_id>/tips')
 @login_required
 def tips_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     tips = wedding.tips
     total_suggested = sum(t.suggested_amount or 0 for t in tips)
     total_actual = sum(t.actual_amount or 0 for t in tips)
@@ -2800,7 +2846,7 @@ def tips_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/tips/add', methods=['GET', 'POST'])
 @login_required
 def tips_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         tip = TipItem(
             wedding_id=wedding_id,
@@ -2849,7 +2895,7 @@ def tips_delete(wedding_id, tip_id):
 @app.route('/wedding/<int:wedding_id>/gifts')
 @login_required
 def gifts_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     gifts = wedding.gifts
     # Group by event
     shower_gifts = [g for g in gifts if g.event == 'shower']
@@ -2871,7 +2917,7 @@ def gifts_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/gifts/add', methods=['GET', 'POST'])
 @login_required
 def gifts_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         gift = Gift(
             wedding_id=wedding_id,
@@ -2928,21 +2974,34 @@ def rsvp_portal(token):
                          menu_items=menu_items, token=token)
 
 @app.route('/rsvp/<token>/submit', methods=['POST'])
+@rate_limit(max_requests=20, window_seconds=3600)
 def rsvp_submit(token):
     """Process RSVP submission from public portal."""
     wedding = Wedding.query.filter_by(rsvp_token=token).first_or_404()
-    guest_name = request.form.get('guest_name', '').strip()
-    rsvp_status = request.form.get('rsvp_status')
-    meal_choice = request.form.get('meal_choice')
-    dietary = request.form.get('dietary_restrictions', '').strip()
-    rsvp_notes = request.form.get('rsvp_notes', '').strip()
-    plus_one_name = request.form.get('plus_one_name', '').strip()
+
+    # Validate and sanitize all input
+    is_valid, errors, data = validate_rsvp_submission(wedding, request.form)
+    if not is_valid:
+        for error in errors:
+            flash(error, 'error')
+        return redirect(url_for('rsvp_portal', token=token))
+
+    guest_name = data['guest_name']
+    rsvp_status = data['rsvp_status']
+    meal_choice = data['meal_choice']
+    dietary = data['dietary']
+    rsvp_notes = data['rsvp_notes']
+    plus_one_name = data['plus_one_name']
 
     guest = Guest.query.filter_by(wedding_id=wedding.id, name=guest_name).first()
     if not guest:
         # Allow new guests to RSVP (they type their name)
-        guest = Guest(wedding_id=wedding.id, name=guest_name)
+        guest = Guest(wedding_id=wedding.id, name=guest_name, guest_token=generate_token())
         db.session.add(guest)
+
+    # Ensure guest has a check-in token
+    if not guest.guest_token:
+        guest.guest_token = generate_token()
 
     guest.rsvp_status = rsvp_status
     guest.rsvp_date = datetime.utcnow().date()
@@ -2956,17 +3015,28 @@ def rsvp_submit(token):
         existing_po = Guest.query.filter_by(wedding_id=wedding.id, name=plus_one_name).first()
         if not existing_po:
             po = Guest(wedding_id=wedding.id, name=plus_one_name, is_plus_one=True,
-                       plus_one_of=guest_name, rsvp_status='accepted')
+                       plus_one_of=guest_name, rsvp_status='accepted',
+                       guest_token=generate_token())
             db.session.add(po)
 
     db.session.commit()
-    return render_template('rsvp/thank_you.html', wedding=wedding, guest=guest, token=token)
+
+    # Set cookie so this guest is recognized at venue check-in
+    response = make_response(render_template('rsvp/thank_you.html', wedding=wedding, guest=guest, token=token))
+    response.set_cookie(
+        f'guest_{wedding.id}',
+        guest.guest_token,
+        max_age=60 * 60 * 24 * 90,
+        httponly=True,
+        samesite='Lax',
+    )
+    return response
 
 @app.route('/wedding/<int:wedding_id>/rsvp/enable', methods=['POST'])
 @login_required
 def rsvp_enable(wedding_id):
     """Enable/disable RSVP portal and generate token."""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     wedding.rsvp_enabled = not wedding.rsvp_enabled
     if wedding.rsvp_enabled and not wedding.rsvp_token:
         wedding.rsvp_token = generate_token()
@@ -2980,13 +3050,248 @@ def rsvp_enable(wedding_id):
     return redirect(url_for('guests_view', wedding_id=wedding_id))
 
 # ============================================
+# GUEST CHECK-IN (PUBLIC - COOKIE-BASED)
+# ============================================
+
+@app.route('/g/<token>')
+@rate_limit(max_requests=30, window_seconds=60)
+def guest_identify(token):
+    """Guest clicks personalized link (from email). Sets a cookie and shows their info."""
+    guest = Guest.query.filter_by(guest_token=token).first_or_404()
+    wedding = Wedding.query.get(guest.wedding_id)
+    if not wedding:
+        abort(404)
+
+    table_name = None
+    table_number = None
+    if guest.seating_table:
+        table_name = guest.seating_table.table_name
+        table_number = guest.seating_table.table_number
+
+    response = make_response(render_template('checkin/welcome.html',
+        guest=guest, wedding=wedding,
+        table_name=table_name, table_number=table_number))
+
+    # Set a long-lived cookie so they're recognized at the venue
+    response.set_cookie(
+        f'guest_{wedding.id}',
+        token,
+        max_age=60 * 60 * 24 * 90,  # 90 days
+        httponly=True,
+        samesite='Lax',
+    )
+    return response
+
+
+@app.route('/checkin/<rsvp_token>')
+@rate_limit(max_requests=30, window_seconds=60)
+def guest_checkin(rsvp_token):
+    """QR code at the venue points here. Reads guest cookie to identify them."""
+    wedding = Wedding.query.filter_by(rsvp_token=rsvp_token).first_or_404()
+
+    # Try to identify the guest from their cookie
+    guest_token = request.cookies.get(f'guest_{wedding.id}')
+    guest = None
+    if guest_token:
+        guest = Guest.query.filter_by(guest_token=guest_token, wedding_id=wedding.id).first()
+
+    table_name = None
+    table_number = None
+    if guest and guest.seating_table:
+        table_name = guest.seating_table.table_name
+        table_number = guest.seating_table.table_number
+
+    return render_template('checkin/table.html',
+        guest=guest, wedding=wedding,
+        table_name=table_name, table_number=table_number,
+        rsvp_token=rsvp_token)
+
+
+@app.route('/checkin/<rsvp_token>/lookup', methods=['POST'])
+@rate_limit(max_requests=10, window_seconds=60)
+def guest_checkin_lookup(rsvp_token):
+    """Fallback: guest types their name to find their table."""
+    wedding = Wedding.query.filter_by(rsvp_token=rsvp_token).first_or_404()
+    name = sanitize_string(request.form.get('name', ''), max_length=200)
+
+    guest = Guest.query.filter(
+        Guest.wedding_id == wedding.id,
+        db.func.lower(Guest.name) == name.lower()
+    ).first()
+
+    table_name = None
+    table_number = None
+    if guest and guest.seating_table:
+        table_name = guest.seating_table.table_name
+        table_number = guest.seating_table.table_number
+
+    # If found and guest has a token, set the cookie for next time
+    response = make_response(render_template('checkin/table.html',
+        guest=guest, wedding=wedding,
+        table_name=table_name, table_number=table_number,
+        rsvp_token=rsvp_token, searched_name=name))
+
+    if guest and guest.guest_token:
+        response.set_cookie(
+            f'guest_{wedding.id}',
+            guest.guest_token,
+            max_age=60 * 60 * 24 * 90,
+            httponly=True,
+            samesite='Lax',
+        )
+    return response
+
+
+@app.route('/wedding/<int:wedding_id>/guest-links')
+@login_required
+def guest_links(wedding_id):
+    """Planner view: generate tokens and see personalized links for all guests."""
+    wedding = get_wedding_or_403(wedding_id)
+    guests = Guest.query.filter_by(wedding_id=wedding_id).order_by(Guest.name).all()
+
+    # Auto-generate tokens for any guests that don't have one
+    generated = 0
+    for guest in guests:
+        if not guest.guest_token:
+            guest.guest_token = generate_token()
+            generated += 1
+    if generated:
+        db.session.commit()
+
+    checkin_url = None
+    if wedding.rsvp_token:
+        checkin_url = url_for('guest_checkin', rsvp_token=wedding.rsvp_token, _external=True)
+
+    return render_template('checkin/guest_links.html',
+        wedding=wedding, guests=guests, checkin_url=checkin_url)
+
+
+@app.route('/wedding/<int:wedding_id>/guest-links/generate', methods=['POST'])
+@login_required
+def guest_links_generate(wedding_id):
+    """Generate tokens for all guests that don't have one yet."""
+    wedding = get_wedding_or_403(wedding_id)
+    guests = Guest.query.filter_by(wedding_id=wedding_id).all()
+    count = 0
+    for guest in guests:
+        if not guest.guest_token:
+            guest.guest_token = generate_token()
+            count += 1
+    # Also ensure the wedding has an RSVP token for the check-in QR code
+    if not wedding.rsvp_token:
+        wedding.rsvp_token = generate_token()
+    db.session.commit()
+    flash(f'Generated links for {count} guests.', 'success')
+    return redirect(url_for('guest_links', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/guests/<int:guest_id>/send-email', methods=['POST'])
+@login_required
+def guest_send_email(wedding_id, guest_id):
+    """Send a single guest their personalized check-in link via email."""
+    wedding = get_wedding_or_403(wedding_id)
+    guest = Guest.query.get_or_404(guest_id)
+
+    if not guest.email:
+        flash(f'No email address on file for {guest.name}.', 'error')
+        return redirect(url_for('guest_links', wedding_id=wedding_id))
+
+    if not guest.guest_token:
+        guest.guest_token = generate_token()
+        db.session.commit()
+
+    guest_link = url_for('guest_identify', token=guest.guest_token, _external=True)
+    email_type = request.form.get('email_type', 'checkin')
+    custom_message = sanitize_string(request.form.get('message', ''), max_length=2000)
+
+    if email_type == 'day_of':
+        subject = f'Day-Of Details - {wedding.couple_names}'
+        message = custom_message or (
+            f"The big day is almost here! Here are your details for our wedding."
+        )
+        if guest.seating_table:
+            table_info = guest.seating_table.table_name or f"Table {guest.seating_table.table_number}"
+            message += f"\n\nYour table: {table_info}"
+        if guest.meal_choice:
+            message += f"\nYour meal: {guest.meal_choice}"
+    else:
+        subject = f'Your Check-In Link - {wedding.couple_names}'
+        message = custom_message or (
+            f"We're so excited to celebrate with you! "
+            f"Click the link below to save your details. "
+            f"At the venue, just scan the QR code to find your table."
+        )
+
+    send_guest_email(
+        to_email=guest.email,
+        guest_name=guest.name,
+        couple_names=wedding.couple_names,
+        wedding_date=wedding.wedding_date,
+        subject=subject,
+        message=message,
+        guest_link=guest_link,
+    )
+    flash(f'Email sent to {guest.name}.', 'success')
+    return redirect(url_for('guest_links', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/guests/send-day-of-emails', methods=['GET', 'POST'])
+@login_required
+def guest_send_day_of_emails(wedding_id):
+    """Send day-of details to all accepted guests with email addresses."""
+    wedding = get_wedding_or_403(wedding_id)
+
+    eligible_guests = [
+        g for g in wedding.guests
+        if g.email and g.rsvp_status == 'accepted'
+    ]
+
+    if request.method == 'POST':
+        custom_message = sanitize_string(request.form.get('message', ''), max_length=2000)
+        sent_count = 0
+        for guest in eligible_guests:
+            if not guest.guest_token:
+                guest.guest_token = generate_token()
+
+            guest_link = url_for('guest_identify', token=guest.guest_token, _external=True)
+
+            message = custom_message or (
+                f"The big day is almost here! Here are your details for our wedding."
+            )
+            guest_message = message
+            if guest.seating_table:
+                table_info = guest.seating_table.table_name or f"Table {guest.seating_table.table_number}"
+                guest_message += f"\n\nYour table: {table_info}"
+            if guest.meal_choice:
+                guest_message += f"\nYour meal: {guest.meal_choice}"
+
+            send_guest_email(
+                to_email=guest.email,
+                guest_name=guest.name,
+                couple_names=wedding.couple_names,
+                wedding_date=wedding.wedding_date,
+                subject=f'Day-Of Details - {wedding.couple_names}',
+                message=guest_message,
+                guest_link=guest_link,
+            )
+            sent_count += 1
+
+        db.session.commit()
+        flash(f'Day-of details sent to {sent_count} guests.', 'success')
+        return redirect(url_for('guest_links', wedding_id=wedding_id))
+
+    return render_template('checkin/send_day_of.html',
+        wedding=wedding, eligible_guests=eligible_guests)
+
+
+# ============================================
 # GUEST MEAL COUNT SUMMARY
 # ============================================
 
 @app.route('/wedding/<int:wedding_id>/guests/meal-summary')
 @login_required
 def guest_meal_summary(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     guests = [g for g in wedding.guests if g.rsvp_status == 'accepted']
     meal_counts = {}
     dietary_counts = {}
@@ -3009,7 +3314,7 @@ def guest_meal_summary(wedding_id):
 @app.route('/wedding/<int:wedding_id>/share/enable', methods=['POST'])
 @login_required
 def share_enable(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if not wedding.share_token:
         wedding.share_token = generate_token()
     db.session.commit()
@@ -3037,7 +3342,7 @@ def shared_view(token):
 @app.route('/wedding/<int:wedding_id>/vendors/<int:vendor_id>/notes')
 @login_required
 def vendor_notes_view(wedding_id, vendor_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     vendor = Vendor.query.get_or_404(vendor_id)
     notes = VendorNote.query.filter_by(vendor_id=vendor_id).order_by(VendorNote.date.desc()).all()
     return render_template('vendors/notes.html', wedding=wedding, vendor=vendor, notes=notes)
@@ -3073,7 +3378,7 @@ def vendor_note_delete(wedding_id, vendor_id, note_id):
 @app.route('/wedding/<int:wedding_id>/vendor-quotes')
 @login_required
 def vendor_quotes_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     quotes = VendorQuote.query.filter_by(wedding_id=wedding_id).order_by(VendorQuote.category).all()
     # Group by category
     grouped = {}
@@ -3084,7 +3389,7 @@ def vendor_quotes_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/vendor-quotes/add', methods=['GET', 'POST'])
 @login_required
 def vendor_quote_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         quote = VendorQuote(
             wedding_id=wedding_id,
@@ -3130,14 +3435,14 @@ def vendor_quote_delete(wedding_id, quote_id):
 @app.route('/wedding/<int:wedding_id>/speeches')
 @login_required
 def speeches_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     speeches = SpeechToast.query.filter_by(wedding_id=wedding_id).order_by(SpeechToast.order).all()
     return render_template('speeches/view.html', wedding=wedding, speeches=speeches)
 
 @app.route('/wedding/<int:wedding_id>/speeches/add', methods=['GET', 'POST'])
 @login_required
 def speeches_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         speech = SpeechToast(
             wedding_id=wedding_id,
@@ -3177,7 +3482,7 @@ def speeches_delete(wedding_id, speech_id):
 @app.route('/wedding/<int:wedding_id>/favors')
 @login_required
 def favors_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     favors = WeddingFavor.query.filter_by(wedding_id=wedding_id).all()
     total_cost = sum(f.total_cost or 0 for f in favors)
     assembled_count = sum(1 for f in favors if f.assembled)
@@ -3187,7 +3492,7 @@ def favors_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/favors/add', methods=['GET', 'POST'])
 @login_required
 def favors_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
         qty = request.form.get('quantity', type=int) or 0
         cost_per = request.form.get('cost_per_item', type=float) or 0
@@ -3233,7 +3538,7 @@ def favors_delete(wedding_id, favor_id):
 @app.route('/wedding/<int:wedding_id>/ceremony/vows', methods=['GET', 'POST'])
 @login_required
 def ceremony_vows(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     ceremony = wedding.ceremony
     if not ceremony:
         ceremony = Ceremony(wedding_id=wedding_id)
@@ -3251,7 +3556,7 @@ def ceremony_vows(wedding_id):
 @app.route('/wedding/<int:wedding_id>/ceremony/script', methods=['GET', 'POST'])
 @login_required
 def ceremony_script(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     ceremony = wedding.ceremony
     if not ceremony:
         ceremony = Ceremony(wedding_id=wedding_id)
@@ -3271,7 +3576,7 @@ def ceremony_script(wedding_id):
 @app.route('/wedding/<int:wedding_id>/budget/apply-template', methods=['POST'])
 @login_required
 def budget_apply_template(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     template_key = request.form.get('template')
     template = BUDGET_TEMPLATES.get(template_key)
     if not template:
@@ -3298,7 +3603,7 @@ def budget_apply_template(wedding_id):
 @app.route('/wedding/<int:wedding_id>/budget/payment-schedule')
 @login_required
 def budget_payment_schedule(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     budget = wedding.budget
     expenses = budget.expenses if budget else []
     # Get all items with due dates, sorted by date
@@ -3325,7 +3630,7 @@ def budget_payment_schedule(wedding_id):
 @app.route('/wedding/<int:wedding_id>/guest-groups')
 @login_required
 def guest_groups_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     groups = GuestGroup.query.filter_by(wedding_id=wedding_id).order_by(GuestGroup.name).all()
     attending = [g for g in wedding.guests if g.rsvp_status == 'accepted']
 
@@ -3431,7 +3736,7 @@ def guest_group_remove_guest(wedding_id, group_id, guest_id):
 @app.route('/wedding/<int:wedding_id>/seating-chart')
 @login_required
 def seating_chart(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     reception = wedding.reception
     tables = reception.seating_tables if reception else []
     all_attending = [g for g in wedding.guests if g.rsvp_status == 'accepted']
@@ -3476,7 +3781,7 @@ def seating_chart(wedding_id):
 @app.route('/wedding/<int:wedding_id>/seating-chart/table/add', methods=['POST'])
 @login_required
 def seating_table_add(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     reception = wedding.reception
     if not reception:
         flash('Please set up reception details first.', 'warning')
@@ -3550,7 +3855,7 @@ def seating_table_delete(wedding_id, table_id):
 @login_required
 def seating_tables_bulk_add(wedding_id):
     """Add multiple tables at once from a preset configuration."""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     reception = wedding.reception
     if not reception:
         flash('Please set up reception details first.', 'warning')
@@ -3662,7 +3967,7 @@ def seating_bulk_assign(wedding_id):
 @login_required
 def seating_clear_all(wedding_id):
     """Remove all guest-to-table assignments."""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     for g in wedding.guests:
         g.table_id = None
     db.session.commit()
@@ -3689,7 +3994,7 @@ def seating_update_position(wedding_id):
 @app.route('/wedding/<int:wedding_id>/seating-chart/preferences')
 @login_required
 def seating_preferences(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     preferences = SeatingPreference.query.filter_by(wedding_id=wedding_id).all()
     attending = [g for g in wedding.guests if g.rsvp_status == 'accepted']
     return render_template('seating/preferences.html', wedding=wedding,
@@ -3759,7 +4064,7 @@ def seating_auto_assign(wedding_id):
     5. Fill VIP/head tables first with family, then fill guest tables
     6. Try to keep groups together at the same table
     """
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     reception = wedding.reception
     if not reception:
         flash('No reception set up.', 'warning')
@@ -4003,7 +4308,7 @@ def seating_auto_assign(wedding_id):
 @app.route('/wedding/<int:wedding_id>/tasks/generate-post-wedding', methods=['POST'])
 @login_required
 def generate_post_wedding_tasks(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     wedding_date = wedding.wedding_date
     count = 0
     for i, (title, category, priority) in enumerate(POST_WEDDING_TASKS):
@@ -4028,7 +4333,7 @@ def generate_post_wedding_tasks(wedding_id):
 @app.route('/wedding/<int:wedding_id>/export/guests')
 @login_required
 def export_guests_csv(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Name', 'Email', 'Phone', 'Address', 'RSVP Status', 'Meal Choice',
@@ -4053,7 +4358,7 @@ def export_guests_csv(wedding_id):
 @app.route('/wedding/<int:wedding_id>/export/budget')
 @login_required
 def export_budget_csv(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     budget = wedding.budget
     output = io.StringIO()
     writer = csv.writer(output)
@@ -4074,7 +4379,7 @@ def export_budget_csv(wedding_id):
 @app.route('/wedding/<int:wedding_id>/export/tasks')
 @login_required
 def export_tasks_csv(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Title', 'Description', 'Due Date', 'Priority', 'Category',
@@ -4093,7 +4398,7 @@ def export_tasks_csv(wedding_id):
 @app.route('/wedding/<int:wedding_id>/export/vendors')
 @login_required
 def export_vendors_csv(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Category', 'Business Name', 'Contact', 'Email', 'Phone',
@@ -4113,7 +4418,7 @@ def export_vendors_csv(wedding_id):
 @login_required
 def print_timeline(wedding_id):
     """Printable day-of timeline."""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     items = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
     return render_template('print/timeline.html', wedding=wedding, items=items)
 
@@ -4121,14 +4426,14 @@ def print_timeline(wedding_id):
 @login_required
 def print_vendor_contacts(wedding_id):
     """Printable vendor contact sheet."""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     return render_template('print/vendor_contacts.html', wedding=wedding, vendors=wedding.vendors)
 
 @app.route('/wedding/<int:wedding_id>/print/shot-list')
 @login_required
 def print_shot_list(wedding_id):
     """Printable photography shot list."""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     shots = sorted(wedding.photo_shots, key=lambda x: (x.category or '', x.priority or ''))
     return render_template('print/shot_list.html', wedding=wedding, shots=shots)
 
@@ -4136,7 +4441,7 @@ def print_shot_list(wedding_id):
 @login_required
 def print_emergency_contacts(wedding_id):
     """Printable emergency contact card."""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     return render_template('print/emergency_contacts.html', wedding=wedding,
                          vendors=wedding.vendors, participants=wedding.participants)
 
@@ -4144,7 +4449,7 @@ def print_emergency_contacts(wedding_id):
 @login_required
 def print_seating(wedding_id):
     """Printable seating chart."""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     tables = wedding.reception.seating_tables if wedding.reception else []
     return render_template('print/seating.html', wedding=wedding, tables=tables)
 
@@ -4152,7 +4457,7 @@ def print_seating(wedding_id):
 @login_required
 def export_mailing_labels(wedding_id):
     """Export guest addresses as CSV for mailing labels."""
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Name', 'Address'])
@@ -4171,7 +4476,7 @@ def export_mailing_labels(wedding_id):
 @app.route('/wedding/<int:wedding_id>/search')
 @login_required
 def global_search(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     q = request.args.get('q', '').strip().lower()
     results = {'guests': [], 'vendors': [], 'tasks': [], 'expenses': []}
     if q:
@@ -4195,7 +4500,7 @@ def global_search(wedding_id):
 @app.route('/wedding/<int:wedding_id>/activity')
 @login_required
 def activity_log_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     page = request.args.get('page', 1, type=int)
     per_page = 50
     logs = ActivityLog.query.filter_by(wedding_id=wedding_id)\
@@ -4241,7 +4546,7 @@ def comment_delete(wedding_id, comment_id):
 @app.route('/wedding/<int:wedding_id>/collaborators')
 @login_required
 def collaborators_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     access_list = WeddingAccess.query.filter_by(wedding_id=wedding_id).all()
     users = []
     for access in access_list:
@@ -4253,8 +4558,14 @@ def collaborators_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/collaborators/add', methods=['POST'])
 @login_required
 def collaborator_add(wedding_id):
-    email = request.form.get('email', '').strip().lower()
+    # Only owners can add collaborators
+    wedding = get_wedding_or_403(wedding_id)
+    if g.wedding_role != 'owner':
+        abort(403, description='Only wedding owners can manage collaborators.')
+    email = sanitize_string(request.form.get('email', '')).lower()
     role = request.form.get('role', 'viewer')
+    if role not in ('viewer', 'planner'):
+        role = 'viewer'  # Prevent self-escalation to owner
     user = User.query.filter_by(email=email).first()
     if not user:
         flash('No user found with that email.', 'error')
@@ -4273,8 +4584,17 @@ def collaborator_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/collaborators/<int:access_id>/update', methods=['POST'])
 @login_required
 def collaborator_update(wedding_id, access_id):
+    # Only owners can update collaborator roles
+    wedding = get_wedding_or_403(wedding_id)
+    if g.wedding_role != 'owner':
+        abort(403, description='Only wedding owners can manage collaborators.')
     access = WeddingAccess.query.get_or_404(access_id)
-    access.role = request.form.get('role', 'viewer')
+    if access.wedding_id != wedding_id:
+        abort(404)
+    new_role = request.form.get('role', 'viewer')
+    if new_role not in ('viewer', 'planner'):
+        new_role = 'viewer'
+    access.role = new_role
     db.session.commit()
     flash('Role updated!', 'success')
     return redirect(url_for('collaborators_view', wedding_id=wedding_id))
@@ -4282,7 +4602,19 @@ def collaborator_update(wedding_id, access_id):
 @app.route('/wedding/<int:wedding_id>/collaborators/<int:access_id>/remove', methods=['POST'])
 @login_required
 def collaborator_remove(wedding_id, access_id):
+    # Only owners can remove collaborators
+    wedding = get_wedding_or_403(wedding_id)
+    if g.wedding_role != 'owner':
+        abort(403, description='Only wedding owners can manage collaborators.')
     access = WeddingAccess.query.get_or_404(access_id)
+    if access.wedding_id != wedding_id:
+        abort(404)
+    # Prevent removing the last owner
+    if access.role == 'owner':
+        owner_count = WeddingAccess.query.filter_by(wedding_id=wedding_id, role='owner').count()
+        if owner_count <= 1:
+            flash('Cannot remove the last owner.', 'error')
+            return redirect(url_for('collaborators_view', wedding_id=wedding_id))
     db.session.delete(access)
     db.session.commit()
     flash('Access removed.', 'success')
@@ -4295,7 +4627,7 @@ def collaborator_remove(wedding_id, access_id):
 @app.route('/wedding/<int:wedding_id>/calendar')
 @login_required
 def calendar_view(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     events = []
     # Tasks
     for t in wedding.tasks:
@@ -4333,7 +4665,7 @@ def calendar_view(wedding_id):
 @app.route('/wedding/<int:wedding_id>/calendar/export.ics')
 @login_required
 def calendar_export_ical(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     lines = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
@@ -4372,7 +4704,7 @@ def calendar_export_ical(wedding_id):
 @app.route('/wedding/<int:wedding_id>/reception/calculators')
 @login_required
 def reception_calculators(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     guest_count = len([g for g in wedding.guests if g.rsvp_status == 'accepted'])
     if guest_count == 0:
         guest_count = (wedding.reception.expected_guest_count if wedding.reception and wedding.reception.expected_guest_count else None) or 100
@@ -4421,7 +4753,7 @@ def reception_calculators(wedding_id):
 @app.route('/wedding/<int:wedding_id>/invitations/wording')
 @login_required
 def invitation_wording(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     return render_template('invitations/wording.html', wedding=wedding,
                          templates=INVITATION_WORDING_TEMPLATES)
 
@@ -4447,7 +4779,7 @@ STATIONERY_CHECKLIST = [
 @app.route('/wedding/<int:wedding_id>/invitations/checklist')
 @login_required
 def stationery_checklist(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     existing = {inv.item_type for inv in wedding.invitations}
     return render_template('invitations/checklist.html', wedding=wedding,
                          checklist=STATIONERY_CHECKLIST, existing=existing)
@@ -4459,7 +4791,7 @@ def stationery_checklist(wedding_id):
 @app.route('/wedding/<int:wedding_id>/bridal-party/processional')
 @login_required
 def processional_order(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     members = sorted(wedding.bridal_party, key=lambda x: x.processional_order or 999)
     people = Person.query.filter_by(wedding_id=wedding_id).order_by(Person.display_order).all()
     return render_template('bridal_party/processional.html', wedding=wedding,
@@ -4472,7 +4804,7 @@ def processional_order(wedding_id):
 @app.route('/wedding/<int:wedding_id>/music/stats')
 @login_required
 def music_stats(wedding_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding = get_wedding_or_403(wedding_id)
     songs = wedding.songs
     moments = {}
     for s in songs:
@@ -4532,4 +4864,5 @@ if __name__ != '__main__':
 if __name__ == '__main__':
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
         start_reminder_thread()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    debug_mode = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    app.run(host='0.0.0.0', port=5000, debug=debug_mode)

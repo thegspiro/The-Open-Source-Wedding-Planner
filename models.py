@@ -478,6 +478,7 @@ class Guest(db.Model):
     social_groups = db.Column(db.Text)  # comma-separated group tags: "Church Group, Book Club, Work"
     rsvp_token = db.Column(db.String(64), unique=True)  # individual RSVP link token
     rsvp_notes = db.Column(db.Text)  # guest notes from RSVP form
+    guest_token = db.Column(db.String(64), unique=True)  # token for cookie-based guest identification
     
     # Plus One
     is_plus_one = db.Column(db.Boolean, default=False)

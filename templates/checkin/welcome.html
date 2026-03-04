@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - {{ wedding.couple_names }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); min-height: 100vh;">
+    <main class="container" style="max-width: 500px; margin: 0 auto; padding: 2rem;">
+        <div class="form-container" style="text-align: center; padding: 2.5rem;">
+            <h1 style="color: #e91e63; margin-bottom: 0.5rem;">{{ wedding.couple_names }}</h1>
+            <p style="color: #666; font-size: 1.1rem; margin-bottom: 2rem;">
+                {{ wedding.wedding_date.strftime('%B %d, %Y') }}
+            </p>
+
+            <div style="background: #fff3e0; border-radius: 12px; padding: 2rem; margin-bottom: 1.5rem;">
+                <p style="font-size: 1.3rem; color: #333; margin-bottom: 0.25rem;">Welcome,</p>
+                <p style="font-size: 1.8rem; font-weight: 700; color: #e91e63; margin: 0;">{{ guest.name }}</p>
+            </div>
+
+            {% if table_name or table_number %}
+            <div style="background: #e8f5e9; border-radius: 12px; padding: 2rem; margin-bottom: 1.5rem;">
+                <p style="font-size: 1rem; color: #666; margin-bottom: 0.5rem;">Your table</p>
+                <p style="font-size: 2rem; font-weight: 700; color: #2e7d32; margin: 0;">
+                    {% if table_name %}{{ table_name }}{% else %}Table {{ table_number }}{% endif %}
+                </p>
+            </div>
+            {% endif %}
+
+            {% if guest.meal_choice %}
+            <div style="background: #f3e5f5; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 0.25rem;">Your meal</p>
+                <p style="font-size: 1.2rem; color: #6a1b9a; margin: 0;">{{ guest.meal_choice }}</p>
+            </div>
+            {% endif %}
+
+            <p style="color: #999; font-size: 0.85rem; margin-top: 2rem;">
+                You're all set! When you arrive at the venue, just scan the check-in QR code and we'll remind you of your table.
+            </p>
+        </div>
+    </main>
+</body>
+</html>
