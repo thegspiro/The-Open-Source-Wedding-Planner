@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Add Contingency Plan - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Add Contingency Plan</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">
+        <div class="form-group">
+            <label>Category *</label>
+            <select name="category" required>
+                <option value="">-- Select --</option>
+                <option value="weather">Weather (Rain/Heat/Cold)</option>
+                <option value="vendor_backup">Vendor No-Show / Backup</option>
+                <option value="venue_backup">Venue Backup</option>
+                <option value="emergency">Medical / Emergency</option>
+                <option value="transportation">Transportation</option>
+                <option value="power_outage">Power / Equipment Failure</option>
+                <option value="guest_issues">Guest Issues</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Plan Title *</label>
+            <input type="text" name="title" required placeholder="e.g., Indoor ceremony backup if rain">
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea name="description" rows="4" placeholder="What is the backup plan? Where, when, how will it work?"></textarea>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Emergency Contact Name</label>
+                <input type="text" name="contact_name" placeholder="Who to call if needed">
+            </div>
+            <div class="form-group">
+                <label>Emergency Contact Phone</label>
+                <input type="text" name="contact_phone" placeholder="Phone number">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="2" placeholder="Additional notes"></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Plan</button>
+            <a href="{{ url_for('contingency_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

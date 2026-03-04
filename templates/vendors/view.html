@@ -59,6 +59,17 @@
         </p>
         {% endif %}
 
+        {% if vendor.cancellation_policy %}
+        <div class="info-item">
+            <strong>Cancellation:</strong> {{ vendor.cancellation_policy[:100] }}{% if vendor.cancellation_policy|length > 100 %}...{% endif %}
+        </div>
+        {% endif %}
+        {% if vendor.backup_contact %}
+        <div class="info-item">
+            <strong>Backup:</strong> {{ vendor.backup_contact }}{% if vendor.backup_phone %} ({{ vendor.backup_phone }}){% endif %}
+        </div>
+        {% endif %}
+
         <div class="form-actions">
             <a href="{{ url_for('vendor_edit', wedding_id=wedding.id, vendor_id=vendor.id) }}" class="btn-primary btn-small">Edit</a>
             <form method="POST" action="{{ url_for('vendor_delete', wedding_id=wedding.id, vendor_id=vendor.id) }}" class="form-inline">

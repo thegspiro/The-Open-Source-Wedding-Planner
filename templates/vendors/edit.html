@@ -64,6 +64,27 @@
             <label>Contract Date</label>
             <input type="date" name="contract_date" value="{{ vendor.contract_date.strftime('%Y-%m-%d') if vendor.contract_date else '' }}">
         </div>
+        <div class="form-group">
+            <label>Cancellation Policy</label>
+            <textarea name="cancellation_policy" rows="3" placeholder="e.g., Full refund 90+ days, 50% refund 30-89 days, no refund under 30 days">{{ vendor.cancellation_policy or '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label>Contract Notes</label>
+            <textarea name="contract_notes" rows="3" placeholder="Key contract terms, what's included, exclusions, overtime rates...">{{ vendor.contract_notes or '' }}</textarea>
+        </div>
+
+        <h2>Backup Contact</h2>
+        <p class="form-help">In case the primary contact is unavailable on the wedding day.</p>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Backup Contact Name</label>
+                <input type="text" name="backup_contact" value="{{ vendor.backup_contact or '' }}" placeholder="Alternate contact person">
+            </div>
+            <div class="form-group">
+                <label>Backup Contact Phone</label>
+                <input type="text" name="backup_phone" value="{{ vendor.backup_phone or '' }}" placeholder="Phone number">
+            </div>
+        </div>
 
         <h2>Financial</h2>
         <div class="form-row">

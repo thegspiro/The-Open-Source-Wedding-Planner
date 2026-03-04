@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Add Tip - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Add Tip</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">
+        <div class="form-group">
+            <label>Recipient *</label>
+            <input type="text" name="recipient" required placeholder="e.g., Lead Photographer, DJ, Catering Staff">
+        </div>
+        <div class="form-group">
+            <label>Service Category</label>
+            <select name="service_category">
+                <option value="">-- Select --</option>
+                <option value="photography">Photography / Videography</option>
+                <option value="catering">Catering / Banquet Staff</option>
+                <option value="music">DJ / Band</option>
+                <option value="beauty">Hair & Makeup</option>
+                <option value="transportation">Transportation / Valet</option>
+                <option value="venue">Venue Coordinator</option>
+                <option value="planner">Wedding Planner</option>
+                <option value="officiant">Officiant</option>
+                <option value="florist">Florist / Decor</option>
+                <option value="cake">Baker / Cake</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Suggested Amount ($)</label>
+                <input type="number" name="suggested_amount" step="1" min="0" placeholder="e.g., 150">
+            </div>
+            <div class="form-group">
+                <label>Actual Amount ($)</label>
+                <input type="number" name="actual_amount" step="1" min="0">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Payment Method</label>
+            <select name="payment_method">
+                <option value="cash">Cash (in envelope)</option>
+                <option value="check">Check</option>
+                <option value="venmo">Venmo / Digital</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="2" placeholder="e.g., Hand to lead photographer at end of reception"></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Tip</button>
+            <a href="{{ url_for('tips_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -3,8 +3,15 @@
 {% block content %}
 <div class="page-header">
     <h1>Tasks</h1>
-    <a href="{{ url_for('task_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Task</a>
+    <div class="header-actions">
+        <a href="{{ url_for('task_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Task</a>
+        <form method="POST" action="{{ url_for('generate_milestones', wedding_id=wedding.id) }}" class="form-inline">
+            <button type="submit" class="btn-secondary" onclick="return confirm('Generate planning milestones based on your wedding date?')">Generate Milestones</button>
+        </form>
+    </div>
 </div>
+
+<p class="form-help">Wedding Date: {{ wedding.wedding_date.strftime('%B %d, %Y') }}. Use "Generate Milestones" to create a countdown checklist with key deadlines.</p>
 
 <h2>Pending Tasks ({{ pending_tasks|length }})</h2>
 {% if pending_tasks %}
@@ -12,7 +19,7 @@
     {% for task in pending_tasks|sort(attribute='due_date') %}
     <div class="task-card priority-{{ task.priority }}">
         <div class="task-header">
-            <div><h3>{{ task.title }}</h3><span class="priority-badge priority-{{ task.priority }}">{{ task.priority }}</span></div>
+            <div><h3>{{ task.title }}</h3><span class="priority-badge priority-{{ task.priority }}">{{ task.priority }}</span>{% if task.is_milestone %}<span class="category-badge">Milestone{% if task.months_before is not none %} &middot; {{ task.months_before }}mo before{% endif %}</span>{% endif %}</div>
             <form method="POST" action="{{ url_for('task_toggle', task_id=task.id) }}" style="display:inline;"><button type="submit" class="btn-success">✓</button></form>
         </div>
         {% if task.description %}<p>{{ task.description }}</p>{% endif %}

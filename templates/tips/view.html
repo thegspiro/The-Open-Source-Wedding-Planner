@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Tipping Tracker - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Tipping Tracker</h1>
+    <a href="{{ url_for('tips_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Tip</a>
+</div>
+
+<p class="form-help">Tipping vendors is often overlooked until the day of. Prepare envelopes in advance so you're not scrambling. This total also appears in your budget.</p>
+
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-num">${{ "{:,.0f}".format(stats.total_suggested) }}</div>
+        <div>Suggested Total</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">${{ "{:,.0f}".format(stats.total_actual) }}</div>
+        <div>Actual Total</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.envelopes_ready }}/{{ stats.total_tips }}</div>
+        <div>Envelopes Ready</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.tips_given }}/{{ stats.total_tips }}</div>
+        <div>Tips Given</div>
+    </div>
+</div>
+
+{% if tips %}
+<div class="module-section">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Recipient</th>
+                <th>Category</th>
+                <th>Suggested</th>
+                <th>Actual</th>
+                <th>Method</th>
+                <th>Envelope</th>
+                <th>Given</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tip in tips %}
+            <tr>
+                <td>{{ tip.recipient }}{% if tip.notes %}<br><small class="expense-note">{{ tip.notes }}</small>{% endif %}</td>
+                <td><span class="category-badge">{{ (tip.service_category or 'other')|replace('_', ' ')|title }}</span></td>
+                <td>${{ "{:,.0f}".format(tip.suggested_amount) if tip.suggested_amount else '-' }}</td>
+                <td>${{ "{:,.0f}".format(tip.actual_amount) if tip.actual_amount else '-' }}</td>
+                <td>{{ (tip.payment_method or '-')|title }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('tips_toggle_envelope', wedding_id=wedding.id, tip_id=tip.id) }}" class="form-inline">
+                        <button type="submit" class="btn-small {% if tip.envelope_prepared %}btn-success{% else %}btn-secondary{% endif %}">
+                            {{ 'Ready' if tip.envelope_prepared else 'Not Ready' }}
+                        </button>
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('tips_toggle_given', wedding_id=wedding.id, tip_id=tip.id) }}" class="form-inline">
+                        <button type="submit" class="btn-small {% if tip.given %}btn-success{% else %}btn-secondary{% endif %}">
+                            {{ 'Given' if tip.given else 'Pending' }}
+                        </button>
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('tips_delete', wedding_id=wedding.id, tip_id=tip.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Tips Planned Yet</h2>
+    <p>Add the vendors and staff you plan to tip on your wedding day.</p>
+    <a href="{{ url_for('tips_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Tip</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Gift Tracking - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Gift Tracking</h1>
+    <a href="{{ url_for('gifts_add', wedding_id=wedding.id) }}" class="btn-primary">+ Record Gift</a>
+</div>
+
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.total_gifts }}</div>
+        <div>Total Gifts</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">${{ "{:,.0f}".format(stats.total_value) }}</div>
+        <div>Estimated Value</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num {% if stats.thank_yous_pending > 0 %}budget-over{% endif %}">{{ stats.thank_yous_pending }}</div>
+        <div>Thank Yous Pending</div>
+    </div>
+</div>
+
+{% macro gift_table(gift_list, event_label) %}
+{% if gift_list %}
+<div class="module-section">
+    <h2>{{ event_label }} ({{ gift_list|length }})</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>From</th>
+                <th>Gift</th>
+                <th>Value</th>
+                <th>Date</th>
+                <th>Thank You</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gift in gift_list %}
+            <tr>
+                <td>{{ gift.from_name }}</td>
+                <td>{{ gift.description or '-' }}{% if gift.notes %}<br><small class="expense-note">{{ gift.notes }}</small>{% endif %}</td>
+                <td>${{ "{:,.0f}".format(gift.estimated_value) if gift.estimated_value else '-' }}</td>
+                <td>{{ gift.date_received.strftime('%b %d') if gift.date_received else '-' }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('gifts_toggle_thank_you', wedding_id=wedding.id, gift_id=gift.id) }}" class="form-inline">
+                        <button type="submit" class="btn-small {% if gift.thank_you_sent %}btn-success{% else %}btn-secondary{% endif %}">
+                            {% if gift.thank_you_sent %}Sent{% if gift.thank_you_sent_date %} {{ gift.thank_you_sent_date.strftime('%b %d') }}{% endif %}{% else %}Not Sent{% endif %}
+                        </button>
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('gifts_delete', wedding_id=wedding.id, gift_id=gift.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endmacro %}
+
+{{ gift_table(engagement_gifts, 'Engagement Gifts') }}
+{{ gift_table(shower_gifts, 'Shower Gifts') }}
+{{ gift_table(wedding_gifts, 'Wedding Day Gifts') }}
+{{ gift_table(other_gifts, 'Other Gifts') }}
+
+{% if not gifts %}
+<div class="empty-state">
+    <h2>No Gifts Recorded Yet</h2>
+    <p>Track gifts from your engagement party, shower, and wedding day. Never forget a thank-you note!</p>
+    <a href="{{ url_for('gifts_add', wedding_id=wedding.id) }}" class="btn-primary">+ Record Your First Gift</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

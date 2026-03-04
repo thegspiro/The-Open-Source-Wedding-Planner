@@ -4,11 +4,12 @@ from models import (
     Reception, ReceptionTimelineItem, MenuItem, SeatingTable,
     Honeymoon, HoneymoonItinerary, PackingItem,
     WeddingBranding, BridalPartyMember, Guest,
-    Budget, BudgetExpense, Vendor, RegistryItem, Attire, TraditionalElement,
+    Budget, BudgetExpense, BudgetCategoryLimit, Vendor, RegistryItem, Attire, TraditionalElement,
     User, WeddingAccess,
     DayOfTimelineItem, PhotoShot, Song, FloralItem, Invitation,
     RehearsalDinner, Accommodation, MarriageLicense, HairMakeup,
-    WeddingParticipant, timeline_assignments
+    WeddingParticipant, timeline_assignments,
+    ContingencyPlan, TipItem, Gift
 )
 from datetime import datetime, timedelta
 import os
@@ -1086,8 +1087,31 @@ def budget_view(wedding_id):
         'all_paid': total_paid + module_total_paid,
     }
 
+    # Category spending for limits comparison
+    category_limits = budget.category_limits if budget else []
+    category_spending = {}
+    for e in expenses:
+        cat = e.category
+        if cat not in category_spending:
+            category_spending[cat] = 0
+        category_spending[cat] += e.estimated_cost or 0
+
+    # Build limit warnings
+    limit_warnings = []
+    for cl in category_limits:
+        spent = category_spending.get(cl.category, 0)
+        if spent > cl.limit_amount:
+            limit_warnings.append({
+                'category': cl.category,
+                'limit': cl.limit_amount,
+                'spent': spent,
+                'over': spent - cl.limit_amount
+            })
+
     return render_template('budget/view.html', wedding=wedding, budget=budget,
-                         expenses=expenses, stats=stats, module_costs=module_costs)
+                         expenses=expenses, stats=stats, module_costs=module_costs,
+                         category_limits=category_limits, category_spending=category_spending,
+                         limit_warnings=limit_warnings)
 
 @app.route('/wedding/<int:wedding_id>/budget/update', methods=['POST'])
 @login_required
@@ -1210,6 +1234,10 @@ def vendor_edit(wedding_id, vendor_id):
         vendor.contract_signed = request.form.get('contract_signed') == 'on'
         if request.form.get('contract_date'):
             vendor.contract_date = datetime.strptime(request.form.get('contract_date'), '%Y-%m-%d').date()
+        vendor.cancellation_policy = request.form.get('cancellation_policy')
+        vendor.contract_notes = request.form.get('contract_notes')
+        vendor.backup_contact = request.form.get('backup_contact')
+        vendor.backup_phone = request.form.get('backup_phone')
         if request.form.get('final_payment_date'):
             vendor.final_payment_date = datetime.strptime(request.form.get('final_payment_date'), '%Y-%m-%d').date()
         if request.form.get('service_date'):
@@ -2117,6 +2145,9 @@ def accommodations_add(wedding_id):
             website=request.form.get('website'),
             block_code=request.form.get('block_code'),
             rate=request.form.get('rate'),
+            rooms_reserved=request.form.get('rooms_reserved', type=int),
+            welcome_bag=request.form.get('welcome_bag') == 'on',
+            welcome_bag_items=request.form.get('welcome_bag_items'),
             notes=request.form.get('notes')
         )
         if request.form.get('deadline'):
@@ -2222,6 +2253,297 @@ def hair_makeup_delete(wedding_id, appt_id):
     db.session.commit()
     flash('Appointment removed.', 'success')
     return redirect(url_for('hair_makeup_view', wedding_id=wedding_id))
+
+# ============================================
+# PLANNING MILESTONES ROUTES
+# ============================================
+
+MILESTONE_TEMPLATES = [
+    (12, 'Set your total budget', 'budget', 'high'),
+    (12, 'Book your ceremony venue', 'ceremony', 'high'),
+    (12, 'Book your reception venue', 'reception', 'high'),
+    (11, 'Hire a wedding planner/coordinator', 'planning', 'medium'),
+    (10, 'Book photographer and videographer', 'vendors', 'high'),
+    (10, 'Start building guest list', 'guests', 'high'),
+    (9, 'Book caterer', 'vendors', 'high'),
+    (9, 'Choose wedding party members', 'bridal_party', 'medium'),
+    (8, 'Book florist', 'vendors', 'medium'),
+    (8, 'Book DJ or band', 'vendors', 'medium'),
+    (8, 'Shop for wedding attire', 'attire', 'high'),
+    (7, 'Book officiant', 'ceremony', 'high'),
+    (7, 'Create wedding website', 'planning', 'medium'),
+    (6, 'Order invitations and stationery', 'stationery', 'high'),
+    (6, 'Book hair and makeup artists', 'vendors', 'medium'),
+    (6, 'Plan honeymoon and book travel', 'honeymoon', 'medium'),
+    (5, 'Register for gifts', 'registry', 'medium'),
+    (5, 'Book transportation', 'transportation', 'medium'),
+    (5, 'Reserve hotel room blocks', 'accommodations', 'medium'),
+    (4, 'Schedule dress/suit fittings', 'attire', 'medium'),
+    (4, 'Plan rehearsal dinner', 'reception', 'medium'),
+    (3, 'Send invitations', 'stationery', 'high'),
+    (3, 'Order wedding cake', 'vendors', 'medium'),
+    (3, 'Purchase wedding party gifts', 'gifts', 'medium'),
+    (3, 'Write personal vows (if applicable)', 'ceremony', 'medium'),
+    (2, 'Final dress/suit fitting', 'attire', 'high'),
+    (2, 'Finalize seating chart', 'reception', 'high'),
+    (2, 'Apply for marriage license', 'legal', 'high'),
+    (2, 'Confirm all vendor details', 'vendors', 'high'),
+    (2, 'Plan contingency/backup plans', 'planning', 'medium'),
+    (1, 'Create day-of timeline', 'planning', 'high'),
+    (1, 'Prepare tip envelopes for vendors', 'tips', 'high'),
+    (1, 'Prepare welcome bags for hotel guests', 'accommodations', 'low'),
+    (1, 'Final guest count to caterer', 'guests', 'high'),
+    (1, 'Confirm honeymoon reservations', 'honeymoon', 'medium'),
+    (1, 'Break in wedding shoes', 'attire', 'low'),
+    (0, 'Pack emergency kit', 'planning', 'medium'),
+    (0, 'Delegate day-of responsibilities', 'planning', 'medium'),
+]
+
+@app.route('/wedding/<int:wedding_id>/milestones/generate', methods=['POST'])
+@login_required
+def generate_milestones(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding_date = wedding.wedding_date
+
+    # Check if milestones already exist
+    existing = Task.query.filter_by(wedding_id=wedding_id, is_milestone=True).count()
+    if existing > 0:
+        flash('Milestones already generated. Delete existing milestones first to regenerate.', 'warning')
+        return redirect(url_for('tasks_view', wedding_id=wedding_id))
+
+    from dateutil.relativedelta import relativedelta
+    for months, title, category, priority in MILESTONE_TEMPLATES:
+        due = wedding_date - relativedelta(months=months)
+        # Don't create milestones in the past
+        if due.date() < datetime.utcnow().date():
+            due = datetime.utcnow()
+        task = Task(
+            wedding_id=wedding_id,
+            title=title,
+            due_date=due,
+            priority=priority,
+            category=category,
+            is_milestone=True,
+            months_before=months
+        )
+        db.session.add(task)
+    db.session.commit()
+    flash('Planning milestones generated based on your wedding date!', 'success')
+    return redirect(url_for('tasks_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/milestones/clear', methods=['POST'])
+@login_required
+def clear_milestones(wedding_id):
+    Task.query.filter_by(wedding_id=wedding_id, is_milestone=True).delete()
+    db.session.commit()
+    flash('All milestones cleared.', 'success')
+    return redirect(url_for('tasks_view', wedding_id=wedding_id))
+
+# ============================================
+# CONTINGENCY PLAN ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/contingency')
+@login_required
+def contingency_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    plans = wedding.contingency_plans
+    return render_template('contingency/view.html', wedding=wedding, plans=plans)
+
+@app.route('/wedding/<int:wedding_id>/contingency/add', methods=['GET', 'POST'])
+@login_required
+def contingency_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        plan = ContingencyPlan(
+            wedding_id=wedding_id,
+            category=request.form.get('category'),
+            title=request.form.get('title'),
+            description=request.form.get('description'),
+            contact_name=request.form.get('contact_name'),
+            contact_phone=request.form.get('contact_phone'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(plan)
+        db.session.commit()
+        flash('Contingency plan added!', 'success')
+        return redirect(url_for('contingency_view', wedding_id=wedding_id))
+    return render_template('contingency/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/contingency/<int:plan_id>/delete', methods=['POST'])
+@login_required
+def contingency_delete(wedding_id, plan_id):
+    plan = ContingencyPlan.query.get_or_404(plan_id)
+    db.session.delete(plan)
+    db.session.commit()
+    flash('Contingency plan removed.', 'success')
+    return redirect(url_for('contingency_view', wedding_id=wedding_id))
+
+# ============================================
+# BUDGET CATEGORY LIMIT ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/budget/category-limit', methods=['POST'])
+@login_required
+def budget_category_limit_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if not wedding.budget:
+        budget = Budget(wedding_id=wedding_id, total_budget=0)
+        db.session.add(budget)
+        db.session.commit()
+    limit = BudgetCategoryLimit(
+        budget_id=wedding.budget.id,
+        category=request.form.get('category'),
+        limit_amount=request.form.get('limit_amount', type=float)
+    )
+    db.session.add(limit)
+    db.session.commit()
+    flash('Category limit set!', 'success')
+    return redirect(url_for('budget_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/budget/category-limit/<int:limit_id>/delete', methods=['POST'])
+@login_required
+def budget_category_limit_delete(wedding_id, limit_id):
+    limit = BudgetCategoryLimit.query.get_or_404(limit_id)
+    db.session.delete(limit)
+    db.session.commit()
+    flash('Category limit removed.', 'success')
+    return redirect(url_for('budget_view', wedding_id=wedding_id))
+
+# ============================================
+# TIPPING TRACKER ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/tips')
+@login_required
+def tips_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    tips = wedding.tips
+    total_suggested = sum(t.suggested_amount or 0 for t in tips)
+    total_actual = sum(t.actual_amount or 0 for t in tips)
+    envelopes_ready = sum(1 for t in tips if t.envelope_prepared)
+    tips_given = sum(1 for t in tips if t.given)
+    stats = {
+        'total_suggested': total_suggested,
+        'total_actual': total_actual,
+        'envelopes_ready': envelopes_ready,
+        'tips_given': tips_given,
+        'total_tips': len(tips)
+    }
+    return render_template('tips/view.html', wedding=wedding, tips=tips, stats=stats)
+
+@app.route('/wedding/<int:wedding_id>/tips/add', methods=['GET', 'POST'])
+@login_required
+def tips_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        tip = TipItem(
+            wedding_id=wedding_id,
+            recipient=request.form.get('recipient'),
+            service_category=request.form.get('service_category'),
+            suggested_amount=request.form.get('suggested_amount', type=float),
+            actual_amount=request.form.get('actual_amount', type=float),
+            payment_method=request.form.get('payment_method'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(tip)
+        db.session.commit()
+        flash('Tip added!', 'success')
+        return redirect(url_for('tips_view', wedding_id=wedding_id))
+    return render_template('tips/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/tips/<int:tip_id>/toggle-envelope', methods=['POST'])
+@login_required
+def tips_toggle_envelope(wedding_id, tip_id):
+    tip = TipItem.query.get_or_404(tip_id)
+    tip.envelope_prepared = not tip.envelope_prepared
+    db.session.commit()
+    return redirect(url_for('tips_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/tips/<int:tip_id>/toggle-given', methods=['POST'])
+@login_required
+def tips_toggle_given(wedding_id, tip_id):
+    tip = TipItem.query.get_or_404(tip_id)
+    tip.given = not tip.given
+    db.session.commit()
+    return redirect(url_for('tips_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/tips/<int:tip_id>/delete', methods=['POST'])
+@login_required
+def tips_delete(wedding_id, tip_id):
+    tip = TipItem.query.get_or_404(tip_id)
+    db.session.delete(tip)
+    db.session.commit()
+    flash('Tip removed.', 'success')
+    return redirect(url_for('tips_view', wedding_id=wedding_id))
+
+# ============================================
+# GIFT TRACKING ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/gifts')
+@login_required
+def gifts_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    gifts = wedding.gifts
+    # Group by event
+    shower_gifts = [g for g in gifts if g.event == 'shower']
+    wedding_gifts = [g for g in gifts if g.event == 'wedding']
+    engagement_gifts = [g for g in gifts if g.event == 'engagement']
+    other_gifts = [g for g in gifts if g.event == 'other']
+    thank_yous_pending = sum(1 for g in gifts if not g.thank_you_sent)
+    total_value = sum(g.estimated_value or 0 for g in gifts)
+    stats = {
+        'total_gifts': len(gifts),
+        'thank_yous_pending': thank_yous_pending,
+        'total_value': total_value
+    }
+    return render_template('gifts/view.html', wedding=wedding, gifts=gifts,
+                         shower_gifts=shower_gifts, wedding_gifts=wedding_gifts,
+                         engagement_gifts=engagement_gifts, other_gifts=other_gifts,
+                         stats=stats)
+
+@app.route('/wedding/<int:wedding_id>/gifts/add', methods=['GET', 'POST'])
+@login_required
+def gifts_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        gift = Gift(
+            wedding_id=wedding_id,
+            event=request.form.get('event'),
+            from_name=request.form.get('from_name'),
+            description=request.form.get('description'),
+            estimated_value=request.form.get('estimated_value', type=float),
+            notes=request.form.get('notes')
+        )
+        if request.form.get('date_received'):
+            gift.date_received = datetime.strptime(request.form.get('date_received'), '%Y-%m-%d').date()
+        db.session.add(gift)
+        db.session.commit()
+        flash('Gift recorded!', 'success')
+        return redirect(url_for('gifts_view', wedding_id=wedding_id))
+    return render_template('gifts/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/gifts/<int:gift_id>/thank-you', methods=['POST'])
+@login_required
+def gifts_toggle_thank_you(wedding_id, gift_id):
+    gift = Gift.query.get_or_404(gift_id)
+    gift.thank_you_sent = not gift.thank_you_sent
+    if gift.thank_you_sent:
+        gift.thank_you_sent_date = datetime.utcnow().date()
+    else:
+        gift.thank_you_sent_date = None
+    db.session.commit()
+    return redirect(url_for('gifts_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/gifts/<int:gift_id>/delete', methods=['POST'])
+@login_required
+def gifts_delete(wedding_id, gift_id):
+    gift = Gift.query.get_or_404(gift_id)
+    db.session.delete(gift)
+    db.session.commit()
+    flash('Gift removed.', 'success')
+    return redirect(url_for('gifts_view', wedding_id=wedding_id))
 
 # Background task for email reminders
 def check_reminders():

@@ -133,6 +133,24 @@
         <p class="stat-label">Legal requirements</p>
     </a>
 
+    <a href="{{ url_for('contingency_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🛡️</div>
+        <h3>Contingency Plans</h3>
+        <p class="stat-label">Backup plans & emergencies</p>
+    </a>
+
+    <a href="{{ url_for('tips_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">💵</div>
+        <h3>Tipping Tracker</h3>
+        <p class="stat-label">Vendor tips & envelopes</p>
+    </a>
+
+    <a href="{{ url_for('gifts_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🎀</div>
+        <h3>Gift Tracking</h3>
+        <p class="stat-label">Shower & wedding gifts</p>
+    </a>
+
     <a href="{{ url_for('branding_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">🎨</div>
         <h3>Style & Branding</h3>

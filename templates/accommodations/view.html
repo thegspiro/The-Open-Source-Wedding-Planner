@@ -41,6 +41,22 @@
                 <strong>Rate:</strong> {{ item.rate }}
             </div>
             {% endif %}
+            {% if item.rooms_reserved %}
+            <div class="info-item">
+                <strong>Rooms Reserved:</strong> {{ item.rooms_reserved }}
+            </div>
+            {% endif %}
+            {% if item.welcome_bag %}
+            <div class="info-item">
+                <strong>Welcome Bags:</strong>
+                {% if item.welcome_bags_delivered %}
+                <span class="rsvp-accepted">Delivered</span>
+                {% else %}
+                <span class="rsvp-pending">Not Yet Delivered</span>
+                {% endif %}
+                {% if item.welcome_bag_items %}<br>{{ item.welcome_bag_items }}{% endif %}
+            </div>
+            {% endif %}
             {% if item.deadline %}
             <div class="info-item">
                 <strong>Deadline:</strong> {{ item.deadline.strftime('%B %d, %Y') }}

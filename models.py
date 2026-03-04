@@ -102,6 +102,8 @@ class Task(db.Model):
     reminder_sent = db.Column(db.Boolean, default=False)
     priority = db.Column(db.String(20), default='medium')
     category = db.Column(db.String(50))  # ceremony, reception, honeymoon, etc.
+    is_milestone = db.Column(db.Boolean, default=False)
+    months_before = db.Column(db.Integer)  # auto-generated milestone: months before wedding
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ============================================
@@ -434,7 +436,13 @@ class Vendor(db.Model):
     # Contract
     contract_signed = db.Column(db.Boolean, default=False)
     contract_date = db.Column(db.Date)
-    
+    cancellation_policy = db.Column(db.Text)
+    contract_notes = db.Column(db.Text)
+
+    # Backup
+    backup_contact = db.Column(db.String(200))
+    backup_phone = db.Column(db.String(50))
+
     # Financial
     total_cost = db.Column(db.Float)
     deposit_amount = db.Column(db.Float)
@@ -627,6 +635,13 @@ class Accommodation(db.Model):
     block_code = db.Column(db.String(100))  # for hotel blocks
     rate = db.Column(db.String(100))  # nightly rate or shuttle cost
     deadline = db.Column(db.Date)  # booking deadline
+    rooms_reserved = db.Column(db.Integer)
+
+    # Welcome/Gift Bags
+    welcome_bag = db.Column(db.Boolean, default=False)
+    welcome_bag_items = db.Column(db.Text)  # description of bag contents
+    welcome_bags_delivered = db.Column(db.Boolean, default=False)
+
     notes = db.Column(db.Text)
 
     wedding = db.relationship('Wedding', backref=db.backref('accommodations', lazy=True, cascade='all, delete-orphan'))
@@ -722,7 +737,7 @@ DayOfTimelineItem.assigned_participants = db.relationship(
 class TraditionalElement(db.Model):
     """Library of traditional wedding elements that couples can browse"""
     id = db.Column(db.Integer, primary_key=True)
-    
+
     category = db.Column(db.String(100), nullable=False)  # ceremony, reception, cultural, religious
     subcategory = db.Column(db.String(100))
     name = db.Column(db.String(200), nullable=False)
@@ -731,3 +746,71 @@ class TraditionalElement(db.Model):
     typical_timing = db.Column(db.String(200))  # when in ceremony/reception
     what_you_need = db.Column(db.Text)  # items/people needed
     how_to_do_it = db.Column(db.Text)  # instructions
+
+# ============================================
+# CONTINGENCY PLAN MODULE
+# ============================================
+
+class ContingencyPlan(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    category = db.Column(db.String(100), nullable=False)  # weather, vendor_backup, venue_backup, emergency, transportation, power_outage, other
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    contact_name = db.Column(db.String(200))
+    contact_phone = db.Column(db.String(50))
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('contingency_plans', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# BUDGET CATEGORY LIMIT MODULE
+# ============================================
+
+class BudgetCategoryLimit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    budget_id = db.Column(db.Integer, db.ForeignKey('budget.id'), nullable=False)
+
+    category = db.Column(db.String(100), nullable=False)
+    limit_amount = db.Column(db.Float, nullable=False)
+
+    budget = db.relationship('Budget', backref=db.backref('category_limits', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# TIPPING TRACKER MODULE
+# ============================================
+
+class TipItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    recipient = db.Column(db.String(200), nullable=False)  # e.g., "Lead Photographer", "DJ", "Catering Staff"
+    service_category = db.Column(db.String(100))  # photography, catering, music, beauty, transportation, venue, planner, officiant, other
+    suggested_amount = db.Column(db.Float)
+    actual_amount = db.Column(db.Float)
+    payment_method = db.Column(db.String(50))  # cash, check, venmo, other
+    envelope_prepared = db.Column(db.Boolean, default=False)
+    given = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('tips', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# GIFT TRACKING MODULE
+# ============================================
+
+class Gift(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    event = db.Column(db.String(50), nullable=False)  # shower, wedding, engagement, other
+    from_name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    estimated_value = db.Column(db.Float)
+    date_received = db.Column(db.Date)
+    thank_you_sent = db.Column(db.Boolean, default=False)
+    thank_you_sent_date = db.Column(db.Date)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('gifts', lazy=True, cascade='all, delete-orphan'))
