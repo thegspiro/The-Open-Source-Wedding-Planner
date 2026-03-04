@@ -203,7 +203,10 @@ def load_logged_in_user():
 
 @app.context_processor
 def inject_user():
-    return dict(current_user=g.get('user'))
+    user = g.get('user')
+    user_theme = user.theme if user and user.theme else 'rose'
+    user_dark_mode = user.dark_mode if user else False
+    return dict(current_user=user, user_theme=user_theme, user_dark_mode=user_dark_mode)
 
 
 def log_activity(wedding_id, action, entity_type, entity_name='', details=''):
@@ -320,6 +323,35 @@ def logout():
     session.pop('user_id', None)
     flash('You have been logged out.', 'success')
     return redirect(url_for('login'))
+
+
+# ============================================
+# USER SETTINGS
+# ============================================
+
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+def user_settings():
+    user = g.user
+    if request.method == 'POST':
+        # Theme color
+        theme = request.form.get('theme', 'rose')
+        if theme in ('rose', 'sage', 'ocean', 'lavender'):
+            user.theme = theme
+
+        # Dark mode
+        user.dark_mode = request.form.get('dark_mode') == 'on'
+
+        # Profile fields
+        name = request.form.get('name', '').strip()
+        if name:
+            user.name = name
+
+        db.session.commit()
+        flash('Settings saved!', 'success')
+        return redirect(url_for('user_settings'))
+
+    return render_template('settings.html', user=user)
 
 
 # ============================================

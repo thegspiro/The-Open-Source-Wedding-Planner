@@ -16,6 +16,8 @@ class User(db.Model):
     name = db.Column(db.String(200), nullable=False)
     user_type = db.Column(db.String(20), nullable=False)  # 'professional', 'friend', 'self'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    theme = db.Column(db.String(20), default='rose')  # rose, sage, ocean, lavender
+    dark_mode = db.Column(db.Boolean, default=False)
 
     wedding_access = db.relationship('WeddingAccess', backref='user', lazy=True, cascade='all, delete-orphan')
 

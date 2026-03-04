@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body data-theme="{{ user_theme }}" data-mode="{{ 'dark' if user_dark_mode else 'light' }}">
     <nav class="navbar">
         <div class="container">
             <a href="{{ url_for('index') }}" class="logo">Wedding Organizer</a>
@@ -47,6 +47,7 @@
                             {% else %}Planner{% endif %}
                         </span>
                     </li>
+                    <li><a href="{{ url_for('user_settings') }}" style="font-size: 1.1rem; text-decoration: none;" title="Settings">&#9881;</a></li>
                     <li><a href="{{ url_for('logout') }}" class="btn-logout">Log Out</a></li>
                 {% else %}
                     <li><a href="{{ url_for('login') }}">Log In</a></li>
