@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Add Attire - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Add Attire</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('attire_add', wedding_id=wedding.id) }}">
+        <div class="form-group">
+            <label for="person_name">Person Name *</label>
+            <input type="text" id="person_name" name="person_name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="person_type">Person Type</label>
+            <select id="person_type" name="person_type">
+                <option value="person getting married">Person Getting Married</option>
+                <option value="wedding party">Wedding Party</option>
+                <option value="parent">Parent</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="garment_type">Garment Type</label>
+            <select id="garment_type" name="garment_type">
+                <option value="dress">Dress</option>
+                <option value="suit">Suit</option>
+                <option value="tuxedo">Tuxedo</option>
+                <option value="outfit">Outfit</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="designer">Designer</label>
+            <input type="text" id="designer" name="designer">
+        </div>
+
+        <div class="form-group">
+            <label for="style_number">Style Number</label>
+            <input type="text" id="style_number" name="style_number">
+        </div>
+
+        <div class="form-group">
+            <label for="color">Color</label>
+            <input type="text" id="color" name="color">
+        </div>
+
+        <div class="form-group">
+            <label for="size">Size</label>
+            <input type="text" id="size" name="size">
+        </div>
+
+        <div class="form-group">
+            <label for="store">Store</label>
+            <input type="text" id="store" name="store">
+        </div>
+
+        <div class="form-group">
+            <label for="price">Price ($)</label>
+            <input type="number" id="price" name="price" step="0.01" min="0">
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" rows="3"></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Attire</button>
+            <a href="{{ url_for('attire_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

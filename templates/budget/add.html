@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Add Expense - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Add Expense</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('budget_expense_add', wedding_id=wedding.id) }}">
+        <div class="module-section">
+            <h2>Expense Details</h2>
+
+            <div class="form-group">
+                <label for="category">Category</label>
+                <select id="category" name="category">
+                    <option value="venue">Venue</option>
+                    <option value="catering">Catering</option>
+                    <option value="photography">Photography</option>
+                    <option value="flowers">Flowers</option>
+                    <option value="music">Music</option>
+                    <option value="attire">Attire</option>
+                    <option value="stationery">Stationery</option>
+                    <option value="transportation">Transportation</option>
+                    <option value="decor">Decor</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="item_name">Item Name *</label>
+                <input type="text" id="item_name" name="item_name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="estimated_cost">Estimated Cost</label>
+                <input type="number" id="estimated_cost" name="estimated_cost" step="0.01" min="0">
+            </div>
+
+            <div class="form-group">
+                <label for="actual_cost">Actual Cost</label>
+                <input type="number" id="actual_cost" name="actual_cost" step="0.01" min="0">
+            </div>
+
+            <div class="form-group">
+                <label for="paid_amount">Paid Amount</label>
+                <input type="number" id="paid_amount" name="paid_amount" step="0.01" min="0">
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h2>Payment Information</h2>
+
+            <div class="form-group">
+                <label for="payment_due_date">Payment Due Date</label>
+                <input type="date" id="payment_due_date" name="payment_due_date">
+            </div>
+
+            <div class="form-group">
+                <label for="payment_status">Payment Status</label>
+                <select id="payment_status" name="payment_status">
+                    <option value="unpaid" selected>Unpaid</option>
+                    <option value="deposit">Deposit</option>
+                    <option value="partial">Partial</option>
+                    <option value="paid">Paid</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="3"></textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Expense</button>
+            <a href="{{ url_for('budget_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

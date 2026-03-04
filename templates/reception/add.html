@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Reception - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Reception</h1>
+</div>
+
+<div class="form-container">
+    <div class="module-section">
+        <p>Reception details are managed through the edit page.</p>
+        <div class="form-actions">
+            <a href="{{ url_for('reception_edit', wedding_id=wedding.id) }}" class="btn-primary">Go to Edit Reception</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

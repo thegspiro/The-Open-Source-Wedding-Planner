@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Rehearsal Dinner - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Rehearsal Dinner</h1>
+    {% if rehearsal %}
+    <a href="{{ url_for('rehearsal_edit', wedding_id=wedding.id) }}" class="btn-primary">Edit Details</a>
+    {% endif %}
+</div>
+
+{% if rehearsal %}
+<div class="module-section">
+    <h2>Event Details</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Date:</strong> {{ rehearsal.date.strftime('%B %d, %Y') if rehearsal.date else 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Start Time:</strong> {{ rehearsal.start_time.strftime('%I:%M %p') if rehearsal.start_time else 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>End Time:</strong> {{ rehearsal.end_time.strftime('%I:%M %p') if rehearsal.end_time else 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Venue Name:</strong> {{ rehearsal.venue_name or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Venue Address:</strong> {{ rehearsal.venue_address or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Venue Contact:</strong> {{ rehearsal.venue_contact or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Venue Phone:</strong> {{ rehearsal.venue_phone or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Expected Guest Count:</strong> {{ rehearsal.expected_guest_count or 'Not set' }}
+        </div>
+    </div>
+</div>
+
+{% if rehearsal.menu_notes %}
+<div class="module-section">
+    <h2>Menu Notes</h2>
+    <p>{{ rehearsal.menu_notes }}</p>
+</div>
+{% endif %}
+
+{% if rehearsal.notes %}
+<div class="module-section">
+    <h2>Additional Notes</h2>
+    <p>{{ rehearsal.notes }}</p>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <h2>No Rehearsal Dinner Details Yet</h2>
+    <p>Set up your rehearsal dinner details to keep everything organized.</p>
+    <a href="{{ url_for('rehearsal_edit', wedding_id=wedding.id) }}" class="btn-primary">Set Up Rehearsal Dinner</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

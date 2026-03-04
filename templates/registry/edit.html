@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Edit Registry Item - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Edit Registry Item: {{ item.item_name }}</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('registry_edit', wedding_id=wedding.id, item_id=item.id) }}">
+        <div class="form-group">
+            <label for="item_name">Item Name *</label>
+            <input type="text" id="item_name" name="item_name" value="{{ item.item_name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="store">Store</label>
+            <input type="text" id="store" name="store" value="{{ item.store or '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="url">URL</label>
+            <input type="url" id="url" name="url" value="{{ item.url or '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="price">Price ($)</label>
+            <input type="number" id="price" name="price" step="0.01" min="0" value="{{ item.price or '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="quantity_requested">Quantity Requested</label>
+            <input type="number" id="quantity_requested" name="quantity_requested" min="1" value="{{ item.quantity_requested or 1 }}">
+        </div>
+
+        <div class="form-group">
+            <label for="quantity_purchased">Quantity Purchased</label>
+            <input type="number" id="quantity_purchased" name="quantity_purchased" min="0" value="{{ item.quantity_purchased or 0 }}">
+        </div>
+
+        <div class="form-group">
+            <label for="purchased_by">Purchased By</label>
+            <input type="text" id="purchased_by" name="purchased_by" value="{{ item.purchased_by or '' }}">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('registry_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

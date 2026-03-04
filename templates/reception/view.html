@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Reception - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Reception Details</h1>
+    <a href="{{ url_for('reception_edit', wedding_id=wedding.id) }}" class="btn-primary">Edit Details</a>
+</div>
+
+<div class="module-section">
+    <h2>Venue</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Venue Name:</strong> {{ reception.venue_name or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Address:</strong> {{ reception.venue_address or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Contact:</strong> {{ reception.venue_contact or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Phone:</strong> {{ reception.venue_phone or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Capacity:</strong> {{ reception.venue_capacity or 'Not set' }}
+        </div>
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Timing</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Start Time:</strong> {{ reception.start_time.strftime('%I:%M %p') if reception.start_time else 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>End Time:</strong> {{ reception.end_time.strftime('%I:%M %p') if reception.end_time else 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Date:</strong> {{ reception.reception_date.strftime('%B %d, %Y') if reception.reception_date else 'Not set' }}
+        </div>
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Catering</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Catering Style:</strong> {{ reception.catering_style or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Bar Service:</strong> {{ reception.bar_service or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Cake Flavor:</strong> {{ reception.cake_flavor or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Cake Design:</strong> {{ reception.cake_design or 'Not set' }}
+        </div>
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Entertainment</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Music Type:</strong> {{ reception.music_type or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>First Dance Song:</strong> {{ reception.first_dance_song or 'Not set' }}
+        </div>
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Decor</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Theme:</strong> {{ reception.theme or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Centerpiece:</strong> {{ reception.centerpiece_description or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Lighting:</strong> {{ reception.lighting_notes or 'Not set' }}
+        </div>
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Guest Count</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Expected Guests:</strong> {{ reception.expected_guest_count or 'Not set' }}
+        </div>
+    </div>
+</div>
+
+<div class="module-section">
+    <div class="section-header">
+        <h2>Reception Timeline</h2>
+    </div>
+    {% if timeline_items %}
+    <div class="timeline-list">
+        {% for item in timeline_items %}
+        <div class="timeline-item">
+            <div class="timeline-order">{{ item.order }}</div>
+            <div class="timeline-content">
+                <h4>{{ item.item_name }}</h4>
+                {% if item.description %}<p>{{ item.description }}</p>{% endif %}
+                <div class="timeline-meta">
+                    {% if item.scheduled_time %}
+                    <span>Time: {{ item.scheduled_time.strftime('%I:%M %p') }}</span>
+                    {% endif %}
+                    {% if item.duration_seconds %}
+                    <span>Duration: {{ item.duration_seconds // 60 }}:{{ '%02d' % (item.duration_seconds % 60) }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-message">No timeline items yet.</p>
+    {% endif %}
+</div>
+
+<div class="module-section">
+    <div class="section-header">
+        <h2>Menu Items</h2>
+    </div>
+    {% if menu_items %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Course</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Dietary Tags</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in menu_items %}
+            <tr>
+                <td>{{ item.course or '-' }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.description or '-' }}</td>
+                <td>{{ item.dietary_tags or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-message">No menu items yet.</p>
+    {% endif %}
+</div>
+
+<div class="module-section">
+    <div class="section-header">
+        <h2>Seating Tables</h2>
+    </div>
+    {% if tables %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Table Number</th>
+                <th>Capacity</th>
+                <th>Shape</th>
+                <th>Assigned Guests</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for table in tables %}
+            <tr>
+                <td>{{ table.table_number }}</td>
+                <td>{{ table.capacity }}</td>
+                <td>{{ table.table_shape or '-' }}</td>
+                <td>{{ table.assigned_guests|length }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-message">No seating tables configured yet.</p>
+    {% endif %}
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

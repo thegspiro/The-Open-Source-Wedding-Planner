@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Edit Expense - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Edit Expense: {{ expense.item_name }}</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('budget_expense_edit', wedding_id=wedding.id, expense_id=expense.id) }}">
+        <div class="module-section">
+            <h2>Expense Details</h2>
+
+            <div class="form-group">
+                <label for="category">Category</label>
+                <select id="category" name="category">
+                    <option value="venue" {% if expense.category == 'venue' %}selected{% endif %}>Venue</option>
+                    <option value="catering" {% if expense.category == 'catering' %}selected{% endif %}>Catering</option>
+                    <option value="photography" {% if expense.category == 'photography' %}selected{% endif %}>Photography</option>
+                    <option value="flowers" {% if expense.category == 'flowers' %}selected{% endif %}>Flowers</option>
+                    <option value="music" {% if expense.category == 'music' %}selected{% endif %}>Music</option>
+                    <option value="attire" {% if expense.category == 'attire' %}selected{% endif %}>Attire</option>
+                    <option value="stationery" {% if expense.category == 'stationery' %}selected{% endif %}>Stationery</option>
+                    <option value="transportation" {% if expense.category == 'transportation' %}selected{% endif %}>Transportation</option>
+                    <option value="decor" {% if expense.category == 'decor' %}selected{% endif %}>Decor</option>
+                    <option value="other" {% if expense.category == 'other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="item_name">Item Name *</label>
+                <input type="text" id="item_name" name="item_name" value="{{ expense.item_name }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="estimated_cost">Estimated Cost</label>
+                <input type="number" id="estimated_cost" name="estimated_cost" step="0.01" min="0" value="{{ expense.estimated_cost or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="actual_cost">Actual Cost</label>
+                <input type="number" id="actual_cost" name="actual_cost" step="0.01" min="0" value="{{ expense.actual_cost or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="paid_amount">Paid Amount</label>
+                <input type="number" id="paid_amount" name="paid_amount" step="0.01" min="0" value="{{ expense.paid_amount or '' }}">
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h2>Payment Information</h2>
+
+            <div class="form-group">
+                <label for="payment_due_date">Payment Due Date</label>
+                <input type="date" id="payment_due_date" name="payment_due_date" value="{{ expense.payment_due_date.strftime('%Y-%m-%d') if expense.payment_due_date else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="payment_status">Payment Status</label>
+                <select id="payment_status" name="payment_status">
+                    <option value="unpaid" {% if expense.payment_status == 'unpaid' or not expense.payment_status %}selected{% endif %}>Unpaid</option>
+                    <option value="deposit" {% if expense.payment_status == 'deposit' %}selected{% endif %}>Deposit</option>
+                    <option value="partial" {% if expense.payment_status == 'partial' %}selected{% endif %}>Partial</option>
+                    <option value="paid" {% if expense.payment_status == 'paid' %}selected{% endif %}>Paid</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="3">{{ expense.notes or '' }}</textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('budget_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

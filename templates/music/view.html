@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Music & Playlist - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Music & Playlist</h1>
+    <a href="{{ url_for('music_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Song</a>
+</div>
+
+{% if songs %}
+{% set moments = {
+    'processional': 'Processional',
+    'recessional': 'Recessional',
+    'first_dance': 'First Dance',
+    'parent_dance': 'Parent Dance',
+    'cake_cutting': 'Cake Cutting',
+    'dinner': 'Dinner',
+    'cocktail_hour': 'Cocktail Hour',
+    'dancing': 'Dancing',
+    'last_dance': 'Last Dance',
+    'do_not_play': 'Do Not Play',
+    'other': 'Other'
+} %}
+
+{% for moment_key, moment_label in moments.items() %}
+    {% set moment_songs = songs|selectattr('moment', 'equalto', moment_key)|list %}
+    {% if moment_songs %}
+    <div class="module-section">
+        <h2>{{ moment_label }}</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Artist</th>
+                    <th>Moment</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for song in moment_songs %}
+                <tr>
+                    <td>{{ song.title }}</td>
+                    <td>{{ song.artist or '-' }}</td>
+                    <td>{{ moment_label }}</td>
+                    <td>{{ song.notes or '-' }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('music_delete', wedding_id=wedding.id, song_id=song.id) }}" class="form-inline">
+                            <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this song?')">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+{% endfor %}
+
+{% else %}
+<div class="empty-state">
+    <h2>No Songs Yet</h2>
+    <p>Start building your wedding playlist by adding songs for each moment of your celebration.</p>
+    <a href="{{ url_for('music_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Song</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

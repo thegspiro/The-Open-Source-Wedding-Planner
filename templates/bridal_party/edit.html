@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Edit Wedding Party Member - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Edit Member: {{ member.name }}</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">
+        <div class="module-section">
+            <h2>Basic Information</h2>
+
+            <div class="form-group">
+                <label for="name">Name *</label>
+                <input type="text" id="name" name="name" value="{{ member.name }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="role">Role</label>
+                <input type="text" id="role" name="role" value="{{ member.role or '' }}" placeholder="e.g., Maid of Honor, Best Man, Attendant">
+            </div>
+
+            <div class="form-group">
+                <label for="side">Side</label>
+                <select id="side" name="side">
+                    <option value="">Not specified</option>
+                    {% for person in wedding.people|sort(attribute='display_order') %}
+                        {% if person.side_label %}
+                        <option value="{{ person.side_label }}" {% if member.side == person.side_label %}selected{% endif %}>{{ person.side_label }}</option>
+                        {% else %}
+                        <option value="{{ person.name }}'s side" {% if member.side == person.name ~ "'s side" %}selected{% endif %}>{{ person.name }}'s side</option>
+                        {% endif %}
+                    {% endfor %}
+                    <option value="Both" {% if member.side == 'Both' %}selected{% endif %}>Both / Shared</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="{{ member.email or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone</label>
+                <input type="text" id="phone" name="phone" value="{{ member.phone or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="processional_order">Processional Order</label>
+                <input type="number" id="processional_order" name="processional_order" min="1" value="{{ member.processional_order or '' }}" placeholder="1, 2, 3...">
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h2>Attire Measurements</h2>
+
+            <div class="form-group">
+                <label for="dress_size">Dress Size</label>
+                <input type="text" id="dress_size" name="dress_size" value="{{ member.dress_size or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="suit_size">Suit Size</label>
+                <input type="text" id="suit_size" name="suit_size" value="{{ member.suit_size or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="shoe_size">Shoe Size</label>
+                <input type="text" id="shoe_size" name="shoe_size" value="{{ member.shoe_size or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="height">Height</label>
+                <input type="text" id="height" name="height" value="{{ member.height or '' }}">
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h2>Gift Tracking</h2>
+
+            <div class="form-group">
+                <label for="gift_idea">Gift Idea</label>
+                <textarea id="gift_idea" name="gift_idea" rows="2">{{ member.gift_idea or '' }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="gift_purchased" {% if member.gift_purchased %}checked{% endif %}>
+                    Gift Purchased
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="gift_given" {% if member.gift_given %}checked{% endif %}>
+                    Gift Given
+                </label>
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h2>Plus One</h2>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="has_plus_one" {% if member.has_plus_one %}checked{% endif %}>
+                    Has Plus One
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label for="plus_one_name">Plus One Name</label>
+                <input type="text" id="plus_one_name" name="plus_one_name" value="{{ member.plus_one_name or '' }}">
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h2>Responsibilities</h2>
+
+            <div class="form-group">
+                <label for="responsibilities">Responsibilities</label>
+                <textarea id="responsibilities" name="responsibilities" rows="4">{{ member.responsibilities or '' }}</textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('bridal_party_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

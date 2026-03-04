@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Vendor - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Edit Vendor</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('vendor_edit', wedding_id=wedding.id, vendor_id=vendor.id) }}">
+        <h2>Vendor Information</h2>
+        <div class="form-group">
+            <label>Category *</label>
+            <select name="category" required>
+                <option value="">-- Select --</option>
+                <option value="photographer" {% if vendor.category == 'photographer' %}selected{% endif %}>Photographer</option>
+                <option value="videographer" {% if vendor.category == 'videographer' %}selected{% endif %}>Videographer</option>
+                <option value="caterer" {% if vendor.category == 'caterer' %}selected{% endif %}>Caterer</option>
+                <option value="florist" {% if vendor.category == 'florist' %}selected{% endif %}>Florist</option>
+                <option value="DJ/band" {% if vendor.category == 'DJ/band' %}selected{% endif %}>DJ/Band</option>
+                <option value="baker" {% if vendor.category == 'baker' %}selected{% endif %}>Baker</option>
+                <option value="officiant" {% if vendor.category == 'officiant' %}selected{% endif %}>Officiant</option>
+                <option value="hair/makeup" {% if vendor.category == 'hair/makeup' %}selected{% endif %}>Hair/Makeup</option>
+                <option value="planner" {% if vendor.category == 'planner' %}selected{% endif %}>Planner</option>
+                <option value="rentals" {% if vendor.category == 'rentals' %}selected{% endif %}>Rentals</option>
+                <option value="transportation" {% if vendor.category == 'transportation' %}selected{% endif %}>Transportation</option>
+                <option value="other" {% if vendor.category == 'other' %}selected{% endif %}>Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Business Name *</label>
+            <input type="text" name="business_name" value="{{ vendor.business_name or '' }}" required placeholder="e.g., Jane's Photography">
+        </div>
+        <div class="form-group">
+            <label>Contact Name</label>
+            <input type="text" name="contact_name" value="{{ vendor.contact_name or '' }}" placeholder="Primary contact person">
+        </div>
+
+        <h2>Contact Details</h2>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" value="{{ vendor.email or '' }}" placeholder="vendor@example.com">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Phone</label>
+                <input type="text" name="phone" value="{{ vendor.phone or '' }}" placeholder="Phone number">
+            </div>
+            <div class="form-group">
+                <label>Website</label>
+                <input type="url" name="website" value="{{ vendor.website or '' }}" placeholder="https://example.com">
+            </div>
+        </div>
+
+        <h2>Contract</h2>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="contract_signed" {% if vendor.contract_signed %}checked{% endif %}>
+                Contract Signed
+            </label>
+        </div>
+        <div class="form-group">
+            <label>Contract Date</label>
+            <input type="date" name="contract_date" value="{{ vendor.contract_date.strftime('%Y-%m-%d') if vendor.contract_date else '' }}">
+        </div>
+
+        <h2>Financial</h2>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Total Cost ($)</label>
+                <input type="number" name="total_cost" step="0.01" min="0" value="{{ vendor.total_cost or '' }}" placeholder="e.g., 5000">
+            </div>
+            <div class="form-group">
+                <label>Deposit Amount ($)</label>
+                <input type="number" name="deposit_amount" step="0.01" min="0" value="{{ vendor.deposit_amount or '' }}" placeholder="e.g., 1000">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="deposit_paid" {% if vendor.deposit_paid %}checked{% endif %}>
+                Deposit Paid
+            </label>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Balance Due ($)</label>
+                <input type="number" name="balance_due" step="0.01" min="0" value="{{ vendor.balance_due or '' }}" placeholder="Remaining balance">
+            </div>
+            <div class="form-group">
+                <label>Final Payment Date</label>
+                <input type="date" name="final_payment_date" value="{{ vendor.final_payment_date.strftime('%Y-%m-%d') if vendor.final_payment_date else '' }}">
+            </div>
+        </div>
+
+        <h2>Service Details</h2>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Service Date</label>
+                <input type="date" name="service_date" value="{{ vendor.service_date.strftime('%Y-%m-%d') if vendor.service_date else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Service Time</label>
+                <input type="time" name="service_time" value="{{ vendor.service_time.strftime('%H:%M') if vendor.service_time else '' }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Service Location</label>
+            <input type="text" name="service_location" value="{{ vendor.service_location or '' }}" placeholder="Where the service will be provided">
+        </div>
+
+        <h2>Notes</h2>
+        <div class="form-group">
+            <label>Additional Notes</label>
+            <textarea name="notes" rows="4" placeholder="Any additional details about this vendor...">{{ vendor.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('vendors_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

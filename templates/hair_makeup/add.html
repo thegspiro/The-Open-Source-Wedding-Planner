@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Add Appointment - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Add Hair & Makeup Appointment</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('hair_makeup_add', wedding_id=wedding.id) }}">
+        <div class="form-group">
+            <label>Person Name *</label>
+            <input type="text" name="person_name" required placeholder="e.g., Bride, Mother of the Bride">
+        </div>
+        <div class="form-group">
+            <label>Service Type</label>
+            <select name="service_type">
+                <option value="">-- Select --</option>
+                <option value="hair">Hair</option>
+                <option value="makeup">Makeup</option>
+                <option value="both">Both</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Appointment Time</label>
+            <input type="time" name="appointment_time">
+        </div>
+        <div class="form-group">
+            <label>Stylist Name</label>
+            <input type="text" name="stylist_name" placeholder="e.g., Jane Smith">
+        </div>
+        <div class="form-group">
+            <label>Style Notes</label>
+            <textarea name="style_notes" rows="3" placeholder="Describe the desired style, inspiration photos, etc."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Trial Date</label>
+            <input type="date" name="trial_date">
+        </div>
+        <div class="form-group">
+            <label>Cost ($)</label>
+            <input type="number" name="cost" step="0.01" min="0" placeholder="e.g., 150.00">
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="3" placeholder="Any additional details..."></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Appointment</button>
+            <a href="{{ url_for('hair_makeup_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

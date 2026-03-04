@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Add Stationery - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Add Stationery Item</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('invitations_add', wedding_id=wedding.id) }}">
+        <div class="form-group">
+            <label>Item Type *</label>
+            <select name="item_type" required>
+                <option value="">-- Select --</option>
+                <option value="save_the_date">Save the Date</option>
+                <option value="invitation">Invitation</option>
+                <option value="rsvp_card">RSVP Card</option>
+                <option value="program">Program</option>
+                <option value="menu_card">Menu Card</option>
+                <option value="thank_you">Thank You</option>
+                <option value="place_card">Place Card</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Designer</label>
+            <input type="text" name="designer" placeholder="e.g., Minted, Paperless Post">
+        </div>
+        <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" name="quantity" min="0" placeholder="e.g., 100">
+        </div>
+        <div class="form-group">
+            <label>Cost ($)</label>
+            <input type="number" name="cost" step="0.01" min="0" placeholder="e.g., 250.00">
+        </div>
+        <div class="form-group">
+            <label>Send By Date</label>
+            <input type="date" name="send_by_date">
+        </div>
+        <div class="form-group">
+            <label>Status</label>
+            <select name="status">
+                <option value="not_started">Not Started</option>
+                <option value="designing">Designing</option>
+                <option value="ordered">Ordered</option>
+                <option value="received">Received</option>
+                <option value="sent">Sent</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="3" placeholder="Any additional details..."></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Item</button>
+            <a href="{{ url_for('invitations_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

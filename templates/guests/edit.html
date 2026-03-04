@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Edit Guest - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Edit Guest: {{ guest.name }}</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">
+        <div class="module-section">
+            <h2>Basic Information</h2>
+
+            <div class="form-group">
+                <label for="name">Name *</label>
+                <input type="text" id="name" name="name" value="{{ guest.name }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="{{ guest.email or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone</label>
+                <input type="text" id="phone" name="phone" value="{{ guest.phone or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="address">Address</label>
+                <textarea id="address" name="address" rows="2">{{ guest.address or '' }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="guest_type">Guest Type</label>
+                <select id="guest_type" name="guest_type">
+                    <option value="family" {% if guest.guest_type == 'family' %}selected{% endif %}>family</option>
+                    <option value="friend" {% if guest.guest_type == 'friend' %}selected{% endif %}>friend</option>
+                    <option value="colleague" {% if guest.guest_type == 'colleague' %}selected{% endif %}>colleague</option>
+                    <option value="other" {% if guest.guest_type == 'other' %}selected{% endif %}>other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="side">Side / Association</label>
+                <select id="side" name="side">
+                    <option value="">Not specified</option>
+                    {% for person in wedding.people|sort(attribute='display_order') %}
+                        {% if person.side_label %}
+                        <option value="{{ person.side_label }}" {% if guest.side == person.side_label %}selected{% endif %}>{{ person.side_label }}</option>
+                        {% else %}
+                        <option value="{{ person.name }}'s side" {% if guest.side == person.name ~ "'s side" %}selected{% endif %}>{{ person.name }}'s side</option>
+                        {% endif %}
+                    {% endfor %}
+                    <option value="Both" {% if guest.side == 'Both' %}selected{% endif %}>Both / Shared</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="dietary_restrictions">Dietary Restrictions</label>
+                <textarea id="dietary_restrictions" name="dietary_restrictions" rows="2">{{ guest.dietary_restrictions or '' }}</textarea>
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h2>RSVP & Attendance</h2>
+
+            <div class="form-group">
+                <label for="rsvp_status">RSVP Status</label>
+                <select id="rsvp_status" name="rsvp_status">
+                    <option value="pending" {% if guest.rsvp_status == 'pending' or not guest.rsvp_status %}selected{% endif %}>pending</option>
+                    <option value="accepted" {% if guest.rsvp_status == 'accepted' %}selected{% endif %}>accepted</option>
+                    <option value="declined" {% if guest.rsvp_status == 'declined' %}selected{% endif %}>declined</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="meal_choice">Meal Choice</label>
+                <input type="text" id="meal_choice" name="meal_choice" value="{{ guest.meal_choice or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="invitation_sent" {% if guest.invitation_sent %}checked{% endif %}>
+                    Invitation Sent
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="attending_ceremony" {% if guest.attending_ceremony %}checked{% endif %}>
+                    Attending Ceremony
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="attending_reception" {% if guest.attending_reception %}checked{% endif %}>
+                    Attending Reception
+                </label>
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h2>Plus One</h2>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="is_plus_one" {% if guest.is_plus_one %}checked{% endif %}>
+                    Is a Plus One
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label for="plus_one_of">Plus One Of</label>
+                <input type="text" id="plus_one_of" name="plus_one_of" value="{{ guest.plus_one_of or '' }}">
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h2>Gift Tracking</h2>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="gift_received" {% if guest.gift_received %}checked{% endif %}>
+                    Gift Received
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label for="gift_description">Gift Description</label>
+                <input type="text" id="gift_description" name="gift_description" value="{{ guest.gift_description or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="thank_you_sent" {% if guest.thank_you_sent %}checked{% endif %}>
+                    Thank You Sent
+                </label>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

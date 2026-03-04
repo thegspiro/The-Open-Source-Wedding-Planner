@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Hair & Makeup - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Hair & Makeup</h1>
+    <a href="{{ url_for('hair_makeup_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Appointment</a>
+</div>
+
+{% if appointments %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Person</th>
+            <th>Service</th>
+            <th>Time</th>
+            <th>Stylist</th>
+            <th>Trial Date</th>
+            <th>Trial Done</th>
+            <th>Cost</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for appt in appointments %}
+        <tr>
+            <td>{{ appt.person_name }}</td>
+            <td>{{ appt.service_type|replace('_', ' ')|title if appt.service_type else '-' }}</td>
+            <td>{{ appt.appointment_time.strftime('%I:%M %p') if appt.appointment_time else '-' }}</td>
+            <td>{{ appt.stylist_name or '-' }}</td>
+            <td>{{ appt.trial_date.strftime('%B %d, %Y') if appt.trial_date else '-' }}</td>
+            <td>
+                {% if appt.trial_completed %}
+                <span class="rsvp-accepted">Yes</span>
+                {% else %}
+                <span class="rsvp-pending">No</span>
+                {% endif %}
+            </td>
+            <td>{{ '$%.2f'|format(appt.cost) if appt.cost else '-' }}</td>
+            <td>
+                <form method="POST" action="{{ url_for('hair_makeup_delete', wedding_id=wedding.id, appointment_id=appt.id) }}" class="form-inline">
+                    <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this appointment?')">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <h2>No Appointments Yet</h2>
+    <p>Start adding hair and makeup appointments for your wedding day.</p>
+    <a href="{{ url_for('hair_makeup_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Appointment</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

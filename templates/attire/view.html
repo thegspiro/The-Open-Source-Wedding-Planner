@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Attire - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Attire</h1>
+    <a href="{{ url_for('attire_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Attire</a>
+</div>
+
+{% if items %}
+<div class="dashboard-grid">
+    {% for item in items %}
+    <div class="dashboard-card">
+        <h3>{{ item.person_name }}</h3>
+        <p class="stat-label">{{ item.person_type }}</p>
+
+        <div class="info-grid">
+            {% if item.garment_type %}
+            <div class="info-item">
+                <strong>Garment:</strong> {{ item.garment_type }}
+            </div>
+            {% endif %}
+            {% if item.designer %}
+            <div class="info-item">
+                <strong>Designer:</strong> {{ item.designer }}
+            </div>
+            {% endif %}
+            {% if item.color %}
+            <div class="info-item">
+                <strong>Color:</strong> {{ item.color }}
+            </div>
+            {% endif %}
+            {% if item.size %}
+            <div class="info-item">
+                <strong>Size:</strong> {{ item.size }}
+            </div>
+            {% endif %}
+            {% if item.store %}
+            <div class="info-item">
+                <strong>Store:</strong> {{ item.store }}
+            </div>
+            {% endif %}
+            {% if item.price %}
+            <div class="info-item">
+                <strong>Price:</strong> ${{ "{:,.2f}".format(item.price) }}
+            </div>
+            {% endif %}
+        </div>
+
+        {% if item.purchased %}
+        <span class="rsvp-accepted">Purchased</span>
+        {% endif %}
+
+        {% if item.first_fitting_date or item.final_fitting_date or item.pickup_date %}
+        <div class="info-grid">
+            {% if item.first_fitting_date %}
+            <div class="info-item">
+                <strong>First Fitting:</strong> {{ item.first_fitting_date.strftime('%b %d, %Y') }}
+            </div>
+            {% endif %}
+            {% if item.final_fitting_date %}
+            <div class="info-item">
+                <strong>Final Fitting:</strong> {{ item.final_fitting_date.strftime('%b %d, %Y') }}
+            </div>
+            {% endif %}
+            {% if item.pickup_date %}
+            <div class="info-item">
+                <strong>Pickup:</strong> {{ item.pickup_date.strftime('%b %d, %Y') }}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="form-actions">
+            <a href="{{ url_for('attire_edit', wedding_id=wedding.id, item_id=item.id) }}" class="btn-primary btn-small">Edit</a>
+            <form method="POST" action="{{ url_for('attire_delete', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline">
+                <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this attire item?')">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Attire Items Yet</h2>
+    <p>Start tracking wedding attire for everyone in the wedding party.</p>
+    <a href="{{ url_for('attire_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Attire Item</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

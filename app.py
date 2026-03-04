@@ -1,8 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g
 from models import (
     db, Wedding, Person, Task, Ceremony, CeremonyTimelineItem, CeremonyReading,
-    Reception, Honeymoon, WeddingBranding, BridalPartyMember, Guest,
-    Budget, BudgetExpense, Vendor, TraditionalElement, User, WeddingAccess
+    Reception, ReceptionTimelineItem, MenuItem, SeatingTable,
+    Honeymoon, HoneymoonItinerary, PackingItem,
+    WeddingBranding, BridalPartyMember, Guest,
+    Budget, BudgetExpense, Vendor, RegistryItem, Attire, TraditionalElement,
+    User, WeddingAccess,
+    DayOfTimelineItem, PhotoShot, Song, FloralItem, Invitation,
+    RehearsalDinner, Accommodation, MarriageLicense, HairMakeup
 )
 from datetime import datetime, timedelta
 import os
@@ -195,6 +200,18 @@ def get_user_weddings(user):
     access_records = WeddingAccess.query.filter_by(user_id=user.id).all()
     wedding_ids = [a.wedding_id for a in access_records]
     return Wedding.query.filter(Wedding.id.in_(wedding_ids)).order_by(Wedding.wedding_date).all()
+
+
+def get_wedding_or_403(wedding_id):
+    """Get a wedding, checking that the current user has access."""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    user = g.user
+    if user:
+        access = WeddingAccess.query.filter_by(user_id=user.id, wedding_id=wedding_id).first()
+        if not access:
+            flash('You do not have access to this wedding.', 'error')
+            return None
+    return wedding
 
 
 # ============================================
@@ -656,6 +673,13 @@ def delete_wedding(wedding_id):
     flash('Wedding deleted successfully!', 'success')
     return redirect(url_for('index'))
 
+# More Modules Page
+@app.route('/wedding/<int:wedding_id>/more')
+@login_required
+def more_modules(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    return render_template('more_modules.html', wedding=wedding)
+
 # Traditional Elements Library
 @app.route('/traditional-elements')
 def traditional_elements():
@@ -843,6 +867,43 @@ def guest_add(wedding_id):
         return redirect(url_for('guests_view', wedding_id=wedding_id))
     return render_template('guests/add.html', wedding=wedding)
 
+@app.route('/wedding/<int:wedding_id>/guests/<int:guest_id>/edit', methods=['GET', 'POST'])
+@login_required
+def guest_edit(wedding_id, guest_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    guest = Guest.query.get_or_404(guest_id)
+    if request.method == 'POST':
+        guest.name = request.form.get('name')
+        guest.email = request.form.get('email')
+        guest.phone = request.form.get('phone')
+        guest.address = request.form.get('address')
+        guest.guest_type = request.form.get('guest_type')
+        guest.side = request.form.get('side')
+        guest.dietary_restrictions = request.form.get('dietary_restrictions')
+        guest.rsvp_status = request.form.get('rsvp_status')
+        guest.meal_choice = request.form.get('meal_choice')
+        guest.invitation_sent = request.form.get('invitation_sent') == 'on'
+        guest.attending_ceremony = request.form.get('attending_ceremony') == 'on'
+        guest.attending_reception = request.form.get('attending_reception') == 'on'
+        guest.is_plus_one = request.form.get('is_plus_one') == 'on'
+        guest.plus_one_of = request.form.get('plus_one_of')
+        guest.gift_received = request.form.get('gift_received') == 'on'
+        guest.gift_description = request.form.get('gift_description')
+        guest.thank_you_sent = request.form.get('thank_you_sent') == 'on'
+        db.session.commit()
+        flash('Guest updated!', 'success')
+        return redirect(url_for('guests_view', wedding_id=wedding_id))
+    return render_template('guests/edit.html', wedding=wedding, guest=guest)
+
+@app.route('/wedding/<int:wedding_id>/guests/<int:guest_id>/delete', methods=['POST'])
+@login_required
+def guest_delete(wedding_id, guest_id):
+    guest = Guest.query.get_or_404(guest_id)
+    db.session.delete(guest)
+    db.session.commit()
+    flash('Guest removed.', 'success')
+    return redirect(url_for('guests_view', wedding_id=wedding_id))
+
 # ============================================
 # BRIDAL PARTY ROUTES
 # ============================================
@@ -851,10 +912,8 @@ def guest_add(wedding_id):
 @login_required
 def bridal_party_view(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
-    bride_side = [m for m in wedding.bridal_party if m.side == 'bride']
-    groom_side = [m for m in wedding.bridal_party if m.side == 'groom']
-    return render_template('bridal_party/view.html', wedding=wedding, 
-                         bride_side=bride_side, groom_side=groom_side)
+    members = wedding.bridal_party
+    return render_template('bridal_party/view.html', wedding=wedding, members=members)
 
 @app.route('/wedding/<int:wedding_id>/bridal-party/add', methods=['GET', 'POST'])
 @login_required
@@ -872,9 +931,45 @@ def bridal_party_add(wedding_id):
         )
         db.session.add(member)
         db.session.commit()
-        flash('Bridal party member added!', 'success')
+        flash('Wedding party member added!', 'success')
         return redirect(url_for('bridal_party_view', wedding_id=wedding_id))
     return render_template('bridal_party/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/bridal-party/<int:member_id>/edit', methods=['GET', 'POST'])
+@login_required
+def bridal_party_edit(wedding_id, member_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    member = BridalPartyMember.query.get_or_404(member_id)
+    if request.method == 'POST':
+        member.name = request.form.get('name')
+        member.role = request.form.get('role')
+        member.side = request.form.get('side')
+        member.email = request.form.get('email')
+        member.phone = request.form.get('phone')
+        member.processional_order = request.form.get('processional_order', type=int)
+        member.dress_size = request.form.get('dress_size')
+        member.suit_size = request.form.get('suit_size')
+        member.shoe_size = request.form.get('shoe_size')
+        member.height = request.form.get('height')
+        member.gift_idea = request.form.get('gift_idea')
+        member.gift_purchased = request.form.get('gift_purchased') == 'on'
+        member.gift_given = request.form.get('gift_given') == 'on'
+        member.has_plus_one = request.form.get('has_plus_one') == 'on'
+        member.plus_one_name = request.form.get('plus_one_name')
+        member.responsibilities = request.form.get('responsibilities')
+        db.session.commit()
+        flash('Wedding party member updated!', 'success')
+        return redirect(url_for('bridal_party_view', wedding_id=wedding_id))
+    return render_template('bridal_party/edit.html', wedding=wedding, member=member)
+
+@app.route('/wedding/<int:wedding_id>/bridal-party/<int:member_id>/delete', methods=['POST'])
+@login_required
+def bridal_party_delete(wedding_id, member_id):
+    member = BridalPartyMember.query.get_or_404(member_id)
+    db.session.delete(member)
+    db.session.commit()
+    flash('Wedding party member removed.', 'success')
+    return redirect(url_for('bridal_party_view', wedding_id=wedding_id))
 
 # ============================================
 # BUDGET ROUTES
@@ -886,12 +981,11 @@ def budget_view(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     budget = wedding.budget
     expenses = budget.expenses if budget else []
-    
-    # Calculate totals
+
     total_estimated = sum([e.estimated_cost or 0 for e in expenses])
     total_actual = sum([e.actual_cost or 0 for e in expenses])
     total_paid = sum([e.paid_amount or 0 for e in expenses])
-    
+
     stats = {
         'budget_total': budget.total_budget if budget else 0,
         'estimated': total_estimated,
@@ -899,9 +993,22 @@ def budget_view(wedding_id):
         'paid': total_paid,
         'remaining': (budget.total_budget if budget else 0) - total_paid
     }
-    
-    return render_template('budget/view.html', wedding=wedding, budget=budget, 
+
+    return render_template('budget/view.html', wedding=wedding, budget=budget,
                          expenses=expenses, stats=stats)
+
+@app.route('/wedding/<int:wedding_id>/budget/update', methods=['POST'])
+@login_required
+def budget_update(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if not wedding.budget:
+        budget = Budget(wedding_id=wedding_id, total_budget=0)
+        db.session.add(budget)
+        db.session.commit()
+    wedding.budget.total_budget = request.form.get('total_budget', type=float) or 0
+    db.session.commit()
+    flash('Budget updated!', 'success')
+    return redirect(url_for('budget_view', wedding_id=wedding_id))
 
 @app.route('/wedding/<int:wedding_id>/budget/expense/add', methods=['POST'])
 @login_required
@@ -917,6 +1024,35 @@ def budget_expense_add(wedding_id):
     db.session.add(expense)
     db.session.commit()
     flash('Expense added!', 'success')
+    return redirect(url_for('budget_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/budget/expense/<int:expense_id>/edit', methods=['GET', 'POST'])
+@login_required
+def budget_expense_edit(wedding_id, expense_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    expense = BudgetExpense.query.get_or_404(expense_id)
+    if request.method == 'POST':
+        expense.category = request.form.get('category')
+        expense.item_name = request.form.get('item_name')
+        expense.estimated_cost = request.form.get('estimated_cost', type=float)
+        expense.actual_cost = request.form.get('actual_cost', type=float)
+        expense.paid_amount = request.form.get('paid_amount', type=float)
+        if request.form.get('payment_due_date'):
+            expense.payment_due_date = datetime.strptime(request.form.get('payment_due_date'), '%Y-%m-%d').date()
+        expense.payment_status = request.form.get('payment_status')
+        expense.notes = request.form.get('notes')
+        db.session.commit()
+        flash('Expense updated!', 'success')
+        return redirect(url_for('budget_view', wedding_id=wedding_id))
+    return render_template('budget/edit.html', wedding=wedding, expense=expense)
+
+@app.route('/wedding/<int:wedding_id>/budget/expense/<int:expense_id>/delete', methods=['POST'])
+@login_required
+def budget_expense_delete(wedding_id, expense_id):
+    expense = BudgetExpense.query.get_or_404(expense_id)
+    db.session.delete(expense)
+    db.session.commit()
+    flash('Expense removed.', 'success')
     return redirect(url_for('budget_view', wedding_id=wedding_id))
 
 # ============================================
@@ -942,13 +1078,56 @@ def vendor_add(wedding_id):
             contact_name=request.form.get('contact_name'),
             email=request.form.get('email'),
             phone=request.form.get('phone'),
-            total_cost=request.form.get('total_cost', type=float)
+            total_cost=request.form.get('total_cost', type=float),
+            deposit_amount=request.form.get('deposit_amount', type=float),
+            notes=request.form.get('notes')
         )
         db.session.add(vendor)
         db.session.commit()
         flash('Vendor added!', 'success')
         return redirect(url_for('vendors_view', wedding_id=wedding_id))
     return render_template('vendors/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/vendors/<int:vendor_id>/edit', methods=['GET', 'POST'])
+@login_required
+def vendor_edit(wedding_id, vendor_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    vendor = Vendor.query.get_or_404(vendor_id)
+    if request.method == 'POST':
+        vendor.category = request.form.get('category')
+        vendor.business_name = request.form.get('business_name')
+        vendor.contact_name = request.form.get('contact_name')
+        vendor.email = request.form.get('email')
+        vendor.phone = request.form.get('phone')
+        vendor.website = request.form.get('website')
+        vendor.total_cost = request.form.get('total_cost', type=float)
+        vendor.deposit_amount = request.form.get('deposit_amount', type=float)
+        vendor.deposit_paid = request.form.get('deposit_paid') == 'on'
+        vendor.balance_due = request.form.get('balance_due', type=float)
+        vendor.contract_signed = request.form.get('contract_signed') == 'on'
+        if request.form.get('contract_date'):
+            vendor.contract_date = datetime.strptime(request.form.get('contract_date'), '%Y-%m-%d').date()
+        if request.form.get('final_payment_date'):
+            vendor.final_payment_date = datetime.strptime(request.form.get('final_payment_date'), '%Y-%m-%d').date()
+        if request.form.get('service_date'):
+            vendor.service_date = datetime.strptime(request.form.get('service_date'), '%Y-%m-%d').date()
+        if request.form.get('service_time'):
+            vendor.service_time = datetime.strptime(request.form.get('service_time'), '%H:%M').time()
+        vendor.service_location = request.form.get('service_location')
+        vendor.notes = request.form.get('notes')
+        db.session.commit()
+        flash('Vendor updated!', 'success')
+        return redirect(url_for('vendors_view', wedding_id=wedding_id))
+    return render_template('vendors/edit.html', wedding=wedding, vendor=vendor)
+
+@app.route('/wedding/<int:wedding_id>/vendors/<int:vendor_id>/delete', methods=['POST'])
+@login_required
+def vendor_delete(wedding_id, vendor_id):
+    vendor = Vendor.query.get_or_404(vendor_id)
+    db.session.delete(vendor)
+    db.session.commit()
+    flash('Vendor removed.', 'success')
+    return redirect(url_for('vendors_view', wedding_id=wedding_id))
 
 # ============================================
 # TASKS ROUTES
@@ -960,7 +1139,7 @@ def tasks_view(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     pending = [t for t in wedding.tasks if not t.completed]
     completed = [t for t in wedding.tasks if t.completed]
-    return render_template('tasks/view.html', wedding=wedding, 
+    return render_template('tasks/view.html', wedding=wedding,
                          pending_tasks=pending, completed_tasks=completed)
 
 @app.route('/wedding/<int:wedding_id>/tasks/add', methods=['GET', 'POST'])
@@ -982,6 +1161,31 @@ def task_add(wedding_id):
         return redirect(url_for('tasks_view', wedding_id=wedding_id))
     return render_template('tasks/add.html', wedding=wedding)
 
+@app.route('/wedding/<int:wedding_id>/tasks/<int:task_id>/edit', methods=['GET', 'POST'])
+@login_required
+def task_edit(wedding_id, task_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    task = Task.query.get_or_404(task_id)
+    if request.method == 'POST':
+        task.title = request.form.get('title')
+        task.description = request.form.get('description')
+        task.due_date = datetime.strptime(request.form.get('due_date'), '%Y-%m-%d')
+        task.priority = request.form.get('priority', 'medium')
+        task.category = request.form.get('category')
+        db.session.commit()
+        flash('Task updated!', 'success')
+        return redirect(url_for('tasks_view', wedding_id=wedding_id))
+    return render_template('tasks/edit.html', wedding=wedding, task=task)
+
+@app.route('/wedding/<int:wedding_id>/tasks/<int:task_id>/delete', methods=['POST'])
+@login_required
+def task_delete(wedding_id, task_id):
+    task = Task.query.get_or_404(task_id)
+    db.session.delete(task)
+    db.session.commit()
+    flash('Task deleted.', 'success')
+    return redirect(url_for('tasks_view', wedding_id=wedding_id))
+
 @app.route('/task/<int:task_id>/toggle', methods=['POST'])
 @login_required
 def task_toggle(task_id):
@@ -990,6 +1194,772 @@ def task_toggle(task_id):
     db.session.commit()
     flash(f'Task {"completed" if task.completed else "reopened"}!', 'success')
     return redirect(url_for('tasks_view', wedding_id=task.wedding_id))
+
+# ============================================
+# REGISTRY ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/registry')
+@login_required
+def registry_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    items = wedding.registry_items
+    return render_template('registry/view.html', wedding=wedding, items=items)
+
+@app.route('/wedding/<int:wedding_id>/registry/add', methods=['GET', 'POST'])
+@login_required
+def registry_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        item = RegistryItem(
+            wedding_id=wedding_id,
+            item_name=request.form.get('item_name'),
+            store=request.form.get('store'),
+            url=request.form.get('url'),
+            price=request.form.get('price', type=float),
+            quantity_requested=request.form.get('quantity_requested', type=int) or 1
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash('Registry item added!', 'success')
+        return redirect(url_for('registry_view', wedding_id=wedding_id))
+    return render_template('registry/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/registry/<int:item_id>/edit', methods=['GET', 'POST'])
+@login_required
+def registry_edit(wedding_id, item_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    item = RegistryItem.query.get_or_404(item_id)
+    if request.method == 'POST':
+        item.item_name = request.form.get('item_name')
+        item.store = request.form.get('store')
+        item.url = request.form.get('url')
+        item.price = request.form.get('price', type=float)
+        item.quantity_requested = request.form.get('quantity_requested', type=int) or 1
+        item.quantity_purchased = request.form.get('quantity_purchased', type=int) or 0
+        item.purchased_by = request.form.get('purchased_by')
+        db.session.commit()
+        flash('Registry item updated!', 'success')
+        return redirect(url_for('registry_view', wedding_id=wedding_id))
+    return render_template('registry/edit.html', wedding=wedding, item=item)
+
+@app.route('/wedding/<int:wedding_id>/registry/<int:item_id>/delete', methods=['POST'])
+@login_required
+def registry_delete(wedding_id, item_id):
+    item = RegistryItem.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Registry item removed.', 'success')
+    return redirect(url_for('registry_view', wedding_id=wedding_id))
+
+# ============================================
+# ATTIRE ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/attire')
+@login_required
+def attire_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    items = wedding.attire
+    return render_template('attire/view.html', wedding=wedding, items=items)
+
+@app.route('/wedding/<int:wedding_id>/attire/add', methods=['GET', 'POST'])
+@login_required
+def attire_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        item = Attire(
+            wedding_id=wedding_id,
+            person_name=request.form.get('person_name'),
+            person_type=request.form.get('person_type'),
+            garment_type=request.form.get('garment_type'),
+            designer=request.form.get('designer'),
+            style_number=request.form.get('style_number'),
+            color=request.form.get('color'),
+            size=request.form.get('size'),
+            store=request.form.get('store'),
+            price=request.form.get('price', type=float),
+            notes=request.form.get('notes')
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash('Attire item added!', 'success')
+        return redirect(url_for('attire_view', wedding_id=wedding_id))
+    return render_template('attire/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/attire/<int:item_id>/edit', methods=['GET', 'POST'])
+@login_required
+def attire_edit(wedding_id, item_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    item = Attire.query.get_or_404(item_id)
+    if request.method == 'POST':
+        item.person_name = request.form.get('person_name')
+        item.person_type = request.form.get('person_type')
+        item.garment_type = request.form.get('garment_type')
+        item.designer = request.form.get('designer')
+        item.style_number = request.form.get('style_number')
+        item.color = request.form.get('color')
+        item.size = request.form.get('size')
+        item.store = request.form.get('store')
+        item.price = request.form.get('price', type=float)
+        item.purchased = request.form.get('purchased') == 'on'
+        if request.form.get('purchase_date'):
+            item.purchase_date = datetime.strptime(request.form.get('purchase_date'), '%Y-%m-%d').date()
+        if request.form.get('first_fitting_date'):
+            item.first_fitting_date = datetime.strptime(request.form.get('first_fitting_date'), '%Y-%m-%d').date()
+        if request.form.get('final_fitting_date'):
+            item.final_fitting_date = datetime.strptime(request.form.get('final_fitting_date'), '%Y-%m-%d').date()
+        if request.form.get('pickup_date'):
+            item.pickup_date = datetime.strptime(request.form.get('pickup_date'), '%Y-%m-%d').date()
+        item.accessories = request.form.get('accessories')
+        item.notes = request.form.get('notes')
+        db.session.commit()
+        flash('Attire item updated!', 'success')
+        return redirect(url_for('attire_view', wedding_id=wedding_id))
+    return render_template('attire/edit.html', wedding=wedding, item=item)
+
+@app.route('/wedding/<int:wedding_id>/attire/<int:item_id>/delete', methods=['POST'])
+@login_required
+def attire_delete(wedding_id, item_id):
+    item = Attire.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Attire item removed.', 'success')
+    return redirect(url_for('attire_view', wedding_id=wedding_id))
+
+# ============================================
+# HONEYMOON ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/honeymoon')
+@login_required
+def honeymoon_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    honeymoon = wedding.honeymoon
+    itinerary = sorted(honeymoon.itinerary_items, key=lambda x: x.day_number) if honeymoon else []
+    packing = honeymoon.packing_items if honeymoon else []
+    return render_template('honeymoon/view.html', wedding=wedding, honeymoon=honeymoon,
+                         itinerary=itinerary, packing=packing)
+
+@app.route('/wedding/<int:wedding_id>/honeymoon/edit', methods=['GET', 'POST'])
+@login_required
+def honeymoon_edit(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    honeymoon = wedding.honeymoon
+    if not honeymoon:
+        honeymoon = Honeymoon(wedding_id=wedding_id)
+        db.session.add(honeymoon)
+        db.session.commit()
+    if request.method == 'POST':
+        honeymoon.destination = request.form.get('destination')
+        if request.form.get('start_date'):
+            honeymoon.start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d')
+        if request.form.get('end_date'):
+            honeymoon.end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d')
+        honeymoon.budget = request.form.get('budget', type=float)
+        honeymoon.flight_confirmation = request.form.get('flight_confirmation')
+        honeymoon.airline = request.form.get('airline')
+        db.session.commit()
+        flash('Honeymoon details updated!', 'success')
+        return redirect(url_for('honeymoon_view', wedding_id=wedding_id))
+    return render_template('honeymoon/edit.html', wedding=wedding, honeymoon=honeymoon)
+
+@app.route('/wedding/<int:wedding_id>/honeymoon/packing/add', methods=['POST'])
+@login_required
+def honeymoon_packing_add(wedding_id):
+    honeymoon = Wedding.query.get_or_404(wedding_id).honeymoon
+    item = PackingItem(
+        honeymoon_id=honeymoon.id,
+        item_name=request.form.get('item_name'),
+        category=request.form.get('category')
+    )
+    db.session.add(item)
+    db.session.commit()
+    flash('Packing item added!', 'success')
+    return redirect(url_for('honeymoon_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/honeymoon/packing/<int:item_id>/toggle', methods=['POST'])
+@login_required
+def honeymoon_packing_toggle(wedding_id, item_id):
+    item = PackingItem.query.get_or_404(item_id)
+    item.packed = not item.packed
+    db.session.commit()
+    return redirect(url_for('honeymoon_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/honeymoon/packing/<int:item_id>/delete', methods=['POST'])
+@login_required
+def honeymoon_packing_delete(wedding_id, item_id):
+    item = PackingItem.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    return redirect(url_for('honeymoon_view', wedding_id=wedding_id))
+
+# ============================================
+# BRANDING ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/branding')
+@login_required
+def branding_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    branding = wedding.branding
+    return render_template('branding/view.html', wedding=wedding, branding=branding)
+
+@app.route('/wedding/<int:wedding_id>/branding/edit', methods=['GET', 'POST'])
+@login_required
+def branding_edit(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    branding = wedding.branding
+    if not branding:
+        branding = WeddingBranding(wedding_id=wedding_id)
+        db.session.add(branding)
+        db.session.commit()
+    if request.method == 'POST':
+        branding.primary_color = request.form.get('primary_color')
+        branding.secondary_color = request.form.get('secondary_color')
+        branding.accent_color = request.form.get('accent_color')
+        branding.primary_font = request.form.get('primary_font')
+        branding.secondary_font = request.form.get('secondary_font')
+        branding.monogram_text = request.form.get('monogram_text')
+        branding.overall_style = request.form.get('overall_style')
+        branding.mood = request.form.get('mood')
+        db.session.commit()
+        flash('Branding updated!', 'success')
+        return redirect(url_for('branding_view', wedding_id=wedding_id))
+    return render_template('branding/edit.html', wedding=wedding, branding=branding)
+
+# ============================================
+# RECEPTION SUB-ITEMS (TIMELINE, MENU, SEATING)
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/reception/timeline/add', methods=['POST'])
+@login_required
+def reception_timeline_add(wedding_id):
+    reception = Wedding.query.get_or_404(wedding_id).reception
+    item = ReceptionTimelineItem(
+        reception_id=reception.id,
+        order=request.form.get('order', type=int) or 0,
+        item_name=request.form.get('item_name'),
+        duration_seconds=request.form.get('duration_seconds', type=int),
+        description=request.form.get('description')
+    )
+    if request.form.get('scheduled_time'):
+        item.scheduled_time = datetime.strptime(request.form.get('scheduled_time'), '%H:%M').time()
+    db.session.add(item)
+    db.session.commit()
+    flash('Timeline item added!', 'success')
+    return redirect(url_for('reception_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/reception/timeline/<int:item_id>/delete', methods=['POST'])
+@login_required
+def reception_timeline_delete(wedding_id, item_id):
+    item = ReceptionTimelineItem.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Timeline item removed.', 'success')
+    return redirect(url_for('reception_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/reception/menu/add', methods=['POST'])
+@login_required
+def reception_menu_add(wedding_id):
+    reception = Wedding.query.get_or_404(wedding_id).reception
+    item = MenuItem(
+        reception_id=reception.id,
+        course=request.form.get('course'),
+        name=request.form.get('name'),
+        description=request.form.get('description'),
+        dietary_tags=request.form.get('dietary_tags')
+    )
+    db.session.add(item)
+    db.session.commit()
+    flash('Menu item added!', 'success')
+    return redirect(url_for('reception_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/reception/menu/<int:item_id>/delete', methods=['POST'])
+@login_required
+def reception_menu_delete(wedding_id, item_id):
+    item = MenuItem.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Menu item removed.', 'success')
+    return redirect(url_for('reception_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/reception/table/add', methods=['POST'])
+@login_required
+def reception_table_add(wedding_id):
+    reception = Wedding.query.get_or_404(wedding_id).reception
+    table = SeatingTable(
+        reception_id=reception.id,
+        table_number=request.form.get('table_number'),
+        capacity=request.form.get('capacity', type=int) or 8,
+        table_shape=request.form.get('table_shape'),
+        notes=request.form.get('notes')
+    )
+    db.session.add(table)
+    db.session.commit()
+    flash('Table added!', 'success')
+    return redirect(url_for('reception_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/reception/table/<int:table_id>/delete', methods=['POST'])
+@login_required
+def reception_table_delete(wedding_id, table_id):
+    table = SeatingTable.query.get_or_404(table_id)
+    db.session.delete(table)
+    db.session.commit()
+    flash('Table removed.', 'success')
+    return redirect(url_for('reception_view', wedding_id=wedding_id))
+
+# ============================================
+# CEREMONY READINGS ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/ceremony/reading/add', methods=['POST'])
+@login_required
+def ceremony_reading_add(wedding_id):
+    ceremony = Wedding.query.get_or_404(wedding_id).ceremony
+    reading = CeremonyReading(
+        ceremony_id=ceremony.id,
+        title=request.form.get('title'),
+        author=request.form.get('author'),
+        reader_name=request.form.get('reader_name'),
+        text_content=request.form.get('text_content'),
+        order=request.form.get('order', type=int)
+    )
+    db.session.add(reading)
+    db.session.commit()
+    flash('Reading added!', 'success')
+    return redirect(url_for('ceremony_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/ceremony/reading/<int:reading_id>/delete', methods=['POST'])
+@login_required
+def ceremony_reading_delete(wedding_id, reading_id):
+    reading = CeremonyReading.query.get_or_404(reading_id)
+    db.session.delete(reading)
+    db.session.commit()
+    flash('Reading removed.', 'success')
+    return redirect(url_for('ceremony_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/ceremony/timeline/<int:item_id>/delete', methods=['POST'])
+@login_required
+def ceremony_timeline_delete(wedding_id, item_id):
+    item = CeremonyTimelineItem.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Timeline item removed.', 'success')
+    return redirect(url_for('ceremony_view', wedding_id=wedding_id))
+
+# ============================================
+# PERSON DELETE ROUTE
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/people/<int:person_id>/delete', methods=['POST'])
+@login_required
+def person_delete(wedding_id, person_id):
+    person = Person.query.get_or_404(person_id)
+    db.session.delete(person)
+    db.session.commit()
+    flash('Person removed.', 'success')
+    return redirect(url_for('people_view', wedding_id=wedding_id))
+
+# ============================================
+# DAY-OF TIMELINE ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/day-of')
+@login_required
+def day_of_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    items = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
+    return render_template('day_of/view.html', wedding=wedding, items=items)
+
+@app.route('/wedding/<int:wedding_id>/day-of/add', methods=['GET', 'POST'])
+@login_required
+def day_of_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        item = DayOfTimelineItem(
+            wedding_id=wedding_id,
+            title=request.form.get('title'),
+            description=request.form.get('description'),
+            location=request.form.get('location'),
+            who=request.form.get('who'),
+            category=request.form.get('category'),
+            order=request.form.get('order', type=int) or 0
+        )
+        if request.form.get('time'):
+            item.time = datetime.strptime(request.form.get('time'), '%H:%M').time()
+        db.session.add(item)
+        db.session.commit()
+        flash('Timeline item added!', 'success')
+        return redirect(url_for('day_of_view', wedding_id=wedding_id))
+    return render_template('day_of/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/day-of/<int:item_id>/edit', methods=['GET', 'POST'])
+@login_required
+def day_of_edit(wedding_id, item_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    item = DayOfTimelineItem.query.get_or_404(item_id)
+    if request.method == 'POST':
+        item.title = request.form.get('title')
+        item.description = request.form.get('description')
+        item.location = request.form.get('location')
+        item.who = request.form.get('who')
+        item.category = request.form.get('category')
+        item.order = request.form.get('order', type=int) or 0
+        if request.form.get('time'):
+            item.time = datetime.strptime(request.form.get('time'), '%H:%M').time()
+        else:
+            item.time = None
+        db.session.commit()
+        flash('Timeline item updated!', 'success')
+        return redirect(url_for('day_of_view', wedding_id=wedding_id))
+    return render_template('day_of/edit.html', wedding=wedding, item=item)
+
+@app.route('/wedding/<int:wedding_id>/day-of/<int:item_id>/delete', methods=['POST'])
+@login_required
+def day_of_delete(wedding_id, item_id):
+    item = DayOfTimelineItem.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Timeline item removed.', 'success')
+    return redirect(url_for('day_of_view', wedding_id=wedding_id))
+
+# ============================================
+# PHOTOGRAPHY ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/photos')
+@login_required
+def photos_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    shots = wedding.photo_shots
+    return render_template('photos/view.html', wedding=wedding, shots=shots)
+
+@app.route('/wedding/<int:wedding_id>/photos/add', methods=['GET', 'POST'])
+@login_required
+def photos_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        shot = PhotoShot(
+            wedding_id=wedding_id,
+            category=request.form.get('category'),
+            description=request.form.get('description'),
+            people=request.form.get('people'),
+            priority=request.form.get('priority', 'nice_to_have'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(shot)
+        db.session.commit()
+        flash('Shot added to list!', 'success')
+        return redirect(url_for('photos_view', wedding_id=wedding_id))
+    return render_template('photos/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/photos/<int:shot_id>/delete', methods=['POST'])
+@login_required
+def photos_delete(wedding_id, shot_id):
+    shot = PhotoShot.query.get_or_404(shot_id)
+    db.session.delete(shot)
+    db.session.commit()
+    flash('Shot removed.', 'success')
+    return redirect(url_for('photos_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/photos/<int:shot_id>/toggle', methods=['POST'])
+@login_required
+def photos_toggle(wedding_id, shot_id):
+    shot = PhotoShot.query.get_or_404(shot_id)
+    shot.captured = not shot.captured
+    db.session.commit()
+    return redirect(url_for('photos_view', wedding_id=wedding_id))
+
+# ============================================
+# MUSIC & PLAYLIST ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/music')
+@login_required
+def music_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    songs = wedding.songs
+    return render_template('music/view.html', wedding=wedding, songs=songs)
+
+@app.route('/wedding/<int:wedding_id>/music/add', methods=['GET', 'POST'])
+@login_required
+def music_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        song = Song(
+            wedding_id=wedding_id,
+            title=request.form.get('title'),
+            artist=request.form.get('artist'),
+            moment=request.form.get('moment'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(song)
+        db.session.commit()
+        flash('Song added!', 'success')
+        return redirect(url_for('music_view', wedding_id=wedding_id))
+    return render_template('music/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/music/<int:song_id>/delete', methods=['POST'])
+@login_required
+def music_delete(wedding_id, song_id):
+    song = Song.query.get_or_404(song_id)
+    db.session.delete(song)
+    db.session.commit()
+    flash('Song removed.', 'success')
+    return redirect(url_for('music_view', wedding_id=wedding_id))
+
+# ============================================
+# FLOWERS & DECOR ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/flowers')
+@login_required
+def flowers_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    items = wedding.floral_items
+    return render_template('flowers/view.html', wedding=wedding, items=items)
+
+@app.route('/wedding/<int:wedding_id>/flowers/add', methods=['GET', 'POST'])
+@login_required
+def flowers_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        item = FloralItem(
+            wedding_id=wedding_id,
+            item_type=request.form.get('item_type'),
+            recipient=request.form.get('recipient'),
+            flowers=request.form.get('flowers'),
+            colors=request.form.get('colors'),
+            quantity=request.form.get('quantity', type=int) or 1,
+            notes=request.form.get('notes')
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash('Floral item added!', 'success')
+        return redirect(url_for('flowers_view', wedding_id=wedding_id))
+    return render_template('flowers/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/flowers/<int:item_id>/delete', methods=['POST'])
+@login_required
+def flowers_delete(wedding_id, item_id):
+    item = FloralItem.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Floral item removed.', 'success')
+    return redirect(url_for('flowers_view', wedding_id=wedding_id))
+
+# ============================================
+# INVITATIONS & STATIONERY ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/invitations')
+@login_required
+def invitations_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    items = wedding.invitations
+    return render_template('invitations/view.html', wedding=wedding, items=items)
+
+@app.route('/wedding/<int:wedding_id>/invitations/add', methods=['GET', 'POST'])
+@login_required
+def invitations_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        item = Invitation(
+            wedding_id=wedding_id,
+            item_type=request.form.get('item_type'),
+            designer=request.form.get('designer'),
+            quantity=request.form.get('quantity', type=int),
+            cost=request.form.get('cost', type=float),
+            status=request.form.get('status', 'not_started'),
+            notes=request.form.get('notes')
+        )
+        if request.form.get('send_by_date'):
+            item.send_by_date = datetime.strptime(request.form.get('send_by_date'), '%Y-%m-%d').date()
+        db.session.add(item)
+        db.session.commit()
+        flash('Stationery item added!', 'success')
+        return redirect(url_for('invitations_view', wedding_id=wedding_id))
+    return render_template('invitations/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/invitations/<int:item_id>/delete', methods=['POST'])
+@login_required
+def invitations_delete(wedding_id, item_id):
+    item = Invitation.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Stationery item removed.', 'success')
+    return redirect(url_for('invitations_view', wedding_id=wedding_id))
+
+# ============================================
+# REHEARSAL DINNER ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/rehearsal')
+@login_required
+def rehearsal_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    rehearsal = wedding.rehearsal_dinner
+    return render_template('rehearsal/view.html', wedding=wedding, rehearsal=rehearsal)
+
+@app.route('/wedding/<int:wedding_id>/rehearsal/edit', methods=['GET', 'POST'])
+@login_required
+def rehearsal_edit(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    rehearsal = wedding.rehearsal_dinner
+    if not rehearsal:
+        rehearsal = RehearsalDinner(wedding_id=wedding_id)
+        db.session.add(rehearsal)
+        db.session.commit()
+    if request.method == 'POST':
+        if request.form.get('date'):
+            rehearsal.date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
+        if request.form.get('start_time'):
+            rehearsal.start_time = datetime.strptime(request.form.get('start_time'), '%H:%M').time()
+        if request.form.get('end_time'):
+            rehearsal.end_time = datetime.strptime(request.form.get('end_time'), '%H:%M').time()
+        rehearsal.venue_name = request.form.get('venue_name')
+        rehearsal.venue_address = request.form.get('venue_address')
+        rehearsal.venue_contact = request.form.get('venue_contact')
+        rehearsal.venue_phone = request.form.get('venue_phone')
+        rehearsal.expected_guest_count = request.form.get('expected_guest_count', type=int)
+        rehearsal.menu_notes = request.form.get('menu_notes')
+        rehearsal.notes = request.form.get('notes')
+        db.session.commit()
+        flash('Rehearsal dinner updated!', 'success')
+        return redirect(url_for('rehearsal_view', wedding_id=wedding_id))
+    return render_template('rehearsal/edit.html', wedding=wedding, rehearsal=rehearsal)
+
+# ============================================
+# ACCOMMODATIONS & TRANSPORTATION ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/accommodations')
+@login_required
+def accommodations_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    items = wedding.accommodations
+    return render_template('accommodations/view.html', wedding=wedding, items=items)
+
+@app.route('/wedding/<int:wedding_id>/accommodations/add', methods=['GET', 'POST'])
+@login_required
+def accommodations_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        item = Accommodation(
+            wedding_id=wedding_id,
+            accommodation_type=request.form.get('accommodation_type'),
+            name=request.form.get('name'),
+            address=request.form.get('address'),
+            phone=request.form.get('phone'),
+            website=request.form.get('website'),
+            block_code=request.form.get('block_code'),
+            rate=request.form.get('rate'),
+            notes=request.form.get('notes')
+        )
+        if request.form.get('deadline'):
+            item.deadline = datetime.strptime(request.form.get('deadline'), '%Y-%m-%d').date()
+        db.session.add(item)
+        db.session.commit()
+        flash('Accommodation added!', 'success')
+        return redirect(url_for('accommodations_view', wedding_id=wedding_id))
+    return render_template('accommodations/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/accommodations/<int:item_id>/delete', methods=['POST'])
+@login_required
+def accommodations_delete(wedding_id, item_id):
+    item = Accommodation.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Accommodation removed.', 'success')
+    return redirect(url_for('accommodations_view', wedding_id=wedding_id))
+
+# ============================================
+# MARRIAGE LICENSE ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/license')
+@login_required
+def license_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    license_info = wedding.marriage_license
+    return render_template('license/view.html', wedding=wedding, license_info=license_info)
+
+@app.route('/wedding/<int:wedding_id>/license/edit', methods=['GET', 'POST'])
+@login_required
+def license_edit(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    license_info = wedding.marriage_license
+    if not license_info:
+        license_info = MarriageLicense(wedding_id=wedding_id)
+        db.session.add(license_info)
+        db.session.commit()
+    if request.method == 'POST':
+        license_info.county = request.form.get('county')
+        license_info.state = request.form.get('state')
+        if request.form.get('application_date'):
+            license_info.application_date = datetime.strptime(request.form.get('application_date'), '%Y-%m-%d').date()
+        if request.form.get('pickup_date'):
+            license_info.pickup_date = datetime.strptime(request.form.get('pickup_date'), '%Y-%m-%d').date()
+        if request.form.get('expiration_date'):
+            license_info.expiration_date = datetime.strptime(request.form.get('expiration_date'), '%Y-%m-%d').date()
+        if request.form.get('filing_deadline'):
+            license_info.filing_deadline = datetime.strptime(request.form.get('filing_deadline'), '%Y-%m-%d').date()
+        license_info.filed = request.form.get('filed') == 'on'
+        if request.form.get('filed_date'):
+            license_info.filed_date = datetime.strptime(request.form.get('filed_date'), '%Y-%m-%d').date()
+        license_info.documents_needed = request.form.get('documents_needed')
+        license_info.cost = request.form.get('cost', type=float)
+        license_info.waiting_period_days = request.form.get('waiting_period_days', type=int)
+        license_info.notes = request.form.get('notes')
+        db.session.commit()
+        flash('Marriage license info updated!', 'success')
+        return redirect(url_for('license_view', wedding_id=wedding_id))
+    return render_template('license/edit.html', wedding=wedding, license_info=license_info)
+
+# ============================================
+# HAIR & MAKEUP ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/hair-makeup')
+@login_required
+def hair_makeup_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    appointments = wedding.hair_makeup
+    return render_template('hair_makeup/view.html', wedding=wedding, appointments=appointments)
+
+@app.route('/wedding/<int:wedding_id>/hair-makeup/add', methods=['GET', 'POST'])
+@login_required
+def hair_makeup_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        appt = HairMakeup(
+            wedding_id=wedding_id,
+            person_name=request.form.get('person_name'),
+            service_type=request.form.get('service_type'),
+            stylist_name=request.form.get('stylist_name'),
+            style_notes=request.form.get('style_notes'),
+            cost=request.form.get('cost', type=float),
+            notes=request.form.get('notes')
+        )
+        if request.form.get('appointment_time'):
+            appt.appointment_time = datetime.strptime(request.form.get('appointment_time'), '%H:%M').time()
+        if request.form.get('trial_date'):
+            appt.trial_date = datetime.strptime(request.form.get('trial_date'), '%Y-%m-%d').date()
+        db.session.add(appt)
+        db.session.commit()
+        flash('Appointment added!', 'success')
+        return redirect(url_for('hair_makeup_view', wedding_id=wedding_id))
+    return render_template('hair_makeup/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/hair-makeup/<int:appt_id>/delete', methods=['POST'])
+@login_required
+def hair_makeup_delete(wedding_id, appt_id):
+    appt = HairMakeup.query.get_or_404(appt_id)
+    db.session.delete(appt)
+    db.session.commit()
+    flash('Appointment removed.', 'success')
+    return redirect(url_for('hair_makeup_view', wedding_id=wedding_id))
 
 # Background task for email reminders
 def check_reminders():
