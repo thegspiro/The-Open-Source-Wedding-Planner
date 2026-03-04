@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Wedding Favors - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Wedding Favors</h1>
+    <a href="{{ url_for('favors_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Favor</a>
+</div>
+
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-num">{{ favors|length }}</div>
+        <div class="stat-label">Total Favors</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">${{ "{:,.2f}".format(total_cost) }}</div>
+        <div class="stat-label">Total Cost</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ assembled_count }}</div>
+        <div class="stat-label">Assembled</div>
+    </div>
+</div>
+
+{% if favors %}
+<div class="dashboard-grid">
+    {% for favor in favors %}
+    <div class="dashboard-card">
+        <h3>{{ favor.description }}</h3>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <strong>Quantity:</strong> {{ favor.quantity or 0 }}
+            </div>
+            <div class="info-item">
+                <strong>Cost Per Item:</strong> ${{ "{:,.2f}".format(favor.cost_per_item) if favor.cost_per_item else '0.00' }}
+            </div>
+            <div class="info-item">
+                <strong>Total Cost:</strong> ${{ "{:,.2f}".format(favor.total_cost) if favor.total_cost else '0.00' }}
+            </div>
+            {% if favor.vendor %}
+            <div class="info-item">
+                <strong>Vendor:</strong> {{ favor.vendor }}
+            </div>
+            {% endif %}
+            {% if favor.order_date %}
+            <div class="info-item">
+                <strong>Order Date:</strong> {{ favor.order_date.strftime('%b %d, %Y') }}
+            </div>
+            {% endif %}
+            {% if favor.assembly_notes %}
+            <div class="info-item">
+                <strong>Assembly Notes:</strong> {{ favor.assembly_notes }}
+            </div>
+            {% endif %}
+            {% if favor.notes %}
+            <div class="info-item">
+                <strong>Notes:</strong> {{ favor.notes }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <form method="POST" action="{{ url_for('favors_toggle', wedding_id=wedding.id, favor_id=favor.id) }}" class="form-inline">
+                {% if favor.assembled %}
+                <button type="submit" class="btn-secondary btn-small">Assembled</button>
+                {% else %}
+                <button type="submit" class="btn-primary btn-small">Mark Assembled</button>
+                {% endif %}
+            </form>
+            <form method="POST" action="{{ url_for('favors_delete', wedding_id=wedding.id, favor_id=favor.id) }}" class="form-inline">
+                <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this favor?')">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Favors Yet</h2>
+    <p>Start adding wedding favors to keep track of quantities, costs, and assembly progress.</p>
+    <a href="{{ url_for('favors_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Favor</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

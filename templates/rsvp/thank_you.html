@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thank You - {{ wedding.couple_names }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);">
+    <main class="container" style="max-width: 600px; margin: 2rem auto; padding: 2rem;">
+        <div class="form-container" style="text-align: center;">
+            <h1 style="color: #e91e63;">Thank You!</h1>
+            <p style="font-size: 1.2rem; color: #333; margin: 1rem 0;">
+                {% if guest.rsvp_status == 'accepted' %}
+                We're so happy you'll be celebrating with us!
+                {% else %}
+                We're sorry you can't make it, but we appreciate you letting us know.
+                {% endif %}
+            </p>
+            <p style="color: #666;">{{ wedding.couple_names }} - {{ wedding.wedding_date.strftime('%B %d, %Y') }}</p>
+            <a href="{{ url_for('rsvp_portal', token=token) }}" class="btn-secondary" style="margin-top: 2rem;">Update Your Response</a>
+        </div>
+    </main>
+</body>
+</html>

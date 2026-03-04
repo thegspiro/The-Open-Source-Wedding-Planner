@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Seating Chart - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Seating Chart</h1>
+</div>
+
+<div class="module-section">
+    <h2>Tables</h2>
+    {% if tables %}
+    <div class="seating-floor-plan" style="position: relative; min-height: 400px; border: 2px dashed #ccc; border-radius: 8px; padding: 1rem; margin-bottom: 2rem; background: #fafafa;">
+        {% for table in tables %}
+        <div class="dashboard-card" style="position: relative; display: inline-block; vertical-align: top; width: 250px; margin: 0.5rem;" data-table-id="{{ table.id }}">
+            <h3>
+                Table {{ table.table_number }}
+                {% if table.table_name %} - {{ table.table_name }}{% endif %}
+            </h3>
+            {% if table.table_shape %}
+            <p class="stat-label">{{ table.table_shape|title }} table</p>
+            {% endif %}
+
+            <div class="info-item">
+                <strong>Capacity:</strong>
+                {% set guest_count = table.assigned_guests|length %}
+                <span{% if guest_count > table.capacity %} style="color: red; font-weight: bold;"{% endif %}>
+                    {{ guest_count }} / {{ table.capacity }}
+                </span>
+                {% if guest_count > table.capacity %}
+                <br><span class="payment-status status-unpaid">Over capacity!</span>
+                {% endif %}
+            </div>
+
+            {% if table.assigned_guests %}
+            <div class="info-item" style="margin-top: 0.5rem;">
+                <strong>Guests:</strong>
+                <ul style="margin: 0.25rem 0; padding-left: 1.2rem;">
+                    {% for guest in table.assigned_guests %}
+                    <li>{{ guest.name }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% else %}
+            <p class="empty-message">No guests assigned yet.</p>
+            {% endif %}
+
+            {% if table.notes %}
+            <div class="info-item">
+                <strong>Notes:</strong> {{ table.notes }}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>No Tables Set Up</h2>
+        <p>Add seating tables in your Reception settings to start building your seating chart.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="module-section">
+    <h2>Unassigned Guests ({{ unassigned_guests|length }})</h2>
+    {% if unassigned_guests %}
+
+    {% if tables %}
+    <div class="module-section" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+        <h3>Bulk Assign Guests</h3>
+        <form method="POST" action="{{ url_for('seating_bulk_assign', wedding_id=wedding.id) }}">
+            <div class="form-group">
+                <label>Select Guests</label>
+                <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 0.5rem; border-radius: 4px; background: #fff;">
+                    {% for guest in unassigned_guests %}
+                    <label style="display: block; padding: 0.25rem 0; cursor: pointer;">
+                        <input type="checkbox" name="guest_ids" value="{{ guest.id }}">
+                        {{ guest.name }}
+                        {% if guest.side %}<span class="stat-label"> ({{ guest.side }})</span>{% endif %}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="bulk_table_id">Assign to Table</label>
+                <select id="bulk_table_id" name="table_id" required>
+                    <option value="">-- Select Table --</option>
+                    {% for table in tables %}
+                    <option value="{{ table.id }}">
+                        Table {{ table.table_number }}{% if table.table_name %} - {{ table.table_name }}{% endif %}
+                        ({{ table.assigned_guests|length }}/{{ table.capacity }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn-primary">Assign Selected Guests</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Guest Name</th>
+                <th>Side</th>
+                <th>Dietary</th>
+                {% if tables %}<th>Assign to Table</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for guest in unassigned_guests %}
+            <tr>
+                <td>{{ guest.name }}</td>
+                <td>{{ guest.side or '-' }}</td>
+                <td>{{ guest.dietary_restrictions or '-' }}</td>
+                {% if tables %}
+                <td>
+                    <form method="POST" action="{{ url_for('seating_assign', wedding_id=wedding.id) }}" class="form-inline">
+                        <input type="hidden" name="guest_id" value="{{ guest.id }}">
+                        <select name="table_id" required>
+                            <option value="">-- Select --</option>
+                            {% for table in tables %}
+                            <option value="{{ table.id }}">
+                                Table {{ table.table_number }}{% if table.table_name %} - {{ table.table_name }}{% endif %}
+                                ({{ table.assigned_guests|length }}/{{ table.capacity }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn-primary btn-small">Assign</button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-message">All accepted guests have been assigned to tables.</p>
+    {% endif %}
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

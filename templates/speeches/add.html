@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Add Speech/Toast - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Add Speech/Toast</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('speeches_add', wedding_id=wedding.id) }}">
+        <div class="form-group">
+            <label>Speaker Name *</label>
+            <input type="text" name="speaker_name" required placeholder="e.g., Best Man, Maid of Honor">
+        </div>
+        <div class="form-group">
+            <label>Type *</label>
+            <select name="speech_type" required>
+                <option value="">-- Select --</option>
+                <option value="toast">Toast</option>
+                <option value="speech">Speech</option>
+                <option value="blessing">Blessing</option>
+                <option value="roast">Roast</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Order</label>
+            <input type="number" name="order" min="0" placeholder="e.g., 1">
+        </div>
+        <div class="form-group">
+            <label>Duration (minutes)</label>
+            <input type="number" name="duration_minutes" min="0" placeholder="e.g., 5">
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="4" placeholder="Any notes about the speech or toast..."></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Speech</button>
+            <a href="{{ url_for('speeches_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

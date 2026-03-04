@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Calendar - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Calendar</h1>
+    <div>
+        <a href="{{ url_for('calendar_export_ical', wedding_id=wedding.id) }}" class="btn-primary">Export to Calendar</a>
+        <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+{% if events %}
+{% set ns = namespace(current_month='') %}
+{% for event in events|sort(attribute='date') %}
+    {% set month_label = event.date.strftime('%B %Y') %}
+    {% if month_label != ns.current_month %}
+        {% if ns.current_month != '' %}
+            </div>
+        {% endif %}
+        {% set ns.current_month = month_label %}
+        <div class="module-section">
+            <h2>{{ month_label }}</h2>
+    {% endif %}
+    <div class="calendar-event">
+        <div class="event-date">
+            <span class="event-day">{{ event.date.strftime('%d') }}</span>
+            <span class="event-weekday">{{ event.date.strftime('%a') }}</span>
+        </div>
+        <div class="event-details">
+            <h3>{{ event.title }}</h3>
+            <div class="event-meta">
+                {% if event.type == 'task' %}
+                <span class="type-badge type-task">Task</span>
+                {% elif event.type == 'payment' %}
+                <span class="type-badge type-payment">Payment</span>
+                {% else %}
+                <span class="type-badge">{{ event.type|title }}</span>
+                {% endif %}
+                {% if event.category %}
+                <span class="event-category">{{ event.category }}</span>
+                {% endif %}
+                {% if event.completed %}
+                <span class="status-complete">Completed</span>
+                {% else %}
+                <span class="status-pending">Pending</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endfor %}
+{% if ns.current_month != '' %}
+    </div>
+{% endif %}
+{% else %}
+<div class="empty-state">
+    <h2>No Events Yet</h2>
+    <p>Events from your tasks, payments, and other modules will appear here on a timeline.</p>
+</div>
+{% endif %}
+
+<style>
+.calendar-event {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.event-date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 50px;
+    padding: 0.5rem;
+    background: #fff3f8;
+    border-radius: 8px;
+}
+.event-day {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #e91e63;
+    line-height: 1;
+}
+.event-weekday {
+    font-size: 0.75rem;
+    color: #999;
+    text-transform: uppercase;
+}
+.event-details h3 {
+    margin: 0 0 0.4rem 0;
+    font-size: 1rem;
+    color: #333;
+}
+.event-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.type-badge {
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+.type-task {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+.type-payment {
+    background: #fff8e1;
+    color: #f57f17;
+}
+.event-category {
+    font-size: 0.85rem;
+    color: #666;
+}
+.status-complete {
+    font-size: 0.8rem;
+    color: #2e7d32;
+    font-weight: 500;
+}
+.status-pending {
+    font-size: 0.8rem;
+    color: #999;
+}
+</style>
+{% endblock %}

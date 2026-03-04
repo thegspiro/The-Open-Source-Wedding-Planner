@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Schedule - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Payment Schedule</h1>
+</div>
+
+<div class="module-section">
+    <h2>Upcoming Expense Payments</h2>
+    {% if upcoming %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Due Date</th>
+                <th>Item</th>
+                <th>Category</th>
+                <th>Amount Due</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in upcoming %}
+            {% set is_overdue = expense.payment_due_date < today if today is defined else false %}
+            <tr{% if is_overdue %} class="overdue-row" style="background-color: #fff0f0;"{% endif %}>
+                <td>
+                    {{ expense.payment_due_date.strftime('%b %d, %Y') }}
+                    {% if is_overdue %}
+                    <br><span class="payment-status status-unpaid">OVERDUE</span>
+                    {% endif %}
+                </td>
+                <td>{{ expense.item_name }}</td>
+                <td><span class="category-badge">{{ expense.category|replace('_', ' ')|title }}</span></td>
+                <td>
+                    {% if expense.actual_cost %}
+                        ${{ "{:,.2f}".format(expense.actual_cost - (expense.paid_amount or 0)) }}
+                    {% elif expense.estimated_cost %}
+                        ${{ "{:,.2f}".format(expense.estimated_cost - (expense.paid_amount or 0)) }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="payment-status status-{{ expense.payment_status or 'unpaid' }}">
+                        {{ (expense.payment_status or 'unpaid')|replace('_', ' ')|title }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-message">No upcoming expense payments scheduled. Add payment due dates to your budget expenses to see them here.</p>
+    {% endif %}
+</div>
+
+<div class="module-section">
+    <h2>Vendor Payments</h2>
+    {% if vendor_payments %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Payment Date</th>
+                <th>Vendor</th>
+                <th>Category</th>
+                <th>Amount Due</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vendor in vendor_payments %}
+            {% set is_overdue = vendor.final_payment_date < today if today is defined else false %}
+            <tr{% if is_overdue %} class="overdue-row" style="background-color: #fff0f0;"{% endif %}>
+                <td>
+                    {{ vendor.final_payment_date.strftime('%b %d, %Y') }}
+                    {% if is_overdue %}
+                    <br><span class="payment-status status-unpaid">OVERDUE</span>
+                    {% endif %}
+                </td>
+                <td>{{ vendor.business_name }}</td>
+                <td><span class="category-badge">{{ vendor.category|replace('_', ' ')|title }}</span></td>
+                <td>
+                    {% if vendor.balance_due %}
+                        ${{ "{:,.2f}".format(vendor.balance_due) }}
+                    {% elif vendor.total_cost %}
+                        ${{ "{:,.2f}".format(vendor.total_cost - (vendor.deposit_amount if vendor.deposit_paid else 0)) }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if vendor.deposit_paid and vendor.balance_due == 0 %}
+                    <span class="payment-status status-paid">Paid</span>
+                    {% elif vendor.deposit_paid %}
+                    <span class="payment-status status-deposit">Deposit Paid</span>
+                    {% else %}
+                    <span class="payment-status status-unpaid">Unpaid</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-message">No vendor payments scheduled. Add final payment dates to your vendors to see them here.</p>
+    {% endif %}
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('budget_view', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Budget</a>
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

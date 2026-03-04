@@ -5,7 +5,10 @@
 {% block content %}
 <div class="page-header">
     <h1>Music & Playlist</h1>
-    <a href="{{ url_for('music_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Song</a>
+    <div class="header-actions">
+        <a href="{{ url_for('music_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Song</a>
+        <a href="{{ url_for('music_stats', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Music Stats</a>
+    </div>
 </div>
 
 {% if songs %}
@@ -33,7 +36,7 @@
                 <tr>
                     <th>Title</th>
                     <th>Artist</th>
-                    <th>Moment</th>
+                    <th>Duration</th>
                     <th>Notes</th>
                     <th>Actions</th>
                 </tr>
@@ -41,9 +44,12 @@
             <tbody>
                 {% for song in moment_songs %}
                 <tr>
-                    <td>{{ song.title }}</td>
+                    <td>
+                        {{ song.title }}
+                        {% if song.spotify_url %}<a href="{{ song.spotify_url }}" target="_blank" style="font-size:0.8rem;">🔗</a>{% endif %}
+                    </td>
                     <td>{{ song.artist or '-' }}</td>
-                    <td>{{ moment_label }}</td>
+                    <td>{{ song.duration_minutes ~ ' min' if song.duration_minutes else '-' }}</td>
                     <td>{{ song.notes or '-' }}</td>
                     <td>
                         <form method="POST" action="{{ url_for('music_delete', wedding_id=wedding.id, song_id=song.id) }}" class="form-inline">

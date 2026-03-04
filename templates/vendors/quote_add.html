@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Add Vendor Quote - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Add Vendor Quote</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('vendor_quote_add', wedding_id=wedding.id) }}">
+        <div class="form-group">
+            <label>Category *</label>
+            <select name="category" required>
+                <option value="">-- Select --</option>
+                <option value="photographer">Photographer</option>
+                <option value="videographer">Videographer</option>
+                <option value="caterer">Caterer</option>
+                <option value="florist">Florist</option>
+                <option value="DJ/band">DJ/Band</option>
+                <option value="baker">Baker</option>
+                <option value="officiant">Officiant</option>
+                <option value="hair/makeup">Hair/Makeup</option>
+                <option value="planner">Planner</option>
+                <option value="rentals">Rentals</option>
+                <option value="transportation">Transportation</option>
+                <option value="venue">Venue</option>
+                <option value="stationery">Stationery</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Vendor Name *</label>
+            <input type="text" name="vendor_name" required placeholder="e.g., Jane's Photography">
+        </div>
+        <div class="form-group">
+            <label>Contact Info</label>
+            <input type="text" name="contact_info" placeholder="Email or phone number">
+        </div>
+        <div class="form-group">
+            <label>Quote Amount ($) *</label>
+            <input type="number" name="quote_amount" step="0.01" min="0" required placeholder="e.g., 3500">
+        </div>
+        <div class="form-group">
+            <label>Package Details</label>
+            <textarea name="package_details" rows="3" placeholder="What is included in this quote..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Pros</label>
+            <textarea name="pros" rows="3" placeholder="Advantages of this vendor/package..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Cons</label>
+            <textarea name="cons" rows="3" placeholder="Disadvantages or concerns..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Date Received</label>
+            <input type="date" name="date_received">
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="3" placeholder="Any additional notes about this quote..."></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Quote</button>
+            <a href="{{ url_for('vendor_quotes_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

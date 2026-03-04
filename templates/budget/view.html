@@ -305,6 +305,37 @@
     </form>
 </div>
 
+<div class="module-section">
+    <div class="section-header">
+        <h2>Budget Templates</h2>
+    </div>
+    <p class="form-help">Apply a pre-built budget template to auto-create expense categories. This will add items that don't already exist.</p>
+    <div class="form-row">
+        <form method="POST" action="{{ url_for('budget_apply_template', wedding_id=wedding.id) }}" style="display:inline;">
+            <input type="hidden" name="template_name" value="small">
+            <button type="submit" class="btn-secondary btn-small">Small Wedding (~50 guests)</button>
+        </form>
+        <form method="POST" action="{{ url_for('budget_apply_template', wedding_id=wedding.id) }}" style="display:inline;">
+            <input type="hidden" name="template_name" value="medium">
+            <button type="submit" class="btn-secondary btn-small">Medium Wedding (~100 guests)</button>
+        </form>
+        <form method="POST" action="{{ url_for('budget_apply_template', wedding_id=wedding.id) }}" style="display:inline;">
+            <input type="hidden" name="template_name" value="large">
+            <button type="submit" class="btn-secondary btn-small">Large Wedding (~200 guests)</button>
+        </form>
+    </div>
+</div>
+
+<div class="module-section">
+    <div class="section-header">
+        <h2>Quick Links</h2>
+    </div>
+    <div class="action-buttons">
+        <a href="{{ url_for('budget_payment_schedule', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Payment Schedule</a>
+        <a href="{{ url_for('export_budget_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
+    </div>
+</div>
+
 <div class="page-actions">
     <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
 </div>

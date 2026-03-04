@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Ceremony Script - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Ceremony Script</h1>
+</div>
+
+<form method="POST" action="{{ url_for('ceremony_script', wedding_id=wedding.id) }}">
+    <div class="module-section">
+        <h2>Script Editor</h2>
+        <p class="form-help">Write or paste your full ceremony script below. Use the template sections to quickly insert common ceremony elements.</p>
+
+        <div class="form-group">
+            <label for="ceremony_script">Ceremony Script</label>
+            <textarea id="ceremony_script" name="ceremony_script" rows="25" placeholder="Begin writing your ceremony script here...">{{ ceremony.ceremony_script or '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Script</button>
+            <a href="{{ url_for('ceremony_view', wedding_id=wedding.id) }}" class="btn-secondary">Back to Ceremony</a>
+        </div>
+    </div>
+</form>
+
+<div class="module-section">
+    <h2>Template Sections</h2>
+    <p class="form-help">Click a section below to insert its template text into the script editor.</p>
+
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <h3>Welcome/Opening</h3>
+            <p class="stat-label">Greeting and introduction to the ceremony</p>
+            <button type="button" class="btn-secondary btn-small" onclick="insertTemplate('welcome')">Insert</button>
+        </div>
+        <div class="dashboard-card">
+            <h3>Declaration of Intent</h3>
+            <p class="stat-label">"Do you take..." questions</p>
+            <button type="button" class="btn-secondary btn-small" onclick="insertTemplate('intent')">Insert</button>
+        </div>
+        <div class="dashboard-card">
+            <h3>Readings</h3>
+            <p class="stat-label">Placeholder for ceremony readings</p>
+            <button type="button" class="btn-secondary btn-small" onclick="insertTemplate('readings')">Insert</button>
+        </div>
+        <div class="dashboard-card">
+            <h3>Vows</h3>
+            <p class="stat-label">Exchange of personal vows</p>
+            <button type="button" class="btn-secondary btn-small" onclick="insertTemplate('vows')">Insert</button>
+        </div>
+        <div class="dashboard-card">
+            <h3>Ring Exchange</h3>
+            <p class="stat-label">Ring ceremony and words</p>
+            <button type="button" class="btn-secondary btn-small" onclick="insertTemplate('rings')">Insert</button>
+        </div>
+        <div class="dashboard-card">
+            <h3>Pronouncement</h3>
+            <p class="stat-label">Official declaration of marriage</p>
+            <button type="button" class="btn-secondary btn-small" onclick="insertTemplate('pronouncement')">Insert</button>
+        </div>
+        <div class="dashboard-card">
+            <h3>Kiss</h3>
+            <p class="stat-label">The first kiss as a married couple</p>
+            <button type="button" class="btn-secondary btn-small" onclick="insertTemplate('kiss')">Insert</button>
+        </div>
+        <div class="dashboard-card">
+            <h3>Closing</h3>
+            <p class="stat-label">Introduction of the married couple and recessional</p>
+            <button type="button" class="btn-secondary btn-small" onclick="insertTemplate('closing')">Insert</button>
+        </div>
+    </div>
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('ceremony_view', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Ceremony</a>
+</div>
+
+<script>
+var templates = {
+    welcome: "\n\n=== WELCOME / OPENING ===\n\nDearly beloved, we are gathered here today to celebrate the union of [Name] and [Name].\n\nWe come together to witness and support the love that has brought these two people to this moment, and to celebrate the beginning of their new life together.\n\n",
+    intent: "\n\n=== DECLARATION OF INTENT ===\n\n[Name], do you take [Name] to be your lawfully wedded partner, to have and to hold, from this day forward, for better or for worse, for richer or for poorer, in sickness and in health, to love and to cherish, for as long as you both shall live?\n\n[Response: I do.]\n\n[Name], do you take [Name] to be your lawfully wedded partner, to have and to hold, from this day forward, for better or for worse, for richer or for poorer, in sickness and in health, to love and to cherish, for as long as you both shall live?\n\n[Response: I do.]\n\n",
+    readings: "\n\n=== READINGS ===\n\n[Reader Name] will now share a reading.\n\n[Title of Reading]\nby [Author]\n\n[Text of reading goes here.]\n\n",
+    vows: "\n\n=== VOWS ===\n\nThe couple will now share the vows they have written for each other.\n\n[Name]:\n[Vows go here.]\n\n[Name]:\n[Vows go here.]\n\n",
+    rings: "\n\n=== RING EXCHANGE ===\n\nThe rings, please.\n\nThese rings are a symbol of the unending love and commitment you share. As you place them on each other's fingers, may they serve as a constant reminder of the promises you make today.\n\n[Name], place this ring on [Name]'s finger and repeat after me:\nWith this ring, I thee wed. I offer you my love, my support, and my devotion, from this day forward.\n\n[Name], place this ring on [Name]'s finger and repeat after me:\nWith this ring, I thee wed. I offer you my love, my support, and my devotion, from this day forward.\n\n",
+    pronouncement: "\n\n=== PRONOUNCEMENT ===\n\nBy the power vested in me, I am overjoyed to declare you married. What has been joined together today, let no one put asunder.\n\n",
+    kiss: "\n\n=== THE KISS ===\n\nYou may now seal your marriage with a kiss.\n\n",
+    closing: "\n\n=== CLOSING ===\n\nLadies and gentlemen, it is my great honor and privilege to introduce to you, for the first time, the newly married couple!\n\n[Recessional music begins.]\n\n"
+};
+
+function insertTemplate(section) {
+    var textarea = document.getElementById('ceremony_script');
+    var text = templates[section] || '';
+    var cursorPos = textarea.selectionStart;
+    var before = textarea.value.substring(0, cursorPos);
+    var after = textarea.value.substring(textarea.selectionEnd);
+    textarea.value = before + text + after;
+    textarea.selectionStart = textarea.selectionEnd = cursorPos + text.length;
+    textarea.focus();
+}
+</script>
+{% endblock %}

@@ -5,7 +5,12 @@
 {% block content %}
 <div class="page-header">
     <h1>Vendors</h1>
-    <a href="{{ url_for('vendor_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Vendor</a>
+    <div class="header-actions">
+        <a href="{{ url_for('vendor_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Vendor</a>
+        <a href="{{ url_for('vendor_quotes_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Compare Quotes</a>
+        <a href="{{ url_for('export_vendors_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
+        <a href="{{ url_for('print_vendor_contacts', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Contacts</a>
+    </div>
 </div>
 
 {% if vendors %}
@@ -70,8 +75,31 @@
         </div>
         {% endif %}
 
+        {% if vendor.rating %}
+        <div class="info-item">
+            <strong>Rating:</strong>
+            <span class="star-rating">{% for i in range(vendor.rating) %}★{% endfor %}{% for i in range(5 - vendor.rating) %}☆{% endfor %}</span>
+        </div>
+        {% endif %}
+        {% if vendor.review_notes %}
+        <div class="info-item">
+            <strong>Review:</strong> {{ vendor.review_notes[:80] }}{% if vendor.review_notes|length > 80 %}...{% endif %}
+        </div>
+        {% endif %}
+        {% if vendor.setup_instructions %}
+        <div class="info-item">
+            <strong>Setup:</strong> {{ vendor.setup_instructions[:80] }}{% if vendor.setup_instructions|length > 80 %}...{% endif %}
+        </div>
+        {% endif %}
+        {% if vendor.meals_needed %}
+        <div class="info-item">
+            <strong>Vendor Meals:</strong> {{ vendor.meals_needed }}
+        </div>
+        {% endif %}
+
         <div class="form-actions">
             <a href="{{ url_for('vendor_edit', wedding_id=wedding.id, vendor_id=vendor.id) }}" class="btn-primary btn-small">Edit</a>
+            <a href="{{ url_for('vendor_notes_view', wedding_id=wedding.id, vendor_id=vendor.id) }}" class="btn-secondary btn-small">Notes ({{ vendor.communication_log|length }})</a>
             <form method="POST" action="{{ url_for('vendor_delete', wedding_id=wedding.id, vendor_id=vendor.id) }}" class="form-inline">
                 <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this vendor?')">Delete</button>
             </form>

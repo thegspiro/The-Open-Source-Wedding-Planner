@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Add Wedding Favor - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Add Wedding Favor</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('favors_add', wedding_id=wedding.id) }}">
+        <div class="module-section">
+            <h2>Favor Details</h2>
+
+            <div class="form-group">
+                <label for="description">Description *</label>
+                <input type="text" id="description" name="description" required placeholder="e.g., Custom candle with wedding date">
+            </div>
+
+            <div class="form-group">
+                <label for="quantity">Quantity</label>
+                <input type="number" id="quantity" name="quantity" min="0" placeholder="e.g., 100">
+            </div>
+
+            <div class="form-group">
+                <label for="cost_per_item">Cost Per Item ($)</label>
+                <input type="number" id="cost_per_item" name="cost_per_item" step="0.01" min="0" placeholder="e.g., 3.50">
+            </div>
+
+            <div class="form-group">
+                <label for="vendor">Vendor</label>
+                <input type="text" id="vendor" name="vendor" placeholder="e.g., Etsy Shop Name">
+            </div>
+
+            <div class="form-group">
+                <label for="assembly_notes">Assembly Notes</label>
+                <textarea id="assembly_notes" name="assembly_notes" rows="3" placeholder="Instructions for assembling the favors"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="order_date">Order Date</label>
+                <input type="date" id="order_date" name="order_date">
+            </div>
+
+            <div class="form-group">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="3" placeholder="Any additional notes about this favor"></textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Favor</button>
+            <a href="{{ url_for('favors_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

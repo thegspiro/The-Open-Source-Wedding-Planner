@@ -130,6 +130,35 @@
             <input type="text" name="service_location" value="{{ vendor.service_location or '' }}" placeholder="Where the service will be provided">
         </div>
 
+        <h2>Day-Of Details</h2>
+        <div class="form-group">
+            <label>Setup Instructions</label>
+            <textarea name="setup_instructions" rows="3" placeholder="Where to set up, access details, timing...">{{ vendor.setup_instructions or '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label>Vendor Meals Needed</label>
+            <input type="number" name="meals_needed" value="{{ vendor.meals_needed or '' }}" min="0" placeholder="Number of vendor meals required">
+        </div>
+
+        <h2>Rating & Review</h2>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Rating (1-5)</label>
+                <select name="rating">
+                    <option value="">-- Select --</option>
+                    <option value="1" {% if vendor.rating == 1 %}selected{% endif %}>1 - Poor</option>
+                    <option value="2" {% if vendor.rating == 2 %}selected{% endif %}>2 - Fair</option>
+                    <option value="3" {% if vendor.rating == 3 %}selected{% endif %}>3 - Good</option>
+                    <option value="4" {% if vendor.rating == 4 %}selected{% endif %}>4 - Very Good</option>
+                    <option value="5" {% if vendor.rating == 5 %}selected{% endif %}>5 - Excellent</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Review Notes</label>
+            <textarea name="review_notes" rows="3" placeholder="Your experience with this vendor...">{{ vendor.review_notes or '' }}</textarea>
+        </div>
+
         <h2>Notes</h2>
         <div class="form-group">
             <label>Additional Notes</label>

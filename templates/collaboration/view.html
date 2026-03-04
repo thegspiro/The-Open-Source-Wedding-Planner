@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Collaborators - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Manage Collaborators</h1>
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">Back to Dashboard</a>
+</div>
+
+<div class="module-section">
+    <h2>Add Collaborator</h2>
+    <form method="POST" action="{{ url_for('collaborator_add', wedding_id=wedding.id) }}" class="form-container">
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" required placeholder="collaborator@example.com">
+        </div>
+        <div class="form-group">
+            <label for="role">Role</label>
+            <select id="role" name="role">
+                <option value="owner">Owner</option>
+                <option value="planner" selected>Planner</option>
+                <option value="viewer">Viewer</option>
+            </select>
+        </div>
+        <button type="submit" class="btn-primary">Add Collaborator</button>
+    </form>
+</div>
+
+<div class="module-section">
+    <h2>Current Collaborators</h2>
+    {% if users %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Change Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in users %}
+            <tr>
+                <td>{{ entry.user.name }}</td>
+                <td>{{ entry.user.email }}</td>
+                <td><span class="role-badge">{{ entry.role|title }}</span></td>
+                <td>
+                    <form method="POST" action="{{ url_for('collaborator_update', wedding_id=wedding.id, access_id=entry.access_id) }}" class="form-inline">
+                        <select name="role" class="select-small">
+                            <option value="owner" {% if entry.role == 'owner' %}selected{% endif %}>Owner</option>
+                            <option value="planner" {% if entry.role == 'planner' %}selected{% endif %}>Planner</option>
+                            <option value="viewer" {% if entry.role == 'viewer' %}selected{% endif %}>Viewer</option>
+                        </select>
+                        <button type="submit" class="btn-secondary btn-small">Update</button>
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('collaborator_remove', wedding_id=wedding.id, access_id=entry.access_id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-small" onclick="return confirm('Remove this collaborator?')">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <h2>No Collaborators Yet</h2>
+        <p>Add collaborators to share wedding planning duties.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="module-section">
+    <h2>Shareable Link</h2>
+    {% if wedding.share_token %}
+    <div class="share-link-box">
+        <p>Anyone with this link can view your wedding details:</p>
+        <div class="share-url">
+            <input type="text" id="share-url" value="{{ url_for('shared_wedding_view', token=wedding.share_token, _external=True) }}" readonly>
+            <button class="btn-secondary btn-small" onclick="document.getElementById('share-url').select(); document.execCommand('copy');">Copy Link</button>
+        </div>
+    </div>
+    {% else %}
+    <p>Generate a shareable link so others can view your wedding details without an account.</p>
+    <form method="POST" action="{{ url_for('share_enable', wedding_id=wedding.id) }}">
+        <button type="submit" class="btn-primary">Generate Shareable Link</button>
+    </form>
+    {% endif %}
+</div>
+
+<style>
+.form-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.select-small {
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+.share-link-box {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+.share-url {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+.share-url input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background: white;
+}
+.role-badge {
+    background: #fff3f8;
+    color: #e91e63;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    display: inline-block;
+}
+</style>
+{% endblock %}

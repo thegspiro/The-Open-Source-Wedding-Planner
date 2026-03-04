@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g, Response, make_response
 from models import (
     db, Wedding, Person, Task, Ceremony, CeremonyTimelineItem, CeremonyReading,
     Reception, ReceptionTimelineItem, MenuItem, SeatingTable,
@@ -9,14 +9,21 @@ from models import (
     DayOfTimelineItem, PhotoShot, Song, FloralItem, Invitation,
     RehearsalDinner, Accommodation, MarriageLicense, HairMakeup,
     WeddingParticipant, timeline_assignments,
-    ContingencyPlan, TipItem, Gift
+    ContingencyPlan, TipItem, Gift,
+    VendorNote, VendorQuote, SpeechToast, WeddingFavor,
+    ActivityLog, Comment,
+    BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES
 )
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import os
+import csv
+import io
+import secrets
 from email_service import send_reminder_email
 import threading
 import time as time_module
 import json
+import math
 from functools import wraps
 
 app = Flask(__name__)
@@ -195,6 +202,26 @@ def load_logged_in_user():
 @app.context_processor
 def inject_user():
     return dict(current_user=g.get('user'))
+
+
+def log_activity(wedding_id, action, entity_type, entity_name='', details=''):
+    """Log an activity for the audit trail."""
+    user = g.get('user')
+    entry = ActivityLog(
+        wedding_id=wedding_id,
+        user_id=user.id if user else None,
+        user_name=user.name if user else 'System',
+        action=action,
+        entity_type=entity_type,
+        entity_name=entity_name,
+        details=details
+    )
+    db.session.add(entry)
+
+
+def generate_token():
+    """Generate a secure random token."""
+    return secrets.token_urlsafe(32)
 
 
 def get_user_weddings(user):
@@ -668,7 +695,8 @@ def wedding_dashboard(wedding_id):
         stats['budget_total'] = 0
         stats['budget_spent'] = 0
     
-    return render_template('wedding_dashboard.html', wedding=wedding, stats=stats)
+    return render_template('wedding_dashboard.html', wedding=wedding, stats=stats,
+                         today=datetime.utcnow().date())
 
 @app.route('/wedding/<int:wedding_id>/delete', methods=['POST'])
 @login_required
@@ -826,9 +854,19 @@ def reception_edit(wedding_id):
         reception.catering_style = request.form.get('catering_style')
         reception.bar_service = request.form.get('bar_service')
         reception.cake_flavor = request.form.get('cake_flavor')
+        reception.cake_design = request.form.get('cake_design')
+        reception.cocktail_menu = request.form.get('cocktail_menu')
+        reception.cocktail_entertainment = request.form.get('cocktail_entertainment')
+        reception.cocktail_hour_notes = request.form.get('cocktail_hour_notes')
         reception.music_type = request.form.get('music_type')
         reception.first_dance_song = request.form.get('first_dance_song')
+        reception.dance_floor_size = request.form.get('dance_floor_size')
         reception.theme = request.form.get('theme')
+        reception.centerpiece_description = request.form.get('centerpiece_description')
+        reception.lighting_notes = request.form.get('lighting_notes')
+        reception.kids_activities = request.form.get('kids_activities')
+        reception.kids_sitter_name = request.form.get('kids_sitter_name')
+        reception.kids_sitter_phone = request.form.get('kids_sitter_phone')
         reception.expected_guest_count = request.form.get('expected_guest_count', type=int)
         db.session.commit()
         flash('Reception details updated!', 'success')
@@ -865,7 +903,8 @@ def guest_add(wedding_id):
             address=request.form.get('address'),
             guest_type=request.form.get('guest_type'),
             side=request.form.get('side'),
-            dietary_restrictions=request.form.get('dietary_restrictions')
+            dietary_restrictions=request.form.get('dietary_restrictions'),
+            household_group=request.form.get('household_group')
         )
         db.session.add(guest)
         db.session.commit()
@@ -896,6 +935,7 @@ def guest_edit(wedding_id, guest_id):
         guest.gift_received = request.form.get('gift_received') == 'on'
         guest.gift_description = request.form.get('gift_description')
         guest.thank_you_sent = request.form.get('thank_you_sent') == 'on'
+        guest.household_group = request.form.get('household_group')
         db.session.commit()
         flash('Guest updated!', 'success')
         return redirect(url_for('guests_view', wedding_id=wedding_id))
@@ -1207,6 +1247,8 @@ def vendor_add(wedding_id):
             phone=request.form.get('phone'),
             total_cost=request.form.get('total_cost', type=float),
             deposit_amount=request.form.get('deposit_amount', type=float),
+            setup_instructions=request.form.get('setup_instructions'),
+            meals_needed=request.form.get('meals_needed', type=int),
             notes=request.form.get('notes')
         )
         db.session.add(vendor)
@@ -1245,6 +1287,10 @@ def vendor_edit(wedding_id, vendor_id):
         if request.form.get('service_time'):
             vendor.service_time = datetime.strptime(request.form.get('service_time'), '%H:%M').time()
         vendor.service_location = request.form.get('service_location')
+        vendor.setup_instructions = request.form.get('setup_instructions')
+        vendor.meals_needed = request.form.get('meals_needed', type=int)
+        vendor.rating = request.form.get('rating', type=int)
+        vendor.review_notes = request.form.get('review_notes')
         vendor.notes = request.form.get('notes')
         db.session.commit()
         flash('Vendor updated!', 'success')
@@ -1284,9 +1330,11 @@ def task_add(wedding_id):
             description=request.form.get('description'),
             due_date=datetime.strptime(request.form.get('due_date'), '%Y-%m-%d'),
             priority=request.form.get('priority', 'medium'),
-            category=request.form.get('category')
+            category=request.form.get('category'),
+            assigned_to=request.form.get('assigned_to')
         )
         db.session.add(task)
+        log_activity(wedding_id, 'created', 'task', task.title)
         db.session.commit()
         flash('Task added!', 'success')
         return redirect(url_for('tasks_view', wedding_id=wedding_id))
@@ -1303,6 +1351,8 @@ def task_edit(wedding_id, task_id):
         task.due_date = datetime.strptime(request.form.get('due_date'), '%Y-%m-%d')
         task.priority = request.form.get('priority', 'medium')
         task.category = request.form.get('category')
+        task.assigned_to = request.form.get('assigned_to')
+        log_activity(wedding_id, 'updated', 'task', task.title)
         db.session.commit()
         flash('Task updated!', 'success')
         return redirect(url_for('tasks_view', wedding_id=wedding_id))
@@ -1981,6 +2031,8 @@ def music_add(wedding_id):
             title=request.form.get('title'),
             artist=request.form.get('artist'),
             moment=request.form.get('moment'),
+            duration_minutes=request.form.get('duration_minutes', type=float),
+            spotify_url=request.form.get('spotify_url'),
             notes=request.form.get('notes')
         )
         db.session.add(song)
@@ -2544,6 +2596,952 @@ def gifts_delete(wedding_id, gift_id):
     db.session.commit()
     flash('Gift removed.', 'success')
     return redirect(url_for('gifts_view', wedding_id=wedding_id))
+
+# ============================================
+# GUEST RSVP PORTAL (PUBLIC - NO LOGIN REQUIRED)
+# ============================================
+
+@app.route('/rsvp/<token>')
+def rsvp_portal(token):
+    """Public RSVP portal - no login required."""
+    wedding = Wedding.query.filter_by(rsvp_token=token).first_or_404()
+    if not wedding.rsvp_enabled:
+        return render_template('rsvp/disabled.html', wedding=wedding)
+    guests = Guest.query.filter_by(wedding_id=wedding.id).order_by(Guest.name).all()
+    menu_items = []
+    if wedding.reception and wedding.reception.menu_items:
+        menu_items = [m for m in wedding.reception.menu_items if m.course == 'entree']
+    return render_template('rsvp/portal.html', wedding=wedding, guests=guests,
+                         menu_items=menu_items, token=token)
+
+@app.route('/rsvp/<token>/submit', methods=['POST'])
+def rsvp_submit(token):
+    """Process RSVP submission from public portal."""
+    wedding = Wedding.query.filter_by(rsvp_token=token).first_or_404()
+    guest_name = request.form.get('guest_name', '').strip()
+    rsvp_status = request.form.get('rsvp_status')
+    meal_choice = request.form.get('meal_choice')
+    dietary = request.form.get('dietary_restrictions', '').strip()
+    rsvp_notes = request.form.get('rsvp_notes', '').strip()
+    plus_one_name = request.form.get('plus_one_name', '').strip()
+
+    guest = Guest.query.filter_by(wedding_id=wedding.id, name=guest_name).first()
+    if not guest:
+        # Allow new guests to RSVP (they type their name)
+        guest = Guest(wedding_id=wedding.id, name=guest_name)
+        db.session.add(guest)
+
+    guest.rsvp_status = rsvp_status
+    guest.rsvp_date = datetime.utcnow().date()
+    guest.meal_choice = meal_choice if meal_choice else guest.meal_choice
+    guest.dietary_restrictions = dietary if dietary else guest.dietary_restrictions
+    guest.rsvp_notes = rsvp_notes
+    if plus_one_name:
+        guest.is_plus_one = False
+        guest.plus_one_of = ''
+        # Create plus one guest if doesn't exist
+        existing_po = Guest.query.filter_by(wedding_id=wedding.id, name=plus_one_name).first()
+        if not existing_po:
+            po = Guest(wedding_id=wedding.id, name=plus_one_name, is_plus_one=True,
+                       plus_one_of=guest_name, rsvp_status='accepted')
+            db.session.add(po)
+
+    db.session.commit()
+    return render_template('rsvp/thank_you.html', wedding=wedding, guest=guest, token=token)
+
+@app.route('/wedding/<int:wedding_id>/rsvp/enable', methods=['POST'])
+@login_required
+def rsvp_enable(wedding_id):
+    """Enable/disable RSVP portal and generate token."""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding.rsvp_enabled = not wedding.rsvp_enabled
+    if wedding.rsvp_enabled and not wedding.rsvp_token:
+        wedding.rsvp_token = generate_token()
+    if request.form.get('rsvp_deadline'):
+        wedding.rsvp_deadline = datetime.strptime(request.form.get('rsvp_deadline'), '%Y-%m-%d').date()
+    if request.form.get('rsvp_message'):
+        wedding.rsvp_message = request.form.get('rsvp_message')
+    db.session.commit()
+    status = 'enabled' if wedding.rsvp_enabled else 'disabled'
+    flash(f'RSVP portal {status}!', 'success')
+    return redirect(url_for('guests_view', wedding_id=wedding_id))
+
+# ============================================
+# GUEST MEAL COUNT SUMMARY
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/guests/meal-summary')
+@login_required
+def guest_meal_summary(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    guests = [g for g in wedding.guests if g.rsvp_status == 'accepted']
+    meal_counts = {}
+    dietary_counts = {}
+    for g in guests:
+        mc = g.meal_choice or 'Not Selected'
+        meal_counts[mc] = meal_counts.get(mc, 0) + 1
+        if g.dietary_restrictions:
+            for d in g.dietary_restrictions.split(','):
+                d = d.strip()
+                if d:
+                    dietary_counts[d] = dietary_counts.get(d, 0) + 1
+    return render_template('guests/meal_summary.html', wedding=wedding,
+                         meal_counts=meal_counts, dietary_counts=dietary_counts,
+                         total_accepted=len(guests))
+
+# ============================================
+# SHAREABLE READ-ONLY LINK
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/share/enable', methods=['POST'])
+@login_required
+def share_enable(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if not wedding.share_token:
+        wedding.share_token = generate_token()
+    db.session.commit()
+    flash('Shareable link generated!', 'success')
+    return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+
+@app.route('/shared/<token>')
+def shared_view(token):
+    """Public read-only view of wedding details."""
+    wedding = Wedding.query.filter_by(share_token=token).first_or_404()
+    stats = {
+        'total_tasks': len(wedding.tasks),
+        'pending_tasks': len([t for t in wedding.tasks if not t.completed]),
+        'total_guests': len(wedding.guests),
+        'rsvp_yes': len([g for g in wedding.guests if g.rsvp_status == 'accepted']),
+        'total_vendors': len(wedding.vendors),
+        'bridal_party_count': len(wedding.bridal_party),
+    }
+    return render_template('shared/dashboard.html', wedding=wedding, stats=stats, token=token)
+
+# ============================================
+# VENDOR COMMUNICATION LOG ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/vendors/<int:vendor_id>/notes')
+@login_required
+def vendor_notes_view(wedding_id, vendor_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    vendor = Vendor.query.get_or_404(vendor_id)
+    notes = VendorNote.query.filter_by(vendor_id=vendor_id).order_by(VendorNote.date.desc()).all()
+    return render_template('vendors/notes.html', wedding=wedding, vendor=vendor, notes=notes)
+
+@app.route('/wedding/<int:wedding_id>/vendors/<int:vendor_id>/notes/add', methods=['POST'])
+@login_required
+def vendor_note_add(wedding_id, vendor_id):
+    note = VendorNote(
+        vendor_id=vendor_id,
+        note_type=request.form.get('note_type'),
+        subject=request.form.get('subject'),
+        content=request.form.get('content')
+    )
+    db.session.add(note)
+    log_activity(wedding_id, 'created', 'vendor_note', request.form.get('subject'))
+    db.session.commit()
+    flash('Note added!', 'success')
+    return redirect(url_for('vendor_notes_view', wedding_id=wedding_id, vendor_id=vendor_id))
+
+@app.route('/wedding/<int:wedding_id>/vendors/<int:vendor_id>/notes/<int:note_id>/delete', methods=['POST'])
+@login_required
+def vendor_note_delete(wedding_id, vendor_id, note_id):
+    note = VendorNote.query.get_or_404(note_id)
+    db.session.delete(note)
+    db.session.commit()
+    flash('Note removed.', 'success')
+    return redirect(url_for('vendor_notes_view', wedding_id=wedding_id, vendor_id=vendor_id))
+
+# ============================================
+# VENDOR QUOTE COMPARISON ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/vendor-quotes')
+@login_required
+def vendor_quotes_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    quotes = VendorQuote.query.filter_by(wedding_id=wedding_id).order_by(VendorQuote.category).all()
+    # Group by category
+    grouped = {}
+    for q in quotes:
+        grouped.setdefault(q.category, []).append(q)
+    return render_template('vendors/quotes.html', wedding=wedding, grouped_quotes=grouped)
+
+@app.route('/wedding/<int:wedding_id>/vendor-quotes/add', methods=['GET', 'POST'])
+@login_required
+def vendor_quote_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        quote = VendorQuote(
+            wedding_id=wedding_id,
+            category=request.form.get('category'),
+            vendor_name=request.form.get('vendor_name'),
+            contact_info=request.form.get('contact_info'),
+            quote_amount=request.form.get('quote_amount', type=float),
+            package_details=request.form.get('package_details'),
+            pros=request.form.get('pros'),
+            cons=request.form.get('cons'),
+            notes=request.form.get('notes')
+        )
+        if request.form.get('date_received'):
+            quote.date_received = datetime.strptime(request.form.get('date_received'), '%Y-%m-%d').date()
+        db.session.add(quote)
+        log_activity(wedding_id, 'created', 'vendor_quote', request.form.get('vendor_name'))
+        db.session.commit()
+        flash('Quote added!', 'success')
+        return redirect(url_for('vendor_quotes_view', wedding_id=wedding_id))
+    return render_template('vendors/quote_add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/vendor-quotes/<int:quote_id>/select', methods=['POST'])
+@login_required
+def vendor_quote_select(wedding_id, quote_id):
+    quote = VendorQuote.query.get_or_404(quote_id)
+    quote.is_selected = not quote.is_selected
+    db.session.commit()
+    return redirect(url_for('vendor_quotes_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/vendor-quotes/<int:quote_id>/delete', methods=['POST'])
+@login_required
+def vendor_quote_delete(wedding_id, quote_id):
+    quote = VendorQuote.query.get_or_404(quote_id)
+    db.session.delete(quote)
+    db.session.commit()
+    flash('Quote removed.', 'success')
+    return redirect(url_for('vendor_quotes_view', wedding_id=wedding_id))
+
+# ============================================
+# SPEECHES & TOASTS ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/speeches')
+@login_required
+def speeches_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    speeches = SpeechToast.query.filter_by(wedding_id=wedding_id).order_by(SpeechToast.order).all()
+    return render_template('speeches/view.html', wedding=wedding, speeches=speeches)
+
+@app.route('/wedding/<int:wedding_id>/speeches/add', methods=['GET', 'POST'])
+@login_required
+def speeches_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        speech = SpeechToast(
+            wedding_id=wedding_id,
+            speaker_name=request.form.get('speaker_name'),
+            speech_type=request.form.get('speech_type'),
+            order=request.form.get('order', type=int) or 0,
+            duration_minutes=request.form.get('duration_minutes', type=int),
+            notes=request.form.get('notes')
+        )
+        db.session.add(speech)
+        db.session.commit()
+        flash('Speech/toast added!', 'success')
+        return redirect(url_for('speeches_view', wedding_id=wedding_id))
+    return render_template('speeches/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/speeches/<int:speech_id>/toggle-reviewed', methods=['POST'])
+@login_required
+def speeches_toggle_reviewed(wedding_id, speech_id):
+    speech = SpeechToast.query.get_or_404(speech_id)
+    speech.reviewed = not speech.reviewed
+    db.session.commit()
+    return redirect(url_for('speeches_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/speeches/<int:speech_id>/delete', methods=['POST'])
+@login_required
+def speeches_delete(wedding_id, speech_id):
+    speech = SpeechToast.query.get_or_404(speech_id)
+    db.session.delete(speech)
+    db.session.commit()
+    flash('Speech removed.', 'success')
+    return redirect(url_for('speeches_view', wedding_id=wedding_id))
+
+# ============================================
+# WEDDING FAVORS ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/favors')
+@login_required
+def favors_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    favors = WeddingFavor.query.filter_by(wedding_id=wedding_id).all()
+    total_cost = sum(f.total_cost or 0 for f in favors)
+    assembled_count = sum(1 for f in favors if f.assembled)
+    return render_template('favors/view.html', wedding=wedding, favors=favors,
+                         total_cost=total_cost, assembled_count=assembled_count)
+
+@app.route('/wedding/<int:wedding_id>/favors/add', methods=['GET', 'POST'])
+@login_required
+def favors_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        qty = request.form.get('quantity', type=int) or 0
+        cost_per = request.form.get('cost_per_item', type=float) or 0
+        favor = WeddingFavor(
+            wedding_id=wedding_id,
+            description=request.form.get('description'),
+            quantity=qty,
+            cost_per_item=cost_per,
+            total_cost=qty * cost_per,
+            vendor=request.form.get('vendor'),
+            assembly_notes=request.form.get('assembly_notes'),
+            notes=request.form.get('notes')
+        )
+        if request.form.get('order_date'):
+            favor.order_date = datetime.strptime(request.form.get('order_date'), '%Y-%m-%d').date()
+        db.session.add(favor)
+        db.session.commit()
+        flash('Favor added!', 'success')
+        return redirect(url_for('favors_view', wedding_id=wedding_id))
+    return render_template('favors/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/favors/<int:favor_id>/toggle', methods=['POST'])
+@login_required
+def favors_toggle(wedding_id, favor_id):
+    favor = WeddingFavor.query.get_or_404(favor_id)
+    favor.assembled = not favor.assembled
+    db.session.commit()
+    return redirect(url_for('favors_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/favors/<int:favor_id>/delete', methods=['POST'])
+@login_required
+def favors_delete(wedding_id, favor_id):
+    favor = WeddingFavor.query.get_or_404(favor_id)
+    db.session.delete(favor)
+    db.session.commit()
+    flash('Favor removed.', 'success')
+    return redirect(url_for('favors_view', wedding_id=wedding_id))
+
+# ============================================
+# CEREMONY VOW WRITING & SCRIPT ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/ceremony/vows', methods=['GET', 'POST'])
+@login_required
+def ceremony_vows(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    ceremony = wedding.ceremony
+    if not ceremony:
+        ceremony = Ceremony(wedding_id=wedding_id)
+        db.session.add(ceremony)
+        db.session.commit()
+    if request.method == 'POST':
+        ceremony.vow_draft_person1 = request.form.get('vow_draft_person1')
+        ceremony.vow_draft_person2 = request.form.get('vow_draft_person2')
+        db.session.commit()
+        flash('Vows saved!', 'success')
+        return redirect(url_for('ceremony_vows', wedding_id=wedding_id))
+    people = Person.query.filter_by(wedding_id=wedding_id).order_by(Person.display_order).all()
+    return render_template('ceremony/vows.html', wedding=wedding, ceremony=ceremony, people=people)
+
+@app.route('/wedding/<int:wedding_id>/ceremony/script', methods=['GET', 'POST'])
+@login_required
+def ceremony_script(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    ceremony = wedding.ceremony
+    if not ceremony:
+        ceremony = Ceremony(wedding_id=wedding_id)
+        db.session.add(ceremony)
+        db.session.commit()
+    if request.method == 'POST':
+        ceremony.ceremony_script = request.form.get('ceremony_script')
+        db.session.commit()
+        flash('Script saved!', 'success')
+        return redirect(url_for('ceremony_script', wedding_id=wedding_id))
+    return render_template('ceremony/script.html', wedding=wedding, ceremony=ceremony)
+
+# ============================================
+# BUDGET TEMPLATE & ENHANCED ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/budget/apply-template', methods=['POST'])
+@login_required
+def budget_apply_template(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    template_key = request.form.get('template')
+    template = BUDGET_TEMPLATES.get(template_key)
+    if not template:
+        flash('Template not found.', 'error')
+        return redirect(url_for('budget_view', wedding_id=wedding_id))
+    if not wedding.budget:
+        budget = Budget(wedding_id=wedding_id, total_budget=template['total'])
+        db.session.add(budget)
+        db.session.commit()
+    else:
+        wedding.budget.total_budget = template['total']
+    # Create category limits from template
+    for cat, amount in template['categories'].items():
+        existing = BudgetCategoryLimit.query.filter_by(
+            budget_id=wedding.budget.id, category=cat).first()
+        if not existing:
+            limit = BudgetCategoryLimit(
+                budget_id=wedding.budget.id, category=cat, limit_amount=amount)
+            db.session.add(limit)
+    db.session.commit()
+    flash(f'Budget template "{template["name"]}" applied!', 'success')
+    return redirect(url_for('budget_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/budget/payment-schedule')
+@login_required
+def budget_payment_schedule(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    budget = wedding.budget
+    expenses = budget.expenses if budget else []
+    # Get all items with due dates, sorted by date
+    upcoming = sorted(
+        [e for e in expenses if e.payment_due_date and e.payment_status != 'paid'],
+        key=lambda x: x.payment_due_date
+    )
+    # Also get vendor payment dates
+    vendor_payments = sorted(
+        [v for v in wedding.vendors if v.final_payment_date and not (v.deposit_paid and v.balance_due == 0)],
+        key=lambda x: x.final_payment_date
+    )
+    return render_template('budget/payment_schedule.html', wedding=wedding,
+                         upcoming=upcoming, vendor_payments=vendor_payments)
+
+# ============================================
+# SEATING CHART VISUAL ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/seating-chart')
+@login_required
+def seating_chart(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    reception = wedding.reception
+    tables = reception.seating_tables if reception else []
+    unassigned = [g for g in wedding.guests if g.rsvp_status == 'accepted' and not g.table_id]
+    return render_template('seating/chart.html', wedding=wedding, tables=tables,
+                         unassigned_guests=unassigned)
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/assign', methods=['POST'])
+@login_required
+def seating_assign(wedding_id):
+    guest_id = request.form.get('guest_id', type=int)
+    table_id = request.form.get('table_id', type=int)
+    guest = Guest.query.get_or_404(guest_id)
+    guest.table_id = table_id if table_id else None
+    db.session.commit()
+    flash(f'{guest.name} assigned!', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/bulk-assign', methods=['POST'])
+@login_required
+def seating_bulk_assign(wedding_id):
+    table_id = request.form.get('table_id', type=int)
+    guest_ids = request.form.getlist('guest_ids')
+    for gid in guest_ids:
+        guest = Guest.query.get(int(gid))
+        if guest:
+            guest.table_id = table_id
+    db.session.commit()
+    flash(f'{len(guest_ids)} guests assigned!', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/update-position', methods=['POST'])
+@login_required
+def seating_update_position(wedding_id):
+    """AJAX endpoint for drag-and-drop table positioning."""
+    table_id = request.json.get('table_id')
+    x = request.json.get('x')
+    y = request.json.get('y')
+    table = SeatingTable.query.get_or_404(table_id)
+    table.x_position = x
+    table.y_position = y
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+# ============================================
+# POST-WEDDING TASKS GENERATION
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/tasks/generate-post-wedding', methods=['POST'])
+@login_required
+def generate_post_wedding_tasks(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    wedding_date = wedding.wedding_date
+    count = 0
+    for i, (title, category, priority) in enumerate(POST_WEDDING_TASKS):
+        due = wedding_date + timedelta(days=7 + i * 3)  # stagger over weeks after wedding
+        task = Task(
+            wedding_id=wedding_id,
+            title=title,
+            due_date=due,
+            priority=priority,
+            category=category
+        )
+        db.session.add(task)
+        count += 1
+    db.session.commit()
+    flash(f'{count} post-wedding tasks generated!', 'success')
+    return redirect(url_for('tasks_view', wedding_id=wedding_id))
+
+# ============================================
+# EXPORT ROUTES (CSV, PRINTABLE)
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/export/guests')
+@login_required
+def export_guests_csv(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Name', 'Email', 'Phone', 'Address', 'RSVP Status', 'Meal Choice',
+                     'Dietary Restrictions', 'Side', 'Guest Type', 'Table',
+                     'Plus One', 'Gift Received', 'Thank You Sent'])
+    for g in wedding.guests:
+        table_name = ''
+        if g.seating_table:
+            table_name = g.seating_table.table_name or g.seating_table.table_number
+        writer.writerow([
+            g.name, g.email or '', g.phone or '', g.address or '',
+            g.rsvp_status or 'pending', g.meal_choice or '', g.dietary_restrictions or '',
+            g.side or '', g.guest_type or '', table_name,
+            g.plus_one_of if g.is_plus_one else '', 'Yes' if g.gift_received else 'No',
+            'Yes' if g.thank_you_sent else 'No'
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=guests_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/budget')
+@login_required
+def export_budget_csv(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    budget = wedding.budget
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Category', 'Item', 'Estimated Cost', 'Actual Cost', 'Paid Amount',
+                     'Payment Status', 'Due Date', 'Covered By', 'Notes'])
+    if budget:
+        for e in budget.expenses:
+            writer.writerow([
+                e.category, e.item_name, e.estimated_cost or 0, e.actual_cost or 0,
+                e.paid_amount or 0, e.payment_status or '', str(e.payment_due_date or ''),
+                e.covered_by or '', e.notes or ''
+            ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=budget_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/tasks')
+@login_required
+def export_tasks_csv(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Title', 'Description', 'Due Date', 'Priority', 'Category',
+                     'Assigned To', 'Completed', 'Milestone'])
+    for t in wedding.tasks:
+        writer.writerow([
+            t.title, t.description or '', str(t.due_date.date()) if t.due_date else '',
+            t.priority, t.category or '', t.assigned_to or '',
+            'Yes' if t.completed else 'No', 'Yes' if t.is_milestone else 'No'
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=tasks_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/vendors')
+@login_required
+def export_vendors_csv(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Category', 'Business Name', 'Contact', 'Email', 'Phone',
+                     'Total Cost', 'Deposit', 'Balance Due', 'Service Date'])
+    for v in wedding.vendors:
+        writer.writerow([
+            v.category, v.business_name, v.contact_name or '', v.email or '', v.phone or '',
+            v.total_cost or 0, v.deposit_amount or 0, v.balance_due or 0,
+            str(v.service_date or '')
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=vendors_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/print/timeline')
+@login_required
+def print_timeline(wedding_id):
+    """Printable day-of timeline."""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    items = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
+    return render_template('print/timeline.html', wedding=wedding, items=items)
+
+@app.route('/wedding/<int:wedding_id>/print/vendor-contacts')
+@login_required
+def print_vendor_contacts(wedding_id):
+    """Printable vendor contact sheet."""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    return render_template('print/vendor_contacts.html', wedding=wedding, vendors=wedding.vendors)
+
+@app.route('/wedding/<int:wedding_id>/print/shot-list')
+@login_required
+def print_shot_list(wedding_id):
+    """Printable photography shot list."""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    shots = sorted(wedding.photo_shots, key=lambda x: (x.category or '', x.priority or ''))
+    return render_template('print/shot_list.html', wedding=wedding, shots=shots)
+
+@app.route('/wedding/<int:wedding_id>/print/emergency-contacts')
+@login_required
+def print_emergency_contacts(wedding_id):
+    """Printable emergency contact card."""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    return render_template('print/emergency_contacts.html', wedding=wedding,
+                         vendors=wedding.vendors, participants=wedding.participants)
+
+@app.route('/wedding/<int:wedding_id>/print/seating')
+@login_required
+def print_seating(wedding_id):
+    """Printable seating chart."""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    tables = wedding.reception.seating_tables if wedding.reception else []
+    return render_template('print/seating.html', wedding=wedding, tables=tables)
+
+@app.route('/wedding/<int:wedding_id>/export/mailing-labels')
+@login_required
+def export_mailing_labels(wedding_id):
+    """Export guest addresses as CSV for mailing labels."""
+    wedding = Wedding.query.get_or_404(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Name', 'Address'])
+    for g in wedding.guests:
+        if g.address:
+            writer.writerow([g.name, g.address])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=mailing_labels_{wedding_id}.csv'
+    return response
+
+# ============================================
+# GLOBAL SEARCH
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/search')
+@login_required
+def global_search(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    q = request.args.get('q', '').strip().lower()
+    results = {'guests': [], 'vendors': [], 'tasks': [], 'expenses': []}
+    if q:
+        results['guests'] = [g for g in wedding.guests if q in g.name.lower() or
+                            (g.email and q in g.email.lower())]
+        results['vendors'] = [v for v in wedding.vendors if q in v.business_name.lower() or
+                             (v.contact_name and q in v.contact_name.lower())]
+        results['tasks'] = [t for t in wedding.tasks if q in t.title.lower() or
+                           (t.description and q in t.description.lower())]
+        if wedding.budget:
+            results['expenses'] = [e for e in wedding.budget.expenses if
+                                  q in e.item_name.lower() or q in e.category.lower()]
+    total = sum(len(v) for v in results.values())
+    return render_template('search/results.html', wedding=wedding, query=q,
+                         results=results, total=total)
+
+# ============================================
+# ACTIVITY LOG / AUDIT TRAIL
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/activity')
+@login_required
+def activity_log_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    logs = ActivityLog.query.filter_by(wedding_id=wedding_id)\
+        .order_by(ActivityLog.timestamp.desc())\
+        .limit(per_page).offset((page - 1) * per_page).all()
+    total = ActivityLog.query.filter_by(wedding_id=wedding_id).count()
+    return render_template('activity/log.html', wedding=wedding, logs=logs,
+                         page=page, total=total, per_page=per_page)
+
+# ============================================
+# COMMENTS ON ITEMS
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/comment/add', methods=['POST'])
+@login_required
+def comment_add(wedding_id):
+    comment = Comment(
+        wedding_id=wedding_id,
+        user_id=g.user.id if g.user else None,
+        user_name=g.user.name if g.user else 'Unknown',
+        entity_type=request.form.get('entity_type'),
+        entity_id=request.form.get('entity_id', type=int),
+        content=request.form.get('content')
+    )
+    db.session.add(comment)
+    db.session.commit()
+    flash('Comment added!', 'success')
+    return redirect(request.referrer or url_for('wedding_dashboard', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/comment/<int:comment_id>/delete', methods=['POST'])
+@login_required
+def comment_delete(wedding_id, comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+    db.session.delete(comment)
+    db.session.commit()
+    flash('Comment removed.', 'success')
+    return redirect(request.referrer or url_for('wedding_dashboard', wedding_id=wedding_id))
+
+# ============================================
+# COLLABORATION / PERMISSIONS UI
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/collaborators')
+@login_required
+def collaborators_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    access_list = WeddingAccess.query.filter_by(wedding_id=wedding_id).all()
+    users = []
+    for access in access_list:
+        user = User.query.get(access.user_id)
+        if user:
+            users.append({'user': user, 'role': access.role, 'access_id': access.id})
+    return render_template('collaboration/view.html', wedding=wedding, users=users)
+
+@app.route('/wedding/<int:wedding_id>/collaborators/add', methods=['POST'])
+@login_required
+def collaborator_add(wedding_id):
+    email = request.form.get('email', '').strip().lower()
+    role = request.form.get('role', 'viewer')
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash('No user found with that email.', 'error')
+        return redirect(url_for('collaborators_view', wedding_id=wedding_id))
+    existing = WeddingAccess.query.filter_by(user_id=user.id, wedding_id=wedding_id).first()
+    if existing:
+        flash('User already has access.', 'error')
+        return redirect(url_for('collaborators_view', wedding_id=wedding_id))
+    access = WeddingAccess(user_id=user.id, wedding_id=wedding_id, role=role)
+    db.session.add(access)
+    log_activity(wedding_id, 'created', 'collaborator', user.name, f'Role: {role}')
+    db.session.commit()
+    flash(f'{user.name} added as {role}!', 'success')
+    return redirect(url_for('collaborators_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/collaborators/<int:access_id>/update', methods=['POST'])
+@login_required
+def collaborator_update(wedding_id, access_id):
+    access = WeddingAccess.query.get_or_404(access_id)
+    access.role = request.form.get('role', 'viewer')
+    db.session.commit()
+    flash('Role updated!', 'success')
+    return redirect(url_for('collaborators_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/collaborators/<int:access_id>/remove', methods=['POST'])
+@login_required
+def collaborator_remove(wedding_id, access_id):
+    access = WeddingAccess.query.get_or_404(access_id)
+    db.session.delete(access)
+    db.session.commit()
+    flash('Access removed.', 'success')
+    return redirect(url_for('collaborators_view', wedding_id=wedding_id))
+
+# ============================================
+# CALENDAR VIEW & ICAL EXPORT
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/calendar')
+@login_required
+def calendar_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    events = []
+    # Tasks
+    for t in wedding.tasks:
+        events.append({
+            'title': t.title,
+            'date': t.due_date.strftime('%Y-%m-%d') if t.due_date else '',
+            'type': 'task',
+            'completed': t.completed,
+            'category': t.category or 'general'
+        })
+    # Vendor payment dates
+    for v in wedding.vendors:
+        if v.final_payment_date:
+            events.append({
+                'title': f'Payment: {v.business_name}',
+                'date': v.final_payment_date.strftime('%Y-%m-%d'),
+                'type': 'payment',
+                'completed': False,
+                'category': 'vendors'
+            })
+    # Budget expense due dates
+    if wedding.budget:
+        for e in wedding.budget.expenses:
+            if e.payment_due_date:
+                events.append({
+                    'title': f'Due: {e.item_name}',
+                    'date': e.payment_due_date.strftime('%Y-%m-%d'),
+                    'type': 'payment',
+                    'completed': e.payment_status == 'paid',
+                    'category': 'budget'
+                })
+    events.sort(key=lambda x: x['date'])
+    return render_template('calendar/view.html', wedding=wedding, events=events)
+
+@app.route('/wedding/<int:wedding_id>/calendar/export.ics')
+@login_required
+def calendar_export_ical(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Wedding Organizer//EN',
+        f'X-WR-CALNAME:{wedding.couple_names} Wedding',
+    ]
+    # Wedding date
+    wd = wedding.wedding_date
+    lines.extend([
+        'BEGIN:VEVENT',
+        f'DTSTART:{wd.strftime("%Y%m%d")}',
+        f'DTEND:{wd.strftime("%Y%m%d")}',
+        f'SUMMARY:{wedding.couple_names} Wedding Day',
+        'END:VEVENT',
+    ])
+    # Tasks
+    for t in wedding.tasks:
+        if t.due_date:
+            lines.extend([
+                'BEGIN:VEVENT',
+                f'DTSTART:{t.due_date.strftime("%Y%m%d")}',
+                f'SUMMARY:{t.title}',
+                f'DESCRIPTION:{t.description or ""}',
+                'END:VEVENT',
+            ])
+    lines.append('END:VCALENDAR')
+    response = make_response('\r\n'.join(lines))
+    response.headers['Content-Type'] = 'text/calendar'
+    response.headers['Content-Disposition'] = f'attachment; filename=wedding_{wedding_id}.ics'
+    return response
+
+# ============================================
+# BAR & DANCE FLOOR CALCULATORS
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/reception/calculators')
+@login_required
+def reception_calculators(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    guest_count = len([g for g in wedding.guests if g.rsvp_status == 'accepted'])
+    if guest_count == 0:
+        guest_count = (wedding.reception.expected_guest_count if wedding.reception and wedding.reception.expected_guest_count else None) or 100
+    hours = 4  # default reception duration
+    if wedding.reception and wedding.reception.start_time and wedding.reception.end_time:
+        start = datetime.combine(date.today(), wedding.reception.start_time)
+        end = datetime.combine(date.today(), wedding.reception.end_time)
+        hours = max(1, (end - start).seconds / 3600)
+
+    # Bar calculator (industry standard: 1 drink per person per hour for first hour, 0.5 after)
+    drinks_per_person = 1 + 0.5 * (hours - 1)
+    total_drinks = math.ceil(guest_count * drinks_per_person)
+    beer_bottles = math.ceil(total_drinks * 0.3 / 5) * 6  # 30% beer, 6-packs
+    wine_bottles = math.ceil(total_drinks * 0.4 / 5)  # 40% wine, 5 glasses per bottle
+    liquor_bottles = math.ceil(total_drinks * 0.3 / 16)  # 30% spirits, 16 drinks per bottle
+
+    # Dance floor calculator (4.5 sq ft per dancer, ~40% of guests dance at once)
+    dancers = math.ceil(guest_count * 0.4)
+    sq_feet = math.ceil(dancers * 4.5)
+    side_length = math.ceil(math.sqrt(sq_feet))
+
+    # Postage calculator (estimate)
+    invitation_count = math.ceil(guest_count * 0.6)  # ~60% of guests per household invite
+
+    bar_calc = {
+        'total_drinks': total_drinks, 'beer_cases': beer_bottles // 6,
+        'wine_bottles': wine_bottles, 'liquor_bottles': liquor_bottles,
+        'hours': hours, 'guest_count': guest_count
+    }
+    dance_calc = {
+        'dancers': dancers, 'sq_feet': sq_feet,
+        'dimensions': f'{side_length}x{side_length}'
+    }
+    postage_calc = {
+        'invitation_count': invitation_count,
+        'stamps_invite': invitation_count,
+        'stamps_rsvp': invitation_count,  # RSVP return postage
+    }
+    return render_template('reception/calculators.html', wedding=wedding,
+                         bar_calc=bar_calc, dance_calc=dance_calc, postage_calc=postage_calc)
+
+# ============================================
+# INVITATION WORDING TEMPLATES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/invitations/wording')
+@login_required
+def invitation_wording(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    return render_template('invitations/wording.html', wedding=wedding,
+                         templates=INVITATION_WORDING_TEMPLATES)
+
+# ============================================
+# STATIONERY CHECKLIST
+# ============================================
+
+STATIONERY_CHECKLIST = [
+    ('Save-the-Dates', 'First thing to send (6-8 months before)'),
+    ('Wedding Invitations', 'Send 6-8 weeks before the wedding'),
+    ('RSVP Cards', 'Include with invitations, pre-stamped return'),
+    ('Reception Cards', 'If reception is at a different venue'),
+    ('Ceremony Programs', 'Outline the ceremony order for guests'),
+    ('Menu Cards', 'Table or place setting menus'),
+    ('Place Cards / Escort Cards', 'Guide guests to their seats'),
+    ('Table Numbers', 'Identify each table'),
+    ('Thank-You Cards', 'Send within 3 months of wedding'),
+    ('Wedding Signs', 'Welcome, seating chart, bar menu, etc.'),
+    ('Favor Tags', 'Attached to wedding favors'),
+    ('Rehearsal Dinner Invitations', 'For rehearsal dinner guests'),
+]
+
+@app.route('/wedding/<int:wedding_id>/invitations/checklist')
+@login_required
+def stationery_checklist(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    existing = {inv.item_type for inv in wedding.invitations}
+    return render_template('invitations/checklist.html', wedding=wedding,
+                         checklist=STATIONERY_CHECKLIST, existing=existing)
+
+# ============================================
+# PROCESSIONAL ORDER VISUALIZATION
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/bridal-party/processional')
+@login_required
+def processional_order(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    members = sorted(wedding.bridal_party, key=lambda x: x.processional_order or 999)
+    people = Person.query.filter_by(wedding_id=wedding_id).order_by(Person.display_order).all()
+    return render_template('bridal_party/processional.html', wedding=wedding,
+                         members=members, people=people)
+
+# ============================================
+# MUSIC DURATION TRACKING
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/music/stats')
+@login_required
+def music_stats(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    songs = wedding.songs
+    moments = {}
+    for s in songs:
+        m = s.moment or 'unassigned'
+        if m not in moments:
+            moments[m] = {'songs': [], 'total_duration': 0}
+        moments[m]['songs'].append(s)
+        moments[m]['total_duration'] += s.duration_minutes or 0
+    total_duration = sum(s.duration_minutes or 0 for s in songs)
+    do_not_play = [s for s in songs if s.moment == 'do_not_play']
+    return render_template('music/stats.html', wedding=wedding, moments=moments,
+                         total_duration=total_duration, do_not_play=do_not_play,
+                         total_songs=len(songs))
 
 # Background task for email reminders
 def check_reminders():

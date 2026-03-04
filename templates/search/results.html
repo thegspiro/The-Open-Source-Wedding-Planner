@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Search Results</h1>
+</div>
+
+<div class="module-section">
+    <form method="GET" action="{{ url_for('global_search', wedding_id=wedding.id) }}">
+        <div class="form-group">
+            <label for="search_query">Search</label>
+            <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="search_query" name="q" value="{{ query }}" placeholder="Search guests, vendors, tasks, expenses..." style="flex: 1;">
+                <button type="submit" class="btn-primary">Search</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% if query %}
+    {% if total == 0 %}
+    <div class="empty-state">
+        <h2>No Results Found</h2>
+        <p>No matches found for "{{ query }}". Try a different search term.</p>
+    </div>
+    {% else %}
+    <p class="form-help">Found {{ total }} result{{ 's' if total != 1 else '' }} for "{{ query }}"</p>
+
+    {% if results.guests %}
+    <div class="module-section">
+        <h2>Guests ({{ results.guests|length }})</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>RSVP</th>
+                    <th>Side</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for guest in results.guests %}
+                <tr>
+                    <td><a href="{{ url_for('guest_edit', wedding_id=wedding.id, guest_id=guest.id) }}">{{ guest.name }}</a></td>
+                    <td>{{ guest.email or '-' }}</td>
+                    <td><span class="rsvp-{{ guest.rsvp_status or 'pending' }}">{{ guest.rsvp_status or 'pending' }}</span></td>
+                    <td>{{ guest.side or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if results.vendors %}
+    <div class="module-section">
+        <h2>Vendors ({{ results.vendors|length }})</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Business Name</th>
+                    <th>Category</th>
+                    <th>Contact</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vendor in results.vendors %}
+                <tr>
+                    <td><a href="{{ url_for('vendor_edit', wedding_id=wedding.id, vendor_id=vendor.id) }}">{{ vendor.business_name }}</a></td>
+                    <td><span class="category-badge">{{ vendor.category|replace('_', ' ')|title }}</span></td>
+                    <td>{{ vendor.contact_name or '-' }}</td>
+                    <td>
+                        {% if vendor.contract_signed %}
+                        <span class="rsvp-accepted">Contract Signed</span>
+                        {% else %}
+                        <span class="rsvp-pending">No Contract</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if results.tasks %}
+    <div class="module-section">
+        <h2>Tasks ({{ results.tasks|length }})</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Due Date</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in results.tasks %}
+                <tr>
+                    <td><a href="{{ url_for('task_edit', wedding_id=wedding.id, task_id=task.id) }}">{{ task.title }}</a></td>
+                    <td>{{ task.due_date.strftime('%b %d, %Y') }}</td>
+                    <td><span class="priority-badge priority-{{ task.priority }}">{{ task.priority }}</span></td>
+                    <td>
+                        {% if task.completed %}
+                        <span class="rsvp-accepted">Completed</span>
+                        {% else %}
+                        <span class="rsvp-pending">Pending</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if results.expenses %}
+    <div class="module-section">
+        <h2>Expenses ({{ results.expenses|length }})</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Estimated</th>
+                    <th>Actual</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in results.expenses %}
+                <tr>
+                    <td><a href="{{ url_for('budget_expense_edit', wedding_id=wedding.id, expense_id=expense.id) }}">{{ expense.item_name }}</a></td>
+                    <td><span class="category-badge">{{ expense.category|replace('_', ' ')|title }}</span></td>
+                    <td>${{ "{:,.2f}".format(expense.estimated_cost) if expense.estimated_cost else '-' }}</td>
+                    <td>${{ "{:,.2f}".format(expense.actual_cost) if expense.actual_cost else '-' }}</td>
+                    <td>
+                        <span class="payment-status status-{{ expense.payment_status or 'unpaid' }}">
+                            {{ (expense.payment_status or 'unpaid')|replace('_', ' ')|title }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% endif %}
+{% else %}
+<div class="empty-state">
+    <h2>Enter a Search Term</h2>
+    <p>Use the search bar above to find guests, vendors, tasks, and expenses across your wedding.</p>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

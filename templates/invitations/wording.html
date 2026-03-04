@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Invitation Wording Templates - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Invitation Wording Templates</h1>
+    <a href="{{ url_for('invitations_view', wedding_id=wedding.id) }}" class="btn-secondary">Back to Invitations</a>
+</div>
+
+{% if templates %}
+<div class="dashboard-grid">
+    {% for key, template in templates.items() %}
+    <div class="dashboard-card wording-card">
+        <h3>{{ template.name }}</h3>
+        <pre class="wording-text">{{ template.text }}</pre>
+        <button class="btn-primary btn-small" onclick="copyWording('wording-{{ key }}')">Copy to Clipboard</button>
+        <textarea id="wording-{{ key }}" class="hidden-text">{{ template.text }}</textarea>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Wording Templates Available</h2>
+    <p>Wording templates will appear here to help you craft the perfect invitation.</p>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+
+<script>
+function copyWording(elementId) {
+    var textarea = document.getElementById(elementId);
+    textarea.style.display = 'block';
+    textarea.select();
+    document.execCommand('copy');
+    textarea.style.display = 'none';
+    var btn = event.target;
+    var originalText = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(function() {
+        btn.textContent = originalText;
+    }, 2000);
+}
+</script>
+
+<style>
+.wording-card {
+    text-align: left;
+}
+.wording-card h3 {
+    color: #e91e63;
+    margin-bottom: 1rem;
+}
+.wording-text {
+    background: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    padding: 1.25rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: 'Georgia', serif;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #444;
+    margin-bottom: 1rem;
+}
+.hidden-text {
+    display: none;
+    position: absolute;
+    left: -9999px;
+}
+</style>
+{% endblock %}

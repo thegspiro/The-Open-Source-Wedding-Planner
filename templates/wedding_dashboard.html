@@ -7,9 +7,20 @@
     <div>
         <h1>{{ wedding.couple_names }}</h1>
         <p class="wedding-date-large">{{ wedding.wedding_date.strftime('%B %d, %Y') }}</p>
+        {% set days_until = (wedding.wedding_date.date() - today).days if today else 0 %}
+        {% if days_until > 0 %}
+        <p class="countdown-badge">{{ days_until }} days to go!</p>
+        {% elif days_until == 0 %}
+        <p class="countdown-badge countdown-today">Today is the day!</p>
+        {% endif %}
     </div>
-    <div>
-        <a href="{{ url_for('index') }}" class="btn-secondary">All Weddings</a>
+    <div class="header-actions">
+        <form action="{{ url_for('global_search', wedding_id=wedding.id) }}" method="GET" class="search-form-inline">
+            <input type="text" name="q" placeholder="Search everything..." class="search-input-inline">
+            <button type="submit" class="btn-primary btn-small">Search</button>
+        </form>
+        <a href="{{ url_for('calendar_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Calendar</a>
+        <a href="{{ url_for('index') }}" class="btn-secondary btn-small">All Weddings</a>
     </div>
 </div>
 
@@ -141,6 +152,35 @@
         <a href="{{ url_for('vendor_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Vendor</a>
         <a href="{{ url_for('day_of_add', wedding_id=wedding.id) }}" class="btn-primary">+ Timeline Item</a>
         <a href="{{ url_for('more_modules', wedding_id=wedding.id) }}" class="btn-secondary">All Modules</a>
+    </div>
+</div>
+
+<div class="quick-actions" style="margin-top: 1rem;">
+    <h2>Export & Print</h2>
+    <div class="action-buttons">
+        <a href="{{ url_for('export_guests_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export Guests CSV</a>
+        <a href="{{ url_for('export_budget_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export Budget CSV</a>
+        <a href="{{ url_for('export_tasks_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export Tasks CSV</a>
+        <a href="{{ url_for('print_timeline', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Timeline</a>
+        <a href="{{ url_for('print_vendor_contacts', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Vendor Contacts</a>
+        <a href="{{ url_for('calendar_export_ical', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export Calendar (.ics)</a>
+    </div>
+</div>
+
+<div class="quick-actions" style="margin-top: 1rem;">
+    <h2>Collaboration</h2>
+    <div class="action-buttons">
+        <a href="{{ url_for('collaborators_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Manage Collaborators</a>
+        <a href="{{ url_for('activity_log_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Activity Log</a>
+        {% if wedding.share_token %}
+        <span style="background: #e8f5e9; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.9rem;">
+            Share link: {{ request.host_url }}shared/{{ wedding.share_token }}
+        </span>
+        {% else %}
+        <form method="POST" action="{{ url_for('share_enable', wedding_id=wedding.id) }}" style="display: inline;">
+            <button type="submit" class="btn-secondary btn-small">Generate Shareable Link</button>
+        </form>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

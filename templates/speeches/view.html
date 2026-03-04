@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Speeches & Toasts - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Speeches & Toasts</h1>
+    <a href="{{ url_for('speeches_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Speech</a>
+</div>
+
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-num">{{ speeches|length }}</div>
+        <div class="stat-label">Total Speeches</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ speeches|sum(attribute='duration_minutes') or 0 }} min</div>
+        <div class="stat-label">Total Duration</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ speeches|selectattr('reviewed')|list|length }}</div>
+        <div class="stat-label">Reviewed</div>
+    </div>
+</div>
+
+{% if speeches %}
+<div class="dashboard-grid">
+    {% for speech in speeches %}
+    <div class="dashboard-card">
+        <h3>{{ speech.speaker_name }}</h3>
+        <span class="category-badge">{{ speech.speech_type or 'speech' }}</span>
+        {% if speech.order %}
+        <p class="stat-label">Order: #{{ speech.order }}</p>
+        {% endif %}
+        {% if speech.duration_minutes %}
+        <p class="stat-label">Duration: {{ speech.duration_minutes }} min</p>
+        {% endif %}
+        {% if speech.notes %}
+        <p>{{ speech.notes }}</p>
+        {% endif %}
+        <div class="form-actions">
+            <form method="POST" action="{{ url_for('speeches_toggle_reviewed', wedding_id=wedding.id, speech_id=speech.id) }}" class="form-inline">
+                <button type="submit" class="btn-{% if speech.reviewed %}primary{% else %}secondary{% endif %} btn-small">
+                    {% if speech.reviewed %}Reviewed{% else %}Mark Reviewed{% endif %}
+                </button>
+            </form>
+            <form method="POST" action="{{ url_for('speeches_delete', wedding_id=wedding.id, speech_id=speech.id) }}" class="form-inline">
+                <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this speech?')">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Speeches Yet</h2>
+    <p>Plan and organize all the speeches and toasts for your reception.</p>
+    <a href="{{ url_for('speeches_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Speech</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&larr; Back to Dashboard</a>
+</div>
+{% endblock %}

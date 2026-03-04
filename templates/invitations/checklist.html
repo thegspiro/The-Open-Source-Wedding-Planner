@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Stationery Checklist - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Stationery Checklist</h1>
+    <a href="{{ url_for('invitations_view', wedding_id=wedding.id) }}" class="btn-secondary">Back to Invitations</a>
+</div>
+
+{% if checklist %}
+<div class="dashboard-grid">
+    {% for name, description in checklist %}
+    {% set item_key = name|lower|replace(' ', '_') %}
+    <div class="dashboard-card checklist-card {% if item_key in existing %}checklist-done{% endif %}">
+        <div class="checklist-header">
+            <h3>{{ name }}</h3>
+            {% if item_key in existing %}
+            <span class="check-mark">&#10003;</span>
+            {% endif %}
+        </div>
+        <p class="checklist-desc">{{ description }}</p>
+        {% if item_key in existing %}
+        <span class="checklist-status status-done">Added</span>
+        {% else %}
+        <span class="checklist-status status-todo">Not Yet Added</span>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Checklist Items</h2>
+    <p>The stationery checklist is not available at this time.</p>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+
+<style>
+.checklist-card {
+    text-align: left;
+    position: relative;
+    border-left: 4px solid #e0e0e0;
+}
+.checklist-card.checklist-done {
+    border-left-color: #4caf50;
+}
+.checklist-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+.checklist-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1rem;
+}
+.check-mark {
+    color: #4caf50;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+.checklist-desc {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.4;
+}
+.checklist-status {
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    display: inline-block;
+}
+.status-done {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+.status-todo {
+    background: #f5f5f5;
+    color: #999;
+}
+</style>
+{% endblock %}

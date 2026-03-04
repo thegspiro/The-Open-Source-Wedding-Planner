@@ -30,6 +30,7 @@
         </select>
     </div>
     <div class="form-group"><label>Dietary Restrictions</label><input type="text" name="dietary_restrictions"></div>
+    <div class="form-group"><label>Household Group</label><input type="text" name="household_group" placeholder="e.g., Smith Family"></div>
     <button type="submit" class="btn-primary">Add Guest</button>
     <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
 </form>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photography Shot List - {{ wedding.couple_names }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            color: #333;
+            line-height: 1.5;
+            padding: 20px 40px;
+        }
+
+        .print-header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .print-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .print-header .wedding-date {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .print-btn {
+            display: inline-block;
+            padding: 8px 20px;
+            background: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        .print-btn:hover {
+            background: #555;
+        }
+
+        .category-section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+
+        .category-section h2 {
+            font-size: 18px;
+            border-bottom: 1px solid #999;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        .shot-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        .shot-table th,
+        .shot-table td {
+            border: 1px solid #ccc;
+            padding: 6px 10px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 12px;
+        }
+
+        .shot-table th {
+            background: #f0f0f0;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .shot-table tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        .priority-must {
+            font-weight: bold;
+            color: #c0392b;
+        }
+
+        .priority-nice {
+            color: #7f8c8d;
+        }
+
+        .checkbox-cell {
+            text-align: center;
+            width: 60px;
+        }
+
+        .checkbox-cell input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        @media print {
+            .print-btn {
+                display: none;
+            }
+
+            body {
+                padding: 0;
+                font-size: 11px;
+            }
+
+            .shot-table th,
+            .shot-table td {
+                font-size: 11px;
+                padding: 4px 8px;
+            }
+
+            .print-header h1 {
+                font-size: 20px;
+            }
+
+            .category-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">Print</button>
+
+    <div class="print-header">
+        <h1>Photography Shot List - {{ wedding.couple_names }}</h1>
+        {% if wedding.date %}
+        <div class="wedding-date">{{ wedding.date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+    </div>
+
+    {% set categories = ['getting_ready', 'ceremony', 'portraits', 'reception', 'detail'] %}
+    {% set category_labels = {
+        'getting_ready': 'Getting Ready',
+        'ceremony': 'Ceremony',
+        'portraits': 'Portraits',
+        'reception': 'Reception',
+        'detail': 'Detail'
+    } %}
+
+    {% for category in categories %}
+    {% set category_shots = shots|selectattr('category', 'equalto', category)|list %}
+    {% if category_shots %}
+    <div class="category-section">
+        <h2>{{ category_labels[category] }}</h2>
+        <table class="shot-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>People</th>
+                    <th>Priority</th>
+                    <th class="checkbox-cell">Captured</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shot in category_shots %}
+                <tr>
+                    <td>{{ shot.description }}</td>
+                    <td>{{ shot.people or '' }}</td>
+                    <td>
+                        {% if shot.priority == 'must_have' %}
+                        <span class="priority-must">Must Have</span>
+                        {% elif shot.priority == 'nice_to_have' %}
+                        <span class="priority-nice">Nice to Have</span>
+                        {% else %}
+                        {{ shot.priority or '' }}
+                        {% endif %}
+                    </td>
+                    <td class="checkbox-cell">
+                        <input type="checkbox" {% if shot.captured %}checked{% endif %}>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {% if not shots %}
+    <p>No shots in the shot list.</p>
+    {% endif %}
+
+    <div class="footer-note">
+        Printed from Wedding Organizer &mdash; {{ wedding.couple_names }}
+    </div>
+</body>
+</html>

@@ -59,6 +59,11 @@
                 <label for="dietary_restrictions">Dietary Restrictions</label>
                 <textarea id="dietary_restrictions" name="dietary_restrictions" rows="2">{{ guest.dietary_restrictions or '' }}</textarea>
             </div>
+
+            <div class="form-group">
+                <label for="household_group">Household Group</label>
+                <input type="text" id="household_group" name="household_group" value="{{ guest.household_group or '' }}" placeholder="e.g., Smith Family">
+            </div>
         </div>
 
         <div class="module-section">

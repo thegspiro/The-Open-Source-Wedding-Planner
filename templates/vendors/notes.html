@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Vendor Communication Log - {{ vendor.business_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Vendor Communication Log - {{ vendor.business_name }}</h1>
+    <a href="{{ url_for('vendors_view', wedding_id=wedding.id) }}" class="btn-secondary">&larr; Back to Vendors</a>
+</div>
+
+<div class="module-section">
+    <h2>Add Note</h2>
+    <div class="form-container">
+        <form method="POST" action="{{ url_for('vendor_note_add', wedding_id=wedding.id, vendor_id=vendor.id) }}">
+            <div class="form-group">
+                <label>Type *</label>
+                <select name="note_type" required>
+                    <option value="">-- Select --</option>
+                    <option value="email">Email</option>
+                    <option value="call">Call</option>
+                    <option value="meeting">Meeting</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Subject *</label>
+                <input type="text" name="subject" required placeholder="Brief subject of the communication">
+            </div>
+            <div class="form-group">
+                <label>Content</label>
+                <textarea name="content" rows="4" placeholder="Details of the communication..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Add Note</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Communication History</h2>
+    {% if notes %}
+    {% for note in notes %}
+    <div class="dashboard-card">
+        <div class="task-header">
+            <div>
+                <span class="category-badge">{{ note.note_type or 'other' }}</span>
+                <strong>{{ note.subject or 'No Subject' }}</strong>
+            </div>
+            <div>
+                <span class="stat-label">{{ note.date.strftime('%b %d, %Y %I:%M %p') }}</span>
+                <form method="POST" action="{{ url_for('vendor_note_delete', wedding_id=wedding.id, vendor_id=vendor.id, note_id=note.id) }}" class="form-inline" style="display: inline;">
+                    <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this note?')">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% if note.content %}
+        <p>{{ note.content }}</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+        <h2>No Notes Yet</h2>
+        <p>Use the form above to log your first communication with this vendor.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('vendors_view', wedding_id=wedding.id) }}" class="btn-secondary">&larr; Back to Vendors</a>
+</div>
+{% endblock %}
