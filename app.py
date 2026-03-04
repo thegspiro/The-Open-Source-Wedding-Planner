@@ -1,6 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
-from models import *
-from datetime import datetime, timedelta, time
+from models import (
+    db, Wedding, Person, Task, Ceremony, CeremonyTimelineItem, CeremonyReading,
+    Reception, Honeymoon, WeddingBranding, BridalPartyMember, Guest,
+    Budget, BudgetExpense, Vendor, TraditionalElement
+)
+from datetime import datetime, timedelta
 import os
 from email_service import send_reminder_email
 import threading
@@ -517,6 +521,34 @@ def traditional_elements():
     return render_template('traditional_elements.html', grouped_elements=grouped)
 
 # ============================================
+# PEOPLE ROUTES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/people')
+def people_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    people = Person.query.filter_by(wedding_id=wedding_id).order_by(Person.display_order).all()
+    return render_template('people/view.html', wedding=wedding, people=people)
+
+@app.route('/wedding/<int:wedding_id>/people/<int:person_id>/edit', methods=['GET', 'POST'])
+def person_edit(wedding_id, person_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    person = Person.query.get_or_404(person_id)
+
+    if request.method == 'POST':
+        person.name = request.form.get('name')
+        person.title = request.form.get('title')
+        person.preferred_pronouns = request.form.get('preferred_pronouns')
+        person.side_label = request.form.get('side_label')
+        person.email = request.form.get('email')
+        person.phone = request.form.get('phone')
+        db.session.commit()
+        flash('Person updated!', 'success')
+        return redirect(url_for('people_view', wedding_id=wedding_id))
+
+    return render_template('people/edit.html', wedding=wedding, person=person)
+
+# ============================================
 # CEREMONY ROUTES
 # ============================================
 
@@ -783,7 +815,7 @@ def task_add(wedding_id):
         return redirect(url_for('tasks_view', wedding_id=wedding_id))
     return render_template('tasks/add.html', wedding=wedding)
 
-@app.route('/task/<int:task_id>/toggle')
+@app.route('/task/<int:task_id>/toggle', methods=['POST'])
 def task_toggle(task_id):
     task = Task.query.get_or_404(task_id)
     task.completed = not task.completed
@@ -822,8 +854,9 @@ def check_reminders():
         
         time_module.sleep(3600)  # Check every hour
 
-reminder_thread = threading.Thread(target=check_reminders, daemon=True)
-reminder_thread.start()
-
 if __name__ == '__main__':
+    # Only start reminder thread once (avoid duplicate under Flask reloader)
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
+        reminder_thread = threading.Thread(target=check_reminders, daemon=True)
+        reminder_thread.start()
     app.run(host='0.0.0.0', port=5000, debug=True)
