@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Wedding Organizer{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('index') }}" class="logo">💍 Wedding Organizer</a>
+            
+            {% if wedding %}
+            <div class="wedding-nav">
+                <span class="wedding-name">{{ wedding.couple_names }}</span>
+                <div class="module-nav">
+                    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}">Dashboard</a>
+                    <a href="{{ url_for('people_view', wedding_id=wedding.id) }}">People</a>
+                    <a href="{{ url_for('ceremony_view', wedding_id=wedding.id) }}">Ceremony</a>
+                    <a href="{{ url_for('reception_view', wedding_id=wedding.id) }}">Reception</a>
+                    <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}">Guests</a>
+                    <a href="{{ url_for('bridal_party_view', wedding_id=wedding.id) }}">Wedding Party</a>
+                    <a href="{{ url_for('vendors_view', wedding_id=wedding.id) }}">Vendors</a>
+                    <a href="{{ url_for('budget_view', wedding_id=wedding.id) }}">Budget</a>
+                    <a href="{{ url_for('tasks_view', wedding_id=wedding.id) }}">Tasks</a>
+                </div>
+            </div>
+            {% endif %}
+            
+            <ul class="nav-links">
+                <li><a href="{{ url_for('traditional_elements') }}">Traditional Elements</a></li>
+                <li><a href="{{ url_for('index') }}">All Weddings</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Wedding Organizer. Making your special day perfect! ❤️</p>
+        </div>
+    </footer>
+</body>
+</html>

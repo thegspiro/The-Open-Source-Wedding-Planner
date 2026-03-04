@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Wedding Party - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Wedding Party</h1>
+    <a href="{{ url_for('bridal_party_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Member</a>
+</div>
+
+{% set people = wedding.people|sort(attribute='display_order') %}
+{% for person in people %}
+    {% set members = wedding.bridal_party|selectattr('side', 'equalto', person.side_label)|list %}
+    {% if members %}
+    <div class="party-section">
+        <h2>{{ person.side_label or (person.name + "'s Side") }}</h2>
+        <div class="party-grid">
+            {% for member in members|sort(attribute='processional_order') %}
+            <div class="party-card">
+                <h3>{{ member.name }}</h3>
+                {% if member.role %}<span class="role-badge">{{ member.role }}</span>{% endif %}
+                <div class="member-details">
+                    {% if member.email %}<p><strong>Email:</strong> {{ member.email }}</p>{% endif %}
+                    {% if member.phone %}<p><strong>Phone:</strong> {{ member.phone }}</p>{% endif %}
+                    {% if member.processional_order %}<p><strong>Order:</strong> {{ member.processional_order }}</p>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
+{% set both_side = wedding.bridal_party|selectattr('side', 'equalto', 'Both')|list %}
+{% if both_side %}
+<div class="party-section">
+    <h2>Both Sides / Shared</h2>
+    <div class="party-grid">
+        {% for member in both_side %}
+        <div class="party-card">
+            <h3>{{ member.name }}</h3>
+            {% if member.role %}<span class="role-badge">{{ member.role }}</span>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<style>
+.party-section { margin-bottom: 3rem; }
+.party-section h2 { color: #e91e63; margin-bottom: 1.5rem; }
+.party-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
+.party-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.party-card h3 { color: #333; margin-bottom: 0.5rem; }
+.role-badge { background: #fff3f8; color: #e91e63; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.85rem; display: inline-block; margin-bottom: 1rem; }
+.member-details p { margin: 0.3rem 0; font-size: 0.9rem; color: #666; }
+</style>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Wedding Setup - Step 1{% endblock %}
+
+{% block content %}
+<div class="onboarding-container">
+    <div class="onboarding-progress">
+        <div class="progress-step active">1. People</div>
+        <div class="progress-step">2. Details</div>
+        <div class="progress-step">3. Preferences</div>
+    </div>
+
+    <div class="onboarding-card">
+        <h1>Let's set up your wedding!</h1>
+        <p class="onboarding-subtitle">First, let's learn about the people getting married.</p>
+
+        <form method="POST" class="onboarding-form">
+            <div class="form-group">
+                <label for="num_people">How many people are getting married?</label>
+                <select name="num_people" id="num_people" class="large-select" required>
+                    <option value="2" selected>2 people</option>
+                    <option value="3">3 people</option>
+                    <option value="4">4 people</option>
+                    <option value="5">5 people</option>
+                </select>
+                <p class="help-text">Most common is 2, but we support any number!</p>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary btn-large">Next Step →</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.onboarding-container {
+    max-width: 700px;
+    margin: 2rem auto;
+}
+
+.onboarding-progress {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    padding: 0 2rem;
+}
+
+.progress-step {
+    flex: 1;
+    text-align: center;
+    padding: 1rem;
+    background: #f5f5f5;
+    border-radius: 8px;
+    margin: 0 0.5rem;
+    color: #999;
+    font-weight: 500;
+}
+
+.progress-step.active {
+    background: #e91e63;
+    color: white;
+}
+
+.onboarding-card {
+    background: white;
+    padding: 3rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.onboarding-card h1 {
+    color: #e91e63;
+    margin-bottom: 0.5rem;
+    font-size: 2rem;
+}
+
+.onboarding-subtitle {
+    color: #666;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+.onboarding-form .form-group {
+    margin-bottom: 2rem;
+}
+
+.large-select {
+    font-size: 1.2rem;
+    padding: 1rem;
+}
+
+.help-text {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+.btn-large {
+    font-size: 1.2rem;
+    padding: 1rem 2rem;
+}
+
+.form-actions {
+    text-align: right;
+    margin-top: 2rem;
+}
+</style>
+{% endblock %}

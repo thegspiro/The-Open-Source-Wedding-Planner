@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Wedding Setup - Step 2{% endblock %}
+
+{% block content %}
+<div class="onboarding-container">
+    <div class="onboarding-progress">
+        <div class="progress-step completed">1. People</div>
+        <div class="progress-step active">2. Details</div>
+        <div class="progress-step">3. Preferences</div>
+    </div>
+
+    <div class="onboarding-card">
+        <h1>Tell us about each person</h1>
+        <p class="onboarding-subtitle">We'll use this information throughout the platform. You can update it anytime.</p>
+
+        <form method="POST" class="onboarding-form">
+            {% for i in range(num_people) %}
+            <div class="person-section">
+                <h3>Person {{ i + 1 }}</h3>
+                
+                <div class="form-group">
+                    <label for="person_{{ i }}_name">Name *</label>
+                    <input type="text" 
+                           id="person_{{ i }}_name" 
+                           name="person_{{ i }}_name" 
+                           required 
+                           placeholder="e.g., Jamie Smith">
+                </div>
+
+                <div class="form-group">
+                    <label for="person_{{ i }}_title">Title / Role</label>
+                    <select id="person_{{ i }}_title" 
+                            name="person_{{ i }}_title" 
+                            onchange="toggleCustomTitle({{ i }})">
+                        <option value="">Prefer not to specify</option>
+                        <option value="Bride">Bride</option>
+                        <option value="Groom">Groom</option>
+                        <option value="Partner">Partner</option>
+                        <option value="Spouse">Spouse</option>
+                        <option value="other">Other (please specify)</option>
+                    </select>
+                    <input type="text" 
+                           id="person_{{ i }}_title_custom" 
+                           name="person_{{ i }}_title_custom" 
+                           placeholder="Your custom title"
+                           style="display: none; margin-top: 0.5rem;">
+                    <p class="help-text">This is optional and just for your reference</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="person_{{ i }}_pronouns">Preferred Pronouns (Optional)</label>
+                    <input type="text" 
+                           id="person_{{ i }}_pronouns" 
+                           name="person_{{ i }}_pronouns" 
+                           placeholder="e.g., she/her, he/him, they/them">
+                    <p class="help-text">We'll use these in suggestions and communications</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="person_{{ i }}_side_label">Side Label (Optional)</label>
+                    <input type="text" 
+                           id="person_{{ i }}_side_label" 
+                           name="person_{{ i }}_side_label" 
+                           placeholder="e.g., Jamie's side, Smith family">
+                    <p class="help-text">For organizing guests and wedding party (e.g., "[Name]'s family" or "[Name]'s friends")</p>
+                </div>
+            </div>
+            {% endfor %}
+
+            <div class="form-actions">
+                <a href="{{ url_for('onboarding_step1', wedding_id=wedding.id) }}" class="btn-secondary">← Back</a>
+                <button type="submit" class="btn-primary btn-large">Next Step →</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleCustomTitle(index) {
+    const select = document.getElementById('person_' + index + '_title');
+    const customInput = document.getElementById('person_' + index + '_title_custom');
+    
+    if (select.value === 'other') {
+        customInput.style.display = 'block';
+        customInput.required = true;
+    } else {
+        customInput.style.display = 'none';
+        customInput.required = false;
+    }
+}
+</script>
+
+<style>
+.person-section {
+    background: #f9f9f9;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    border-left: 4px solid #e91e63;
+}
+
+.person-section h3 {
+    color: #e91e63;
+    margin-bottom: 1.5rem;
+}
+
+.progress-step.completed {
+    background: #4caf50;
+    color: white;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  wedding-organizer:
+    build: .
+    container_name: wedding-organizer
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./instance:/app/instance
+    environment:
+      - SECRET_KEY=your-secret-key-change-in-production
+      # Uncomment to enable email
+      # - SMTP_HOST=smtp.gmail.com
+      # - SMTP_PORT=587
+      # - SMTP_USER=your-email@gmail.com
+      # - SMTP_PASSWORD=your-app-password
+      # - FROM_EMAIL=your-email@gmail.com
+    restart: unless-stopped

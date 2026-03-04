@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <h1>Guest List</h1>
+    <a href="{{ url_for('guest_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Guest</a>
+</div>
+<div class="stats-row">
+    <div class="stat-box"><div class="stat-num">{{ stats.total }}</div><div>Total Guests</div></div>
+    <div class="stat-box"><div class="stat-num">{{ stats.rsvp_yes }}</div><div>Accepted</div></div>
+    <div class="stat-box"><div class="stat-num">{{ stats.rsvp_no }}</div><div>Declined</div></div>
+    <div class="stat-box"><div class="stat-num">{{ stats.rsvp_pending }}</div><div>Pending</div></div>
+</div>
+<table class="data-table">
+    <thead><tr><th>Name</th><th>Email</th><th>RSVP</th><th>Side</th><th>Dietary</th></tr></thead>
+    <tbody>
+    {% for guest in guests %}
+    <tr>
+        <td>{{ guest.name }}</td>
+        <td>{{ guest.email or '-' }}</td>
+        <td><span class="rsvp-{{ guest.rsvp_status or 'pending' }}">{{ guest.rsvp_status or 'pending' }}</span></td>
+        <td>{{ guest.side or '-' }}</td>
+        <td>{{ guest.dietary_restrictions or '-' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Choose Ceremony Template - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="onboarding-container">
+    <div class="onboarding-header">
+        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="back-link">← Back to Setup Hub</a>
+        <h1>Choose Your Ceremony Style</h1>
+        <p class="subtitle">Pick a template to start with, or build from scratch</p>
+    </div>
+
+    <div class="template-choice">
+        <div class="choice-header">
+            <h2>How would you like to set up your ceremony?</h2>
+        </div>
+
+        <div class="choice-options">
+            <div class="choice-option">
+                <h3>📋 Use a Template</h3>
+                <p>Start with a pre-built ceremony that you can customize</p>
+                <p class="choice-benefit">✓ Saves time • ✓ Proven structure • ✓ Fully editable</p>
+                <div class="template-list">
+                    {% for key, template in templates.items() %}
+                    <a href="{{ url_for('onboarding_ceremony_template_preview', wedding_id=wedding.id, template_key=key) }}" class="template-card">
+                        <h4>{{ template.name }}</h4>
+                        <p class="template-desc">{{ template.description }}</p>
+                        <div class="template-meta">
+                            <span>⏱️ {{ template.typical_duration }} min</span>
+                            <span>📝 {{ template.timeline|length }} steps</span>
+                        </div>
+                        <div class="template-tags">
+                            {% for tag in template.tags %}
+                            <span class="tag">{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="divider-or">
+                <span>OR</span>
+            </div>
+
+            <div class="choice-option">
+                <h3>✨ Build from Scratch</h3>
+                <p>Answer questions to create a custom ceremony</p>
+                <p class="choice-benefit">✓ Fully personalized • ✓ Guided questions • ✓ Your unique style</p>
+                <a href="{{ url_for('onboarding_ceremony_custom', wedding_id=wedding.id) }}" class="btn-primary btn-large">Start Custom Setup →</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="skip-section">
+        <p>Want to set this up later?</p>
+        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary">Skip for Now</a>
+    </div>
+</div>
+
+<style>
+.template-choice {
+    background: white;
+    border-radius: 12px;
+    padding: 3rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.choice-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.choice-header h2 {
+    color: #333;
+    font-size: 1.8rem;
+}
+
+.choice-options {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 3rem;
+    align-items: start;
+}
+
+.choice-option {
+    text-align: center;
+}
+
+.choice-option h3 {
+    color: #e91e63;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.choice-option > p {
+    color: #666;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.choice-benefit {
+    color: #4caf50;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 2rem;
+}
+
+.divider-or {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.divider-or::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    background: #e0e0e0;
+}
+
+.divider-or span {
+    background: white;
+    padding: 1rem;
+    border-radius: 50%;
+    border: 2px solid #e0e0e0;
+    color: #999;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+}
+
+.template-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: left;
+}
+
+.template-card {
+    background: #f9f9f9;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s;
+    display: block;
+}
+
+.template-card:hover {
+    border-color: #e91e63;
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(233, 30, 99, 0.2);
+}
+
+.template-card h4 {
+    color: #e91e63;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.template-desc {
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.template-meta {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #777;
+}
+
+.template-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tag {
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+@media (max-width: 900px) {
+    .choice-options {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .divider-or::before {
+        left: 0;
+        right: 0;
+        top: 50%;
+        bottom: auto;
+        width: auto;
+        height: 2px;
+    }
+}
+</style>
+{% endblock %}

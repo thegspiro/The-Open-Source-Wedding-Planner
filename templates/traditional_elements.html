@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Traditional Wedding Elements</h1>
+<p>Browse traditional wedding elements to inspire your ceremony and reception.</p>
+{% for category, elements in grouped_elements.items() %}
+<div class="module-section">
+    <h2>{{ category|title }} Elements</h2>
+    <div class="elements-grid">
+        {% for elem in elements %}
+        <div class="element-card">
+            <h3>{{ elem.name }}</h3>
+            <p><strong>Origin:</strong> {{ elem.origin }}</p>
+            <p>{{ elem.description }}</p>
+            <p><strong>Timing:</strong> {{ elem.typical_timing }}</p>
+            {% if elem.what_you_need %}<p><strong>What you need:</strong> {{ elem.what_you_need }}</p>{% endif %}
+            {% if elem.how_to_do_it %}<details><summary>How to do it</summary><p>{{ elem.how_to_do_it }}</p></details>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Setup Your Wedding - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="onboarding-hub">
+    <div class="hub-header">
+        <h1>Welcome! Let's Set Up Your Wedding</h1>
+        <p class="hub-subtitle">Jump to any section you'd like to set up. You can skip around freely and come back anytime!</p>
+    </div>
+
+    <div class="progress-summary">
+        <div class="progress-item">
+            <div class="progress-number">{{ modules_completed|length }}</div>
+            <div class="progress-label">Modules Complete</div>
+        </div>
+        <div class="progress-item">
+            <div class="progress-number">{{ 8 - modules_completed|length }}</div>
+            <div class="progress-label">Still To Go</div>
+        </div>
+        <div class="progress-item">
+            <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-success">Skip Setup & Start Planning →</a>
+        </div>
+    </div>
+
+    <div class="module-grid">
+        <!-- People Module -->
+        <div class="module-card {% if 'people' in modules_completed %}completed{% endif %}">
+            <div class="module-icon">👥</div>
+            <h3>People Getting Married</h3>
+            <p>Tell us about who's getting married and choose how to organize your wedding</p>
+            {% if 'people' in modules_completed %}
+            <div class="status-badge complete">✓ Complete</div>
+            <a href="{{ url_for('onboarding_people', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Edit</a>
+            {% else %}
+            <a href="{{ url_for('onboarding_people', wedding_id=wedding.id) }}" class="btn-primary">Start Setup →</a>
+            {% endif %}
+        </div>
+
+        <!-- Ceremony Module -->
+        <div class="module-card {% if 'ceremony' in modules_completed %}completed{% endif %}">
+            <div class="module-icon">💒</div>
+            <h3>Ceremony</h3>
+            <p>Plan your ceremony with templates or build it step-by-step</p>
+            <div class="module-features">
+                <span>✓ Venue & timing</span>
+                <span>✓ Timeline builder</span>
+                <span>✓ Music & readings</span>
+            </div>
+            {% if 'ceremony' in modules_completed %}
+            <div class="status-badge complete">✓ Complete</div>
+            <a href="{{ url_for('onboarding_ceremony_start', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Edit</a>
+            {% else %}
+            <a href="{{ url_for('onboarding_ceremony_start', wedding_id=wedding.id) }}" class="btn-primary">Start Setup →</a>
+            {% endif %}
+        </div>
+
+        <!-- Reception Module -->
+        <div class="module-card {% if 'reception' in modules_completed %}completed{% endif %}">
+            <div class="module-icon">🎉</div>
+            <h3>Reception</h3>
+            <p>Choose a reception style and customize your celebration</p>
+            <div class="module-features">
+                <span>✓ Venue & catering</span>
+                <span>✓ Timeline</span>
+                <span>✓ Music & entertainment</span>
+            </div>
+            {% if 'reception' in modules_completed %}
+            <div class="status-badge complete">✓ Complete</div>
+            <a href="{{ url_for('onboarding_reception_start', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Edit</a>
+            {% else %}
+            <a href="{{ url_for('onboarding_reception_start', wedding_id=wedding.id) }}" class="btn-primary">Start Setup →</a>
+            {% endif %}
+        </div>
+
+        <!-- Budget Module -->
+        <div class="module-card {% if 'budget' in modules_completed %}completed{% endif %}">
+            <div class="module-icon">💰</div>
+            <h3>Budget</h3>
+            <p>Set your budget and get recommended expense allocations</p>
+            <div class="module-features">
+                <span>✓ Budget templates</span>
+                <span>✓ Expense categories</span>
+                <span>✓ Payment tracking</span>
+            </div>
+            {% if 'budget' in modules_completed %}
+            <div class="status-badge complete">✓ Complete</div>
+            <a href="{{ url_for('onboarding_budget_start', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Edit</a>
+            {% else %}
+            <a href="{{ url_for('onboarding_budget_start', wedding_id=wedding.id) }}" class="btn-primary">Start Setup →</a>
+            {% endif %}
+        </div>
+
+        <!-- Guests Module -->
+        <div class="module-card {% if 'guests' in modules_completed %}completed{% endif %}">
+            <div class="module-icon">📋</div>
+            <h3>Guest List</h3>
+            <p>Start your guest list and set up RSVP tracking</p>
+            {% if 'guests' in modules_completed %}
+            <div class="status-badge complete">✓ Complete</div>
+            <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">View Guests</a>
+            {% else %}
+            <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}" class="btn-primary">Add Guests →</a>
+            {% endif %}
+        </div>
+
+        <!-- Other modules can be accessed from dashboard -->
+        <div class="module-card optional">
+            <div class="module-icon">✨</div>
+            <h3>Additional Modules</h3>
+            <p>Vendors, Tasks, Wedding Party, and more are available from your dashboard!</p>
+            <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary btn-small">View Dashboard</a>
+        </div>
+    </div>
+
+    <div class="hub-actions">
+        <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-large btn-success">Done - Go to Dashboard →</a>
+        <p class="help-text">You can always come back to setup more modules later</p>
+    </div>
+</div>
+
+<style>
+.onboarding-hub {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.hub-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.hub-header h1 {
+    color: #e91e63;
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.hub-subtitle {
+    font-size: 1.2rem;
+    color: #666;
+}
+
+.progress-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.progress-item {
+    text-align: center;
+}
+
+.progress-number {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #e91e63;
+    margin-bottom: 0.5rem;
+}
+
+.progress-label {
+    color: #666;
+    font-size: 1rem;
+}
+
+.module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.module-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid #e91e63;
+    transition: transform 0.3s, box-shadow 0.3s;
+    position: relative;
+}
+
+.module-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.module-card.completed {
+    border-left-color: #4caf50;
+    background: #f8fff9;
+}
+
+.module-card.optional {
+    border-left-color: #9e9e9e;
+    background: #fafafa;
+}
+
+.module-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.module-card h3 {
+    color: #333;
+    font-size: 1.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.module-card p {
+    color: #666;
+    margin-bottom: 1rem;
+    min-height: 3rem;
+}
+
+.module-features {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.status-badge.complete {
+    background: #e8f5e9;
+    color: #4caf50;
+}
+
+.hub-actions {
+    text-align: center;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn-large {
+    font-size: 1.3rem;
+    padding: 1rem 2.5rem;
+}
+
+.help-text {
+    margin-top: 1rem;
+    color: #999;
+    font-style: italic;
+}
+</style>
+{% endblock %}

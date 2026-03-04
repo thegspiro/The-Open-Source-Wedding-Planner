@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Wedding Setup - Step 3{% endblock %}
+
+{% block content %}
+<div class="onboarding-container">
+    <div class="onboarding-progress">
+        <div class="progress-step completed">1. People</div>
+        <div class="progress-step completed">2. Details</div>
+        <div class="progress-step active">3. Preferences</div>
+    </div>
+
+    <div class="onboarding-card">
+        <h1>Customize your experience</h1>
+        <p class="onboarding-subtitle">You can change these anytime, and all suggestions can be edited or removed.</p>
+
+        <form method="POST" class="onboarding-form">
+            <div class="preference-section">
+                <h3>✨ Terminology Preferences</h3>
+                <p class="section-description">We'll use these terms throughout the platform, but you can always edit specific items.</p>
+
+                <div class="form-group">
+                    <label for="wedding_party_term">What would you like to call your wedding party?</label>
+                    <select id="wedding_party_term" name="wedding_party_term">
+                        <option value="Wedding Party" selected>Wedding Party</option>
+                        <option value="Bridal Party">Bridal Party</option>
+                        <option value="Attendants">Attendants</option>
+                        <option value="Wedding Team">Wedding Team</option>
+                        <option value="Honor Attendants">Honor Attendants</option>
+                    </select>
+                    <p class="help-text">This is the group of special people standing with you</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="processional_term">What would you like to call the entrance?</label>
+                    <select id="processional_term" name="processional_term">
+                        <option value="Processional" selected>Processional</option>
+                        <option value="Entrance">Entrance</option>
+                        <option value="Walk Down the Aisle">Walk Down the Aisle</option>
+                        <option value="Grand Entrance">Grand Entrance</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="preference-section">
+                <h3>🎯 Quick Summary</h3>
+                <div class="summary-box">
+                    <p><strong>People getting married:</strong></p>
+                    <ul>
+                    {% for person in people %}
+                        <li>
+                            <strong>{{ person.name }}</strong>
+                            {% if person.title %} ({{ person.title }}){% endif %}
+                            {% if person.preferred_pronouns %} - {{ person.preferred_pronouns }}{% endif %}
+                            {% if person.side_label %}<br><small>Side: {{ person.side_label }}</small>{% endif %}
+                        </li>
+                    {% endfor %}
+                    </ul>
+                    <p class="help-text" style="margin-top: 1rem;">
+                        <em>You can update this information anytime from the "People" section</em>
+                    </p>
+                </div>
+            </div>
+
+            <div class="preference-section">
+                <h3>💡 What happens next?</h3>
+                <ul class="next-steps">
+                    <li>We'll create your personalized wedding dashboard</li>
+                    <li>All suggestions can be edited, removed, or customized</li>
+                    <li>Add your ceremony, reception, and guest details</li>
+                    <li>Browse traditional elements and adapt them to your style</li>
+                    <li>Everything is flexible - make it yours!</li>
+                </ul>
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('onboarding_step2', wedding_id=wedding.id) }}" class="btn-secondary">← Back</a>
+                <button type="submit" class="btn-primary btn-large">Complete Setup →</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.preference-section {
+    background: #f9f9f9;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.preference-section h3 {
+    color: #e91e63;
+    margin-bottom: 1rem;
+}
+
+.section-description {
+    color: #666;
+    margin-bottom: 1.5rem;
+    font-style: italic;
+}
+
+.summary-box {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid #e91e63;
+}
+
+.summary-box ul {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+}
+
+.summary-box li {
+    margin: 0.5rem 0;
+}
+
+.next-steps {
+    list-style: none;
+    padding: 0;
+}
+
+.next-steps li {
+    padding: 0.5rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.next-steps li:before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #4caf50;
+    font-weight: bold;
+}
+</style>
+{% endblock %}

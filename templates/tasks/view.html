@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Tasks - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Tasks</h1>
+    <a href="{{ url_for('task_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Task</a>
+</div>
+
+<h2>Pending Tasks ({{ pending_tasks|length }})</h2>
+{% if pending_tasks %}
+<div class="task-list">
+    {% for task in pending_tasks|sort(attribute='due_date') %}
+    <div class="task-card priority-{{ task.priority }}">
+        <div class="task-header">
+            <div><h3>{{ task.title }}</h3><span class="priority-badge priority-{{ task.priority }}">{{ task.priority }}</span></div>
+            <a href="{{ url_for('task_toggle', task_id=task.id) }}" class="btn-success">✓</a>
+        </div>
+        {% if task.description %}<p>{{ task.description }}</p>{% endif %}
+        <div class="task-footer">
+            <span>Due: {{ task.due_date.strftime('%b %d, %Y') }}</span>
+            {% if task.category %}<span>{{ task.category }}</span>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}<p class="empty-message">No pending tasks!</p>{% endif %}
+
+<h2>Completed ({{ completed_tasks|length }})</h2>
+{% if completed_tasks %}
+<div class="task-list">
+    {% for task in completed_tasks %}
+    <div class="task-card task-completed">
+        <div class="task-header">
+            <h3>{{ task.title }}</h3>
+            <a href="{{ url_for('task_toggle', task_id=task.id) }}" class="btn-secondary">↺</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

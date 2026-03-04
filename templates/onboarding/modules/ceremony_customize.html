@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Customize Ceremony - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="onboarding-container wide">
+    <div class="onboarding-header">
+        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="back-link">← Back to Setup Hub</a>
+        <h1>Customize Your Ceremony</h1>
+        <p class="subtitle">Add the details that make it yours</p>
+    </div>
+
+    <form method="POST" class="customize-form">
+        <div class="form-sections">
+            <!-- Venue Section -->
+            <div class="form-section">
+                <h2>📍 Venue & Location</h2>
+                <p class="section-help">Where will your ceremony take place?</p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="venue_name">Venue Name</label>
+                        <input type="text" id="venue_name" name="venue_name" 
+                               value="{{ ceremony.venue_name or '' }}"
+                               placeholder="e.g., St. Mary's Church, Central Park, Our Backyard">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="venue_address">Address</label>
+                        <input type="text" id="venue_address" name="venue_address" 
+                               value="{{ ceremony.venue_address or '' }}"
+                               placeholder="123 Main St, City, State">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timing Section -->
+            <div class="form-section">
+                <h2>⏰ Timing</h2>
+                <p class="section-help">When will your ceremony begin and how long will it last?</p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="start_time">Start Time</label>
+                        <input type="time" id="start_time" name="start_time" 
+                               value="{{ ceremony.start_time.strftime('%H:%M') if ceremony.start_time else '' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="duration_minutes">Duration (minutes)</label>
+                        <input type="number" id="duration_minutes" name="duration_minutes" 
+                               value="{{ ceremony.duration_minutes or 30 }}" min="5" max="180">
+                        <p class="help-text">Most ceremonies are 20-45 minutes</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Officiant Section -->
+            <div class="form-section">
+                <h2>👔 Officiant</h2>
+                <p class="section-help">Who will be officiating your ceremony?</p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="officiant_name">Officiant Name</label>
+                        <input type="text" id="officiant_name" name="officiant_name" 
+                               value="{{ ceremony.officiant_name or '' }}"
+                               placeholder="e.g., Father Smith, Judge Johnson, Sarah (our friend)">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="officiant_type">Officiant Type</label>
+                        <select id="officiant_type" name="officiant_type">
+                            <option value="">Select type</option>
+                            <option value="Religious leader" {% if ceremony.officiant_type == 'Religious leader' %}selected{% endif %}>Religious leader</option>
+                            <option value="Justice of the peace" {% if ceremony.officiant_type == 'Justice of the peace' %}selected{% endif %}>Justice of the peace</option>
+                            <option value="Friend/Family" {% if ceremony.officiant_type == 'Friend/Family' %}selected{% endif %}>Friend/Family</option>
+                            <option value="Professional officiant" {% if ceremony.officiant_type == 'Professional officiant' %}selected{% endif %}>Professional officiant</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline Preview -->
+            {% if timeline_items %}
+            <div class="form-section">
+                <h2>📋 Your Ceremony Timeline</h2>
+                <p class="section-help">This is the flow of your ceremony. You can edit this later from the Ceremony page.</p>
+
+                <div class="timeline-summary">
+                    {% for item in timeline_items[:5] %}
+                    <div class="timeline-item-summary">
+                        <span class="item-number">{{ item.order }}</span>
+                        <span class="item-name">{{ item.item_name }}</span>
+                        {% if item.duration_seconds %}
+                        <span class="item-duration">{{ (item.duration_seconds // 60)|int }}:{{ '%02d' % (item.duration_seconds % 60) }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% if timeline_items|length > 5 %}
+                    <div class="timeline-more">
+                        ... and {{ timeline_items|length - 5 }} more steps
+                    </div>
+                    {% endif %}
+                </div>
+
+                <p class="timeline-note">💡 You can view and edit the full timeline from your Ceremony dashboard after setup</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary btn-large">Complete Ceremony Setup ✓</button>
+            <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary">Save & Continue Later</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.onboarding-container.wide {
+    max-width: 900px;
+}
+
+.customize-form {
+    background: white;
+    border-radius: 12px;
+    padding: 3rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.form-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+.form-section {
+    padding-bottom: 2rem;
+    border-bottom: 2px solid #f5f5f5;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.form-section h2 {
+    color: #e91e63;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.section-help {
+    color: #666;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.timeline-summary {
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+}
+
+.timeline-item-summary {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.timeline-item-summary:last-child {
+    border-bottom: none;
+}
+
+.item-number {
+    background: #e91e63;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.item-name {
+    flex: 1;
+    color: #333;
+    font-weight: 500;
+}
+
+.item-duration {
+    color: #777;
+    font-size: 0.9rem;
+    font-family: monospace;
+}
+
+.timeline-more {
+    text-align: center;
+    color: #999;
+    padding: 1rem 0;
+    font-style: italic;
+}
+
+.timeline-note {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 1rem;
+    border-radius: 4px;
+    color: #1976d2;
+    font-size: 0.95rem;
+    margin-top: 1rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 2px solid #f5f5f5;
+    justify-content: center;
+}
+</style>
+{% endblock %}

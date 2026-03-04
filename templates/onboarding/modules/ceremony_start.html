@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Ceremony Setup - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="onboarding-container">
+    <div class="onboarding-header">
+        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="back-link">← Back to Setup Hub</a>
+        <h1>Let's Plan Your Ceremony!</h1>
+        <p class="subtitle">We'll help you create the perfect ceremony for your celebration</p>
+    </div>
+
+    <!-- First Question: What type of ceremony? -->
+    <div class="question-card">
+        <div class="question-number">Question 1</div>
+        <h2>What type of ceremony are you planning?</h2>
+        <p class="question-help">This helps us show you relevant options. Don't worry - you can customize everything!</p>
+
+        <form method="POST" action="{{ url_for('onboarding_ceremony_templates', wedding_id=wedding.id) }}" class="choice-form">
+            <div class="choice-grid">
+                <label class="choice-card">
+                    <input type="radio" name="ceremony_type" value="religious" required>
+                    <div class="choice-content">
+                        <div class="choice-icon">⛪</div>
+                        <h3>Religious Ceremony</h3>
+                        <p>Traditional religious wedding with spiritual elements</p>
+                        <small>Catholic, Jewish, Protestant, Hindu, Muslim, etc.</small>
+                    </div>
+                </label>
+
+                <label class="choice-card">
+                    <input type="radio" name="ceremony_type" value="secular">
+                    <div class="choice-content">
+                        <div class="choice-icon">💕</div>
+                        <h3>Secular Ceremony</h3>
+                        <p>Non-religious ceremony with personalized elements</p>
+                        <small>Modern, traditional, or uniquely yours</small>
+                    </div>
+                </label>
+
+                <label class="choice-card">
+                    <input type="radio" name="ceremony_type" value="spiritual">
+                    <div class="choice-content">
+                        <div class="choice-icon">🕊️</div>
+                        <h3>Spiritual (Non-Religious)</h3>
+                        <p>Meaningful ceremony with spiritual but not religious elements</p>
+                        <small>Interfaith, nature-based, or custom spiritual</small>
+                    </div>
+                </label>
+
+                <label class="choice-card">
+                    <input type="radio" name="ceremony_type" value="civil">
+                    <div class="choice-content">
+                        <div class="choice-icon">📜</div>
+                        <h3>Civil/Legal Only</h3>
+                        <p>Simple legal ceremony at courthouse or with officiant</p>
+                        <small>Quick and straightforward</small>
+                    </div>
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary btn-large">Continue →</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="skip-section">
+        <p>Want to set this up later?</p>
+        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary">Skip Ceremony Setup</a>
+    </div>
+</div>
+
+<style>
+.onboarding-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.onboarding-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.back-link {
+    display: inline-block;
+    color: #e91e63;
+    text-decoration: none;
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.onboarding-header h1 {
+    color: #e91e63;
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    color: #666;
+}
+
+.question-card {
+    background: white;
+    border-radius: 12px;
+    padding: 3rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.question-number {
+    display: inline-block;
+    background: #fff3f8;
+    color: #e91e63;
+    padding: 0.3rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.question-card h2 {
+    color: #333;
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.question-help {
+    color: #666;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+.choice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.choice-card {
+    position: relative;
+    cursor: pointer;
+}
+
+.choice-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.choice-content {
+    background: #f9f9f9;
+    border: 3px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    transition: all 0.3s;
+    height: 100%;
+}
+
+.choice-card input[type="radio"]:checked + .choice-content {
+    background: #fff3f8;
+    border-color: #e91e63;
+    transform: scale(1.05);
+}
+
+.choice-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.choice-content h3 {
+    color: #333;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.choice-content p {
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.choice-content small {
+    color: #999;
+    font-size: 0.85rem;
+}
+
+.form-actions {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.skip-section {
+    text-align: center;
+    padding: 2rem;
+    color: #999;
+}
+
+.skip-section p {
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}

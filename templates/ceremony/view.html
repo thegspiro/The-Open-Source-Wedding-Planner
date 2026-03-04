@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Ceremony - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Ceremony Details</h1>
+    <a href="{{ url_for('ceremony_edit', wedding_id=wedding.id) }}" class="btn-primary">Edit Details</a>
+</div>
+
+<div class="module-section">
+    <h2>Venue & Timing</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Venue:</strong> {{ ceremony.venue_name or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Address:</strong> {{ ceremony.venue_address or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Time:</strong> {{ ceremony.start_time.strftime('%I:%M %p') if ceremony.start_time else 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Duration:</strong> {{ ceremony.duration_minutes }} minutes
+        </div>
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Officiant</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Name:</strong> {{ ceremony.officiant_name or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Type:</strong> {{ ceremony.officiant_type or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Contact:</strong> {{ ceremony.officiant_contact or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Phone:</strong> {{ ceremony.officiant_phone or 'Not set' }}
+        </div>
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Music</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Processional:</strong> {{ ceremony.processional_song or 'Not selected' }}
+        </div>
+        <div class="info-item">
+            <strong>Recessional:</strong> {{ ceremony.recessional_song or 'Not selected' }}
+        </div>
+        {% if ceremony.has_unity_ceremony %}
+        <div class="info-item">
+            <strong>Unity Ceremony:</strong> {{ ceremony.unity_ceremony_song or 'Not selected' }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if ceremony.has_unity_ceremony %}
+<div class="module-section">
+    <h2>Unity Ceremony</h2>
+    <p><strong>Type:</strong> {{ ceremony.unity_ceremony_type }}</p>
+</div>
+{% endif %}
+
+<div class="module-section">
+    <div class="section-header">
+        <h2>Ceremony Timeline</h2>
+        <button onclick="document.getElementById('timeline-form').style.display='block'" class="btn-primary btn-small">+ Add Item</button>
+    </div>
+    
+    <div id="timeline-form" class="form-card" style="display: none;">
+        <h3>Add Timeline Item</h3>
+        <form method="POST" action="{{ url_for('ceremony_timeline_add', wedding_id=wedding.id) }}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Order</label>
+                    <input type="number" name="order" required min="1" value="{{ timeline_items|length + 1 }}">
+                </div>
+                <div class="form-group">
+                    <label>Item Name *</label>
+                    <input type="text" name="item_name" required placeholder="e.g., Processional">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Duration (seconds)</label>
+                    <input type="number" name="duration_seconds" placeholder="e.g., 180">
+                </div>
+                <div class="form-group">
+                    <label>Participants</label>
+                    <input type="text" name="participants" placeholder="e.g., Bridal party">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" rows="2"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Add Item</button>
+                <button type="button" onclick="document.getElementById('timeline-form').style.display='none'" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    {% if timeline_items %}
+    <div class="timeline-list">
+        {% for item in timeline_items %}
+        <div class="timeline-item">
+            <div class="timeline-order">{{ item.order }}</div>
+            <div class="timeline-content">
+                <h4>{{ item.item_name }}</h4>
+                {% if item.description %}<p>{{ item.description }}</p>{% endif %}
+                <div class="timeline-meta">
+                    {% if item.duration_seconds %}
+                    <span>Duration: {{ item.duration_seconds // 60 }}:{{ '%02d' % (item.duration_seconds % 60) }}</span>
+                    {% endif %}
+                    {% if item.participants %}
+                    <span>Participants: {{ item.participants }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-message">No timeline items yet. Add items to build your ceremony timeline!</p>
+    {% endif %}
+</div>
+
+{% if ceremony.has_special_readings %}
+<div class="module-section">
+    <div class="section-header">
+        <h2>Readings</h2>
+    </div>
+    {% if readings %}
+    <div class="readings-list">
+        {% for reading in readings %}
+        <div class="reading-card">
+            <h4>{{ reading.title }}</h4>
+            <p><strong>Author:</strong> {{ reading.author }}</p>
+            <p><strong>Reader:</strong> {{ reading.reader_name }}</p>
+            {% if reading.text_content %}
+            <div class="reading-text">{{ reading.text_content }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-message">No readings added yet.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">← Back to Dashboard</a>
+</div>
+{% endblock %}

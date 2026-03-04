@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Preview: {{ template.name }} - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="onboarding-container wide">
+    <div class="onboarding-header">
+        <a href="{{ url_for('onboarding_ceremony_templates', wedding_id=wedding.id, ceremony_type=template.category) }}" class="back-link">← Back to Templates</a>
+        <h1>{{ template.name }}</h1>
+        <p class="subtitle">{{ template.description }}</p>
+    </div>
+
+    <div class="template-preview">
+        <div class="preview-sidebar">
+            <div class="preview-stats">
+                <div class="stat-box">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-value">{{ template.typical_duration }} min</div>
+                    <div class="stat-label">Typical Duration</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-icon">📝</div>
+                    <div class="stat-value">{{ template.timeline|length }}</div>
+                    <div class="stat-label">Timeline Steps</div>
+                </div>
+            </div>
+
+            {% if template.music_suggestions %}
+            <div class="preview-section">
+                <h3>🎵 Music Suggestions</h3>
+                {% if template.music_suggestions.processional %}
+                <p><strong>Processional:</strong><br>{{ template.music_suggestions.processional }}</p>
+                {% endif %}
+                {% if template.music_suggestions.recessional %}
+                <p><strong>Recessional:</strong><br>{{ template.music_suggestions.recessional }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if template.unity_ceremony %}
+            <div class="preview-section">
+                <h3>💕 Unity Ceremony</h3>
+                <p>Includes: {{ template.unity_ceremony|replace('_', ' ')|title }}</p>
+            </div>
+            {% endif %}
+
+            {% if template.note %}
+            <div class="preview-section note">
+                <p><strong>Note:</strong> {{ template.note }}</p>
+            </div>
+            {% endif %}
+
+            <div class="preview-actions">
+                <form method="POST" action="{{ url_for('onboarding_ceremony_template_apply', wedding_id=wedding.id, template_key=template_key) }}">
+                    <button type="submit" class="btn-primary btn-large">Use This Template →</button>
+                </form>
+                <p class="help-text">You can customize everything after applying</p>
+            </div>
+        </div>
+
+        <div class="preview-main">
+            <h2>Ceremony Timeline Preview</h2>
+            <p class="timeline-intro">Here's what this ceremony includes. After you apply it, you can edit, add, or remove any steps!</p>
+
+            <div class="timeline-preview">
+                {% for item in template.timeline %}
+                <div class="timeline-item">
+                    <div class="timeline-number">{{ item.order }}</div>
+                    <div class="timeline-content">
+                        <h4>{{ item.name }}</h4>
+                        <p class="timeline-desc">{{ item.description }}</p>
+                        <div class="timeline-meta">
+                            {% if item.duration %}
+                            <span class="duration">
+                                ⏱️ {{ (item.duration // 60)|int }}:{{ '%02d' % (item.duration % 60) }}
+                                ({{ item.duration // 60 }} min {{ item.duration % 60 }} sec)
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="total-time">
+                <strong>Total Estimated Time:</strong> {{ template.typical_duration }} minutes
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.onboarding-container.wide {
+    max-width: 1200px;
+}
+
+.template-preview {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 3rem;
+    margin-bottom: 2rem;
+}
+
+.preview-sidebar {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 2rem;
+    height: fit-content;
+}
+
+.preview-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-box {
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.stat-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #e91e63;
+    margin-bottom: 0.3rem;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.preview-section {
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.preview-section h3 {
+    color: #e91e63;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.preview-section p {
+    color: #666;
+    font-size: 0.95rem;
+    margin: 0.5rem 0;
+}
+
+.preview-section.note {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+}
+
+.preview-actions {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+.preview-actions .help-text {
+    margin-top: 1rem;
+    color: #999;
+    font-size: 0.9rem;
+}
+
+.preview-main {
+    background: white;
+    border-radius: 12px;
+    padding: 3rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.preview-main h2 {
+    color: #333;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-intro {
+    color: #666;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+.timeline-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: #f9f9f9;
+    border-radius: 8px;
+    border-left: 4px solid #e91e63;
+}
+
+.timeline-number {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    background: #e91e63;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.timeline-content {
+    flex: 1;
+}
+
+.timeline-content h4 {
+    color: #333;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-desc {
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.9rem;
+    color: #777;
+}
+
+.duration {
+    background: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 12px;
+}
+
+.total-time {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #e0e0e0;
+    text-align: right;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+@media (max-width: 900px) {
+    .template-preview {
+        grid-template-columns: 1fr;
+    }
+    
+    .preview-sidebar {
+        position: static;
+    }
+}
+</style>
+{% endblock %}

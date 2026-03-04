@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ person.name }} - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Edit: {{ person.name }}</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">
+        <div class="form-group">
+            <label for="name">Name *</label>
+            <input type="text" id="name" name="name" value="{{ person.name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="title">Title / Role</label>
+            <input type="text" id="title" name="title" value="{{ person.title or '' }}" placeholder="e.g., Bride, Groom, Partner, Spouse">
+            <p class="help-text">Optional - use whatever feels right for you</p>
+        </div>
+
+        <div class="form-group">
+            <label for="preferred_pronouns">Preferred Pronouns</label>
+            <input type="text" id="preferred_pronouns" name="preferred_pronouns" value="{{ person.preferred_pronouns or '' }}" placeholder="e.g., she/her, he/him, they/them">
+        </div>
+
+        <div class="form-group">
+            <label for="side_label">Side Label</label>
+            <input type="text" id="side_label" name="side_label" value="{{ person.side_label or '' }}" placeholder="e.g., [Name]'s side, [Name]'s family">
+            <p class="help-text">Used for organizing guests and wedding party</p>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ person.email or '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="phone">Phone</label>
+            <input type="text" id="phone" name="phone" value="{{ person.phone or '' }}">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('people_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

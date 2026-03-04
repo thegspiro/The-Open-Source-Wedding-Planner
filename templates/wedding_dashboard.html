@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}{{ wedding.couple_names }} - Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{{ wedding.couple_names }}</h1>
+        <p class="wedding-date-large">{{ wedding.wedding_date.strftime('%B %d, %Y') }}</p>
+    </div>
+    <div>
+        <a href="{{ url_for('index') }}" class="btn-secondary">← All Weddings</a>
+        <form method="POST" action="{{ url_for('delete_wedding', wedding_id=wedding.id) }}" style="display: inline;">
+            <button type="submit" class="btn-danger" onclick="return confirm('Delete this wedding and all data?')">Delete Wedding</button>
+        </form>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Tasks Overview -->
+    <div class="dashboard-card">
+        <div class="card-icon">📋</div>
+        <h3>Tasks</h3>
+        <div class="stat-large">{{ stats.pending_tasks }}</div>
+        <p class="stat-label">Pending Tasks</p>
+        <p class="stat-small">{{ stats.total_tasks }} total</p>
+        <a href="{{ url_for('tasks_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">Manage Tasks</a>
+    </div>
+
+    <!-- Guests Overview -->
+    <div class="dashboard-card">
+        <div class="card-icon">👥</div>
+        <h3>Guests</h3>
+        <div class="stat-large">{{ stats.rsvp_yes }}</div>
+        <p class="stat-label">Confirmed Guests</p>
+        <p class="stat-small">{{ stats.total_guests }} invited</p>
+        <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">Manage Guests</a>
+    </div>
+
+    <!-- Budget Overview -->
+    <div class="dashboard-card">
+        <div class="card-icon">💰</div>
+        <h3>Budget</h3>
+        <div class="stat-large">${{ "{:,.0f}".format(stats.budget_spent) }}</div>
+        <p class="stat-label">Spent</p>
+        <p class="stat-small">of ${{ "{:,.0f}".format(stats.budget_total) }}</p>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ (stats.budget_spent / stats.budget_total * 100) if stats.budget_total > 0 else 0 }}%"></div>
+        </div>
+        <a href="{{ url_for('budget_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">View Budget</a>
+    </div>
+
+    <!-- Vendors Overview -->
+    <div class="dashboard-card">
+        <div class="card-icon">🤝</div>
+        <h3>Vendors</h3>
+        <div class="stat-large">{{ stats.total_vendors }}</div>
+        <p class="stat-label">Vendors Booked</p>
+        <a href="{{ url_for('vendors_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">Manage Vendors</a>
+    </div>
+
+    <!-- Ceremony -->
+    <div class="dashboard-card">
+        <div class="card-icon">💒</div>
+        <h3>Ceremony</h3>
+        <p class="stat-label">{{ wedding.ceremony.venue_name or 'Venue not set' }}</p>
+        {% if wedding.ceremony.start_time %}
+        <p class="stat-small">{{ wedding.ceremony.start_time.strftime('%I:%M %p') }}</p>
+        {% endif %}
+        <a href="{{ url_for('ceremony_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">View Details</a>
+    </div>
+
+    <!-- Reception -->
+    <div class="dashboard-card">
+        <div class="card-icon">🎉</div>
+        <h3>Reception</h3>
+        <p class="stat-label">{{ wedding.reception.venue_name or 'Venue not set' }}</p>
+        {% if wedding.reception.expected_guest_count %}
+        <p class="stat-small">{{ wedding.reception.expected_guest_count }} expected guests</p>
+        {% endif %}
+        <a href="{{ url_for('reception_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">View Details</a>
+    </div>
+
+    <!-- Bridal Party -->
+    <div class="dashboard-card">
+        <div class="card-icon">👰🤵</div>
+        <h3>Bridal Party</h3>
+        <div class="stat-large">{{ stats.bridal_party_count }}</div>
+        <p class="stat-label">Members</p>
+        <a href="{{ url_for('bridal_party_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">View Party</a>
+    </div>
+
+    <!-- Traditional Elements -->
+    <div class="dashboard-card">
+        <div class="card-icon">📖</div>
+        <h3>Traditional Elements</h3>
+        <p class="stat-label">Browse traditional wedding elements</p>
+        <a href="{{ url_for('traditional_elements') }}" class="btn-primary btn-small">Browse Library</a>
+    </div>
+</div>
+
+<div class="quick-actions">
+    <h2>Quick Actions</h2>
+    <div class="action-buttons">
+        <a href="{{ url_for('task_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Task</a>
+        <a href="{{ url_for('guest_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Guest</a>
+        <a href="{{ url_for('vendor_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Vendor</a>
+    </div>
+</div>
+{% endblock %}

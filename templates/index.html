@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Weddings - Wedding Organizer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>All Weddings</h1>
+    <a href="{{ url_for('new_wedding') }}" class="btn-primary">+ Add New Wedding</a>
+</div>
+
+{% if weddings %}
+    <div class="wedding-grid">
+        {% for wedding in weddings %}
+            <div class="wedding-card">
+                <div class="wedding-card-header">
+                    <h2>{{ wedding.couple_names }}</h2>
+                    <span class="wedding-date">{{ wedding.wedding_date.strftime('%B %d, %Y') }}</span>
+                </div>
+                <div class="wedding-card-body">
+                    <p><strong>Email:</strong> {{ wedding.email }}</p>
+                    <p><strong>Tasks:</strong> {{ wedding.tasks|selectattr('completed', 'equalto', False)|list|length }} pending</p>
+                    <p><strong>Guests:</strong> {{ wedding.guests|length }} total</p>
+                </div>
+                <div class="wedding-card-footer">
+                    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-primary">Open Dashboard</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <h2>No weddings yet!</h2>
+        <p>Start by creating your first wedding to organize.</p>
+        <a href="{{ url_for('new_wedding') }}" class="btn-primary">Create Your First Wedding</a>
+    </div>
+{% endif %}
+{% endblock %}

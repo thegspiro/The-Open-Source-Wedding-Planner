@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}People - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>People Getting Married</h1>
+</div>
+
+<div class="people-grid">
+    {% for person in people %}
+    <div class="person-card">
+        <div class="person-header">
+            <div>
+                <h2>{{ person.name }}</h2>
+                {% if person.title %}
+                <span class="person-title">{{ person.title }}</span>
+                {% endif %}
+            </div>
+            <a href="{{ url_for('person_edit', wedding_id=wedding.id, person_id=person.id) }}" class="btn-secondary btn-small">Edit</a>
+        </div>
+
+        <div class="person-details">
+            {% if person.preferred_pronouns %}
+            <div class="detail-item">
+                <strong>Pronouns:</strong> {{ person.preferred_pronouns }}
+            </div>
+            {% endif %}
+
+            {% if person.side_label %}
+            <div class="detail-item">
+                <strong>Side:</strong> {{ person.side_label }}
+            </div>
+            {% endif %}
+
+            {% if person.email %}
+            <div class="detail-item">
+                <strong>Email:</strong> {{ person.email }}
+            </div>
+            {% endif %}
+
+            {% if person.phone %}
+            <div class="detail-item">
+                <strong>Phone:</strong> {{ person.phone }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="person-stats">
+            <div class="stat-item">
+                <div class="stat-number">{{ person.party_members|length }}</div>
+                <div class="stat-label">Wedding Party</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ person.guests|length }}</div>
+                <div class="stat-label">Guests</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ person.attire_items|length }}</div>
+                <div class="stat-label">Attire Items</div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+.people-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.person-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid #e91e63;
+}
+
+.person-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f5f5f5;
+}
+
+.person-header h2 {
+    color: #e91e63;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.person-title {
+    display: inline-block;
+    background: #fff3f8;
+    color: #e91e63;
+    padding: 0.3rem 0.8rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.person-details {
+    margin-bottom: 1.5rem;
+}
+
+.detail-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.detail-item:last-child {
+    border-bottom: none;
+}
+
+.detail-item strong {
+    color: #e91e63;
+    margin-right: 0.5rem;
+}
+
+.person-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid #f5f5f5;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #e91e63;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.3rem;
+}
+</style>
+{% endblock %}

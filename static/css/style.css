@@ -1,0 +1,152 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; }
+.container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
+
+/* Navbar */
+.navbar { background: #e91e63; color: white; padding: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.navbar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.logo { font-size: 1.5rem; font-weight: bold; color: white; text-decoration: none; }
+.wedding-nav { display: flex; flex-direction: column; gap: 0.5rem; align-items: center; }
+.wedding-name { font-weight: bold; font-size: 1.1rem; }
+.module-nav { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.module-nav a { color: white; text-decoration: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.9rem; transition: background 0.3s; }
+.module-nav a:hover { background: rgba(255, 255, 255, 0.2); }
+.nav-links { display: flex; list-style: none; gap: 1rem; align-items: center; }
+.nav-links a { color: white; text-decoration: none; padding: 0.5rem 1rem; border-radius: 4px; }
+.nav-links a:hover { background: rgba(255, 255, 255, 0.1); }
+
+/* Main */
+main { min-height: calc(100vh - 200px); padding: 2rem 0; }
+
+/* Headers */
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid #e91e63; flex-wrap: wrap; gap: 1rem; }
+.page-header h1 { color: #e91e63; font-size: 2rem; }
+.wedding-date-large { color: #666; font-size: 1.2rem; margin: 0.5rem 0; }
+
+/* Buttons */
+.btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-danger-small { padding: 0.6rem 1.2rem; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.3s; font-size: 1rem; }
+.btn-primary { background: #e91e63; color: white; }
+.btn-primary:hover { background: #c2185b; }
+.btn-secondary { background: #666; color: white; }
+.btn-secondary:hover { background: #555; }
+.btn-success { background: #4caf50; color: white; }
+.btn-success:hover { background: #45a049; }
+.btn-danger { background: #f44336; color: white; }
+.btn-danger:hover { background: #da190b; }
+.btn-small { padding: 0.4rem 0.8rem; font-size: 0.9rem; }
+
+/* Alerts */
+.alert { padding: 1rem; border-radius: 4px; margin-bottom: 1rem; }
+.alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+/* Dashboard Grid */
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+.dashboard-card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 1.5rem; text-align: center; transition: transform 0.3s; }
+.dashboard-card:hover { transform: translateY(-5px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.card-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+.dashboard-card h3 { color: #e91e63; margin-bottom: 1rem; }
+.stat-large { font-size: 2.5rem; font-weight: bold; color: #333; margin: 0.5rem 0; }
+.stat-label { color: #666; font-weight: 500; margin-bottom: 0.5rem; }
+.stat-small { color: #999; font-size: 0.9rem; margin-bottom: 1rem; }
+.progress-bar { width: 100%; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin: 1rem 0; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #e91e63, #c2185b); transition: width 0.3s; }
+
+/* Wedding Grid */
+.wedding-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+.wedding-card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 1.5rem; transition: transform 0.3s; }
+.wedding-card:hover { transform: translateY(-5px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.wedding-card-header h2 { color: #e91e63; font-size: 1.3rem; margin-bottom: 0.5rem; }
+.wedding-date { color: #666; font-size: 0.9rem; }
+.wedding-card-body { margin: 1rem 0; color: #555; }
+.wedding-card-body p { margin: 0.5rem 0; }
+.wedding-card-footer { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee; }
+
+/* Forms */
+.form-container { max-width: 600px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.form-group { margin-bottom: 1.5rem; }
+.form-group label { display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; }
+.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #e91e63; }
+.form-actions { display: flex; gap: 1rem; margin-top: 2rem; }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.form-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 1rem; }
+
+/* Module Sections */
+.module-section { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+.module-section h2 { color: #e91e63; margin-bottom: 1.5rem; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+.info-item { padding: 1rem; background: #f9f9f9; border-radius: 4px; }
+.info-item strong { color: #e91e63; display: block; margin-bottom: 0.3rem; }
+
+/* Timeline */
+.timeline-list { display: flex; flex-direction: column; gap: 1rem; }
+.timeline-item { display: flex; gap: 1rem; background: #f9f9f9; padding: 1rem; border-radius: 4px; border-left: 4px solid #e91e63; }
+.timeline-order { background: #e91e63; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+.timeline-content { flex: 1; }
+.timeline-content h4 { color: #333; margin-bottom: 0.5rem; }
+.timeline-meta { color: #666; font-size: 0.9rem; margin-top: 0.5rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+.timeline-meta span { background: white; padding: 0.2rem 0.6rem; border-radius: 4px; }
+
+/* Tasks */
+.task-list { display: flex; flex-direction: column; gap: 1rem; }
+.task-card { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #666; }
+.task-card.priority-high { border-left-color: #f44336; }
+.task-card.priority-medium { border-left-color: #ff9800; }
+.task-card.priority-low { border-left-color: #4caf50; }
+.task-card.task-completed { opacity: 0.6; background: #f9f9f9; }
+.task-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+.task-header h3 { color: #333; font-size: 1.2rem; margin-bottom: 0.5rem; }
+.priority-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: 500; text-transform: uppercase; margin-left: 0.5rem; }
+.priority-badge.priority-high { background: #ffebee; color: #f44336; }
+.priority-badge.priority-medium { background: #fff3e0; color: #ff9800; }
+.priority-badge.priority-low { background: #e8f5e9; color: #4caf50; }
+.task-footer { display: flex; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee; font-size: 0.9rem; color: #666; }
+
+/* Tables */
+.data-table { width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.data-table thead { background: #e91e63; color: white; }
+.data-table th, .data-table td { padding: 1rem; text-align: left; }
+.data-table tbody tr:nth-child(even) { background: #f9f9f9; }
+.data-table tbody tr:hover { background: #f0f0f0; }
+.rsvp-accepted { background: #4caf50; color: white; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.85rem; }
+.rsvp-declined { background: #f44336; color: white; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.85rem; }
+.rsvp-pending { background: #ff9800; color: white; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.85rem; }
+
+/* Stats Row */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.stat-box { background: white; padding: 1.5rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.stat-num { font-size: 2.5rem; font-weight: bold; color: #e91e63; }
+
+/* Elements Grid */
+.elements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+.element-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.element-card h3 { color: #e91e63; margin-bottom: 0.5rem; }
+.element-card details { margin-top: 1rem; }
+.element-card summary { cursor: pointer; color: #e91e63; font-weight: 500; }
+
+/* Quick Actions */
+.quick-actions { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 2rem; }
+.quick-actions h2 { color: #e91e63; margin-bottom: 1rem; }
+.action-buttons { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+/* Empty State */
+.empty-state { text-align: center; padding: 4rem 2rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.empty-state h2 { color: #666; margin-bottom: 1rem; }
+.empty-state p { color: #999; margin-bottom: 2rem; }
+.empty-message { color: #999; font-style: italic; padding: 2rem; text-align: center; }
+
+/* Footer */
+footer { background: #333; color: white; text-align: center; padding: 2rem 0; margin-top: 3rem; }
+footer p { margin: 0; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: flex-start; }
+    .navbar .container { flex-direction: column; gap: 1rem; }
+    .module-nav { justify-content: center; }
+    .dashboard-grid { grid-template-columns: 1fr; }
+    .wedding-grid { grid-template-columns: 1fr; }
+    .task-header { flex-direction: column; gap: 1rem; }
+}

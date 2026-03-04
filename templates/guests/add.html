@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Add Guest</h1>
+<form method="POST">
+    <div class="form-group"><label>Name *</label><input type="text" name="name" required></div>
+    <div class="form-group"><label>Email</label><input type="email" name="email"></div>
+    <div class="form-group"><label>Phone</label><input type="text" name="phone"></div>
+    <div class="form-group"><label>Address</label><textarea name="address" rows="2"></textarea></div>
+    <div class="form-group">
+        <label>Guest Type</label>
+        <select name="guest_type">
+            <option>family</option>
+            <option>friend</option>
+            <option>colleague</option>
+            <option>other</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Side / Association</label>
+        <select name="side">
+            <option value="">Not specified</option>
+            {% for person in wedding.people|sort(attribute='display_order') %}
+                {% if person.side_label %}
+                <option value="{{ person.side_label }}">{{ person.side_label }}</option>
+                {% else %}
+                <option value="{{ person.name }}'s side">{{ person.name }}'s side</option>
+                {% endif %}
+            {% endfor %}
+            <option value="Both">Both / Shared</option>
+        </select>
+    </div>
+    <div class="form-group"><label>Dietary Restrictions</label><input type="text" name="dietary_restrictions"></div>
+    <button type="submit" class="btn-primary">Add Guest</button>
+    <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+</form>
+{% endblock %}
