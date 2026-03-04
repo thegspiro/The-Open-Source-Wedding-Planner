@@ -4758,6 +4758,14 @@ def inventory_print_all(wedding_id):
     return render_template('inventory/print_all.html', wedding=wedding, bins=bins, unassigned=unassigned)
 
 
+@app.route('/wedding/<int:wedding_id>/inventory/labels')
+@login_required
+def inventory_labels_print(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
+    return render_template('inventory/labels_print.html', wedding=wedding, bins=bins)
+
+
 @app.route('/wedding/<int:wedding_id>/inventory/export')
 @login_required
 def inventory_export_csv(wedding_id):

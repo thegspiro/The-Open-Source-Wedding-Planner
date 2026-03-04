@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bin Labels - {{ wedding.couple_names }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', Arial, Helvetica, sans-serif; color: #222; }
+
+        .no-print { padding: 1.5rem; max-width: 700px; margin: 0 auto; }
+        .no-print h2 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+        .no-print p { color: #666; font-size: 0.9rem; margin-bottom: 1rem; }
+        .print-options { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+        .print-btn { padding: 0.5rem 1.5rem; font-size: 0.9rem; cursor: pointer; background: #b76e79; color: #fff; border: none; border-radius: 6px; }
+        .print-btn:hover { background: #9c5563; }
+        .back-link { color: #666; text-decoration: none; font-size: 0.9rem; }
+        .size-toggle { display: flex; gap: 0.25rem; }
+        .size-toggle button { padding: 0.35rem 0.75rem; font-size: 0.82rem; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 4px; }
+        .size-toggle button.active { background: #333; color: #fff; border-color: #333; }
+
+        .labels-container { max-width: 700px; margin: 0 auto; padding: 0 1rem; }
+
+        /* Individual label */
+        .bin-label {
+            border: 2px dashed #999;
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            page-break-inside: avoid;
+            position: relative;
+        }
+        .bin-label-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.6rem;
+            border-bottom: 2px solid #333;
+        }
+        .bin-label-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+        .bin-label-badge {
+            text-align: right;
+        }
+        .bin-label-badge .area-tag {
+            display: inline-block;
+            background: #333;
+            color: #fff;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .bin-label-badge .table-tag {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-top: 0.25rem;
+        }
+        .bin-label-meta {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+            color: #555;
+            margin-bottom: 0.6rem;
+        }
+        .bin-label-meta strong { color: #222; }
+        .bin-label-items {
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+        .bin-label-items .item-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.15rem 0;
+            border-bottom: 1px dotted #ddd;
+        }
+        .bin-label-items .item-line:last-child { border-bottom: none; }
+        .item-qty { color: #888; font-weight: 600; min-width: 40px; text-align: right; }
+        .fragile-flag { color: #c45c5c; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; }
+        .bin-label-footer {
+            margin-top: 0.6rem;
+            padding-top: 0.4rem;
+            border-top: 1px solid #ddd;
+            font-size: 0.78rem;
+            color: #999;
+            display: flex;
+            justify-content: space-between;
+        }
+        .color-dot {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #333;
+            vertical-align: middle;
+            margin-right: 0.4rem;
+        }
+
+        /* Compact mode: 2 labels per page */
+        body.compact .bin-label { padding: 0.75rem; margin-bottom: 0.6rem; }
+        body.compact .bin-label-title { font-size: 1.15rem; }
+        body.compact .bin-label-meta { font-size: 0.78rem; gap: 1rem; }
+        body.compact .bin-label-items { font-size: 0.75rem; }
+        body.compact .bin-label-items .item-line { padding: 0.1rem 0; }
+
+        @media print {
+            .no-print { display: none; }
+            .labels-container { padding: 0; max-width: 100%; }
+            .bin-label { border: 2px solid #333; margin: 0.5rem 0; }
+            body.compact .bin-label { margin: 0.3rem 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <h2>Print Bin Labels</h2>
+        <p>Print these labels and attach them to the outside of each bin. Each label shows the bin name, area, contents summary, and who is transporting it.</p>
+        <div class="print-options">
+            <button onclick="window.print()" class="print-btn">Print Labels</button>
+            <div class="size-toggle">
+                <button class="active" onclick="setSize(this, 'normal')">Full Size</button>
+                <button onclick="setSize(this, 'compact')">Compact</button>
+            </div>
+            <label style="font-size: 0.85rem; color: #555; cursor: pointer;">
+                <input type="checkbox" id="toggle-items" checked onchange="toggleItems(this.checked)"> Show item list
+            </label>
+            <a href="{{ url_for('inventory_view', wedding_id=wedding.id) }}" class="back-link">Back to Inventory</a>
+        </div>
+    </div>
+
+    <div class="labels-container">
+        {% for bin in bins %}
+        <div class="bin-label">
+            <div class="bin-label-header">
+                <div class="bin-label-title">
+                    {% if bin.color_code %}<span class="color-dot" style="background: {{ bin.color_code }};"></span>{% endif %}
+                    {{ bin.label }}
+                </div>
+                <div class="bin-label-badge">
+                    {% if bin.area %}
+                    <span class="area-tag">{{ bin.area|replace('_', ' ')|title }}</span>
+                    {% endif %}
+                    {% if bin.table_number %}
+                    <span class="table-tag">Table {{ bin.table_number }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="bin-label-meta">
+                <span><strong>{{ bin.item_count }}</strong> items ({{ bin.total_quantity }} pcs)</span>
+                {% if bin.assigned_to %}<span>Transport: <strong>{{ bin.assigned_to }}</strong></span>{% endif %}
+                {% if bin.storage_location %}<span>From: {{ bin.storage_location }}</span>{% endif %}
+            </div>
+
+            {% if bin.items %}
+            <div class="bin-label-items items-list">
+                {% for item in bin.items %}
+                <div class="item-line">
+                    <span>
+                        {{ item.name }}
+                        {% if item.condition == 'fragile' %}<span class="fragile-flag">FRAGILE</span>{% endif %}
+                    </span>
+                    <span class="item-qty">x{{ item.quantity }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if bin.notes %}
+            <div style="margin-top: 0.4rem; font-size: 0.78rem; color: #888; font-style: italic;">{{ bin.notes }}</div>
+            {% endif %}
+
+            <div class="bin-label-footer">
+                <span>{{ wedding.couple_names }}</span>
+                <span>Bin {{ loop.index }} of {{ bins|length }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+    function setSize(btn, mode) {
+        document.querySelectorAll('.size-toggle button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (mode === 'compact') {
+            document.body.classList.add('compact');
+        } else {
+            document.body.classList.remove('compact');
+        }
+    }
+    function toggleItems(show) {
+        document.querySelectorAll('.items-list').forEach(el => {
+            el.style.display = show ? '' : 'none';
+        });
+    }
+    </script>
+</body>
+</html>
