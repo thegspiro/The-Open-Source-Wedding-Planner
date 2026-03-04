@@ -293,6 +293,27 @@ class SeatingPreference(db.Model):
     other_guest = db.relationship('Guest', foreign_keys=[other_guest_id], backref='seating_prefs_as_other')
 
 
+class GuestGroup(db.Model):
+    """Named social groups for organizing guests (e.g., Church, Work, College)."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)  # "Church Group", "Work Friends", etc.
+    color = db.Column(db.String(7))  # optional hex color for visual tagging
+    seat_together = db.Column(db.Boolean, default=True)  # should algorithm try to seat together?
+    priority = db.Column(db.Integer, default=5)  # 1-10 how important is grouping
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('guest_groups', lazy=True, cascade='all, delete-orphan'))
+
+
+SUGGESTED_GROUP_TYPES = [
+    'Church Group', 'Work Colleagues', 'College Friends', 'High School Friends',
+    'Neighbors', 'Book Club', 'Sports Team', 'Gym Friends',
+    'Parents of Kids\' Friends', 'Extended Family', 'Travel Friends',
+    'Volunteering Group', 'Music/Band Friends', 'Online Friends',
+]
+
+
 # Table size reference data (inches)
 TABLE_SIZE_REFERENCE = {
     'round_48': {'shape': 'round', 'label': '48" Round', 'capacity': 6, 'diameter': 48},
@@ -452,6 +473,7 @@ class Guest(db.Model):
     guest_type = db.Column(db.String(50))  # family, friend, colleague, etc.
     side = db.Column(db.String(100))  # Flexible: person name, "both", "shared", etc.
     household_group = db.Column(db.String(200))  # group name for household tracking
+    social_groups = db.Column(db.Text)  # comma-separated group tags: "Church Group, Book Club, Work"
     rsvp_token = db.Column(db.String(64), unique=True)  # individual RSVP link token
     rsvp_notes = db.Column(db.Text)  # guest notes from RSVP form
     

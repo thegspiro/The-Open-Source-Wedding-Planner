@@ -94,6 +94,9 @@
     <a href="{{ url_for('seating_chart', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">🪑</div><h3>Seating Chart</h3><p class="stat-label">Visual table assignments</p>
     </a>
+    <a href="{{ url_for('guest_groups_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">👥</div><h3>Guest Groups</h3><p class="stat-label">Church, work, friend circles</p>
+    </a>
     <a href="{{ url_for('processional_order', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">🚶</div><h3>Processional Order</h3><p class="stat-label">Visual ceremony lineup</p>
     </a>

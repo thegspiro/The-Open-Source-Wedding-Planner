@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g, Response, make_response
 from models import (
     db, Wedding, Person, Task, Ceremony, CeremonyTimelineItem, CeremonyReading,
-    Reception, ReceptionTimelineItem, MenuItem, SeatingTable, SeatingPreference,
+    Reception, ReceptionTimelineItem, MenuItem, SeatingTable, SeatingPreference, GuestGroup,
     Honeymoon, HoneymoonItinerary, PackingItem,
     WeddingBranding, BridalPartyMember, Guest,
     Budget, BudgetExpense, BudgetCategoryLimit, Vendor, RegistryItem, Attire, TraditionalElement,
@@ -13,7 +13,7 @@ from models import (
     VendorNote, VendorQuote, SpeechToast, WeddingFavor,
     ActivityLog, Comment,
     BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES,
-    TABLE_SIZE_REFERENCE, TABLE_ROLES
+    TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES
 )
 import random
 from datetime import datetime, timedelta, date
@@ -906,7 +906,8 @@ def guest_add(wedding_id):
             guest_type=request.form.get('guest_type'),
             side=request.form.get('side'),
             dietary_restrictions=request.form.get('dietary_restrictions'),
-            household_group=request.form.get('household_group')
+            household_group=request.form.get('household_group'),
+            social_groups=request.form.get('social_groups')
         )
         db.session.add(guest)
         db.session.commit()
@@ -938,6 +939,7 @@ def guest_edit(wedding_id, guest_id):
         guest.gift_description = request.form.get('gift_description')
         guest.thank_you_sent = request.form.get('thank_you_sent') == 'on'
         guest.household_group = request.form.get('household_group')
+        guest.social_groups = request.form.get('social_groups')
         db.session.commit()
         flash('Guest updated!', 'success')
         return redirect(url_for('guests_view', wedding_id=wedding_id))
@@ -3007,6 +3009,116 @@ def budget_payment_schedule(wedding_id):
 # SEATING CHART & BUILDER ROUTES
 # ============================================
 
+# ============================================
+# GUEST SOCIAL GROUPS
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/guest-groups')
+@login_required
+def guest_groups_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    groups = GuestGroup.query.filter_by(wedding_id=wedding_id).order_by(GuestGroup.name).all()
+    attending = [g for g in wedding.guests if g.rsvp_status == 'accepted']
+
+    # Build a summary of how many guests are in each group
+    group_counts = {}
+    for grp in groups:
+        count = 0
+        for guest in attending:
+            if guest.social_groups:
+                tags = [t.strip() for t in guest.social_groups.split(',')]
+                if grp.name in tags:
+                    count += 1
+        group_counts[grp.id] = count
+
+    # Find all unique tags currently in use
+    all_tags = set()
+    for guest in wedding.guests:
+        if guest.social_groups:
+            for tag in guest.social_groups.split(','):
+                tag = tag.strip()
+                if tag:
+                    all_tags.add(tag)
+
+    return render_template('guests/groups.html', wedding=wedding, groups=groups,
+                         group_counts=group_counts, all_tags=sorted(all_tags),
+                         suggested=SUGGESTED_GROUP_TYPES, guests=attending)
+
+
+@app.route('/wedding/<int:wedding_id>/guest-groups/add', methods=['POST'])
+@login_required
+def guest_group_add(wedding_id):
+    name = request.form.get('name', '').strip()
+    if not name:
+        flash('Group name is required.', 'warning')
+        return redirect(url_for('guest_groups_view', wedding_id=wedding_id))
+
+    existing = GuestGroup.query.filter_by(wedding_id=wedding_id, name=name).first()
+    if existing:
+        flash(f'Group "{name}" already exists.', 'warning')
+        return redirect(url_for('guest_groups_view', wedding_id=wedding_id))
+
+    group = GuestGroup(
+        wedding_id=wedding_id,
+        name=name,
+        color=request.form.get('color', ''),
+        seat_together=request.form.get('seat_together') != 'off',
+        priority=request.form.get('priority', 5, type=int),
+        notes=request.form.get('notes', '')
+    )
+    db.session.add(group)
+    db.session.commit()
+    log_activity(wedding_id, 'added', 'guest_group', name)
+    flash(f'Group "{name}" created!', 'success')
+    return redirect(url_for('guest_groups_view', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/guest-groups/<int:group_id>/delete', methods=['POST'])
+@login_required
+def guest_group_delete(wedding_id, group_id):
+    group = GuestGroup.query.get_or_404(group_id)
+    name = group.name
+    db.session.delete(group)
+    db.session.commit()
+    flash(f'Group "{name}" deleted.', 'success')
+    return redirect(url_for('guest_groups_view', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/guest-groups/<int:group_id>/assign', methods=['POST'])
+@login_required
+def guest_group_bulk_assign(wedding_id, group_id):
+    """Add a social group tag to multiple guests at once."""
+    group = GuestGroup.query.get_or_404(group_id)
+    guest_ids = request.form.getlist('guest_ids')
+    count = 0
+    for gid in guest_ids:
+        guest = Guest.query.get(int(gid))
+        if guest:
+            existing_tags = [t.strip() for t in (guest.social_groups or '').split(',') if t.strip()]
+            if group.name not in existing_tags:
+                existing_tags.append(group.name)
+                guest.social_groups = ', '.join(existing_tags)
+                count += 1
+    db.session.commit()
+    flash(f'Added {count} guests to "{group.name}".', 'success')
+    return redirect(url_for('guest_groups_view', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/guest-groups/<int:group_id>/remove-guest/<int:guest_id>', methods=['POST'])
+@login_required
+def guest_group_remove_guest(wedding_id, group_id, guest_id):
+    """Remove a social group tag from a single guest."""
+    group = GuestGroup.query.get_or_404(group_id)
+    guest = Guest.query.get_or_404(guest_id)
+    if guest.social_groups:
+        tags = [t.strip() for t in guest.social_groups.split(',') if t.strip()]
+        tags = [t for t in tags if t != group.name]
+        guest.social_groups = ', '.join(tags) if tags else None
+        db.session.commit()
+    flash(f'{guest.name} removed from "{group.name}".', 'success')
+    return redirect(url_for('guest_groups_view', wedding_id=wedding_id))
+
+
 @app.route('/wedding/<int:wedding_id>/seating-chart')
 @login_required
 def seating_chart(wedding_id):
@@ -3418,6 +3530,41 @@ def seating_auto_assign(wedding_id):
         if a in guest_ids and b in guest_ids:
             apart_roots.add((find(a), find(b)))
 
+    # --- Social Group Affinity ---
+    # Build a map: group_root -> set of social tags
+    group_tags = {}
+    for root, members in groups.items():
+        tags = set()
+        for g in members:
+            if g.social_groups:
+                for tag in g.social_groups.split(','):
+                    tag = tag.strip()
+                    if tag:
+                        tags.add(tag)
+        group_tags[root] = tags
+
+    # Load group priorities from GuestGroup definitions
+    defined_groups = GuestGroup.query.filter_by(wedding_id=wedding_id).all()
+    group_priority = {dg.name: dg.priority for dg in defined_groups}
+    group_seat_together = {dg.name: dg.seat_together for dg in defined_groups}
+
+    def affinity_score(root_a, root_b):
+        """Compute how much two groups want to be at the same table.
+        Higher score = more affinity. Based on shared social tags."""
+        tags_a = group_tags.get(root_a, set())
+        tags_b = group_tags.get(root_b, set())
+        shared = tags_a & tags_b
+        score = 0
+        for tag in shared:
+            if group_seat_together.get(tag, True):  # default to True
+                score += group_priority.get(tag, 5)
+        # Also boost if same side
+        sides_a = {g.side for g in groups[root_a] if g.side}
+        sides_b = {g.side for g in groups[root_b] if g.side}
+        if sides_a & sides_b:
+            score += 2
+        return score
+
     # Categorize tables by role
     role_tables = defaultdict(list)
     for t in tables:
@@ -3457,6 +3604,13 @@ def seating_auto_assign(wedding_id):
                 return False
         return True
 
+    def table_affinity(group_root, table):
+        """Score how well this group fits at this table based on who's already there."""
+        score = 0
+        for existing_root in table_assignments[table.id]:
+            score += affinity_score(group_root, existing_root)
+        return score
+
     def place_group(grp, table):
         root = find(grp[0].id)
         for g in grp:
@@ -3483,22 +3637,29 @@ def seating_auto_assign(wedding_id):
             preferred_roles.append('vip')
         preferred_roles.append('guest')  # fallback
 
+        # Find best table: prefer tables with highest affinity to this group
+        best_table = None
+        best_score = -1
+
         for role in preferred_roles:
-            for table in role_tables.get(role, []):
-                if can_place(root, table, len(grp)):
-                    place_group(grp, table)
-                    placed = True
-                    break
-            if placed:
-                break
+            candidates = [t for t in role_tables.get(role, []) if can_place(root, t, len(grp))]
+            for table in candidates:
+                score = table_affinity(root, table)
+                if score > best_score:
+                    best_score = score
+                    best_table = table
+
+        if best_table:
+            place_group(grp, best_table)
+            placed = True
 
         if not placed:
-            # Try any table with space
-            for table in tables:
-                if can_place(root, table, len(grp)):
-                    place_group(grp, table)
-                    placed = True
-                    break
+            # Try any table with space, still preferring affinity
+            candidates = [(table_affinity(root, t), t) for t in tables if can_place(root, t, len(grp))]
+            candidates.sort(key=lambda x: -x[0])
+            if candidates:
+                place_group(grp, candidates[0][1])
+                placed = True
 
         if not placed:
             unplaced.extend(grp)

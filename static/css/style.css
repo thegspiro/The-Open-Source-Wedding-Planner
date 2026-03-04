@@ -382,6 +382,9 @@ footer p { margin: 0; }
     .seating-tables-grid { grid-template-columns: 1fr; }
 }
 
+/* Social Group Tags */
+.social-tag { font-size: 0.65rem; background: #e8eaf6; color: #3949ab; padding: 1px 5px; border-radius: 8px; margin-left: 2px; white-space: nowrap; }
+
 /* Processional */
 .processional-list { display: flex; flex-direction: column; gap: 0.75rem; max-width: 500px; margin: 0 auto; }
 .processional-item { display: flex; align-items: center; gap: 1rem; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }

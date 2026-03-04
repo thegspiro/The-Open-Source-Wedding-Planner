@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Guest Social Groups - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Guest Social Groups</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('seating_chart', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Back to Seating Chart</a>
+    </div>
+</div>
+
+<p class="form-help">
+    Define social circles your guests belong to (church, work, college, etc.).
+    Tag guests with these groups, and the seating auto-assign algorithm will try to seat
+    people from the same social circles at the same table.
+</p>
+
+{# Create New Group #}
+<div class="module-section">
+    <h2>Create Group</h2>
+    <form method="POST" action="{{ url_for('guest_group_add', wedding_id=wedding.id) }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Group Name *</label>
+                <input type="text" name="name" required placeholder="e.g., Church Group, Work Team" list="group-suggestions">
+                <datalist id="group-suggestions">
+                    {% for s in suggested %}
+                    <option value="{{ s }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+            <div class="form-group">
+                <label>Priority (1-10)</label>
+                <input type="number" name="priority" value="5" min="1" max="10">
+                <p class="form-help">Higher = stronger grouping preference</p>
+            </div>
+            <div class="form-group">
+                <label>Color</label>
+                <input type="color" name="color" value="#e91e63" style="height:38px;">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group" style="padding-top:0.5rem;">
+                <label><input type="checkbox" name="seat_together" checked> Try to seat together</label>
+                <p class="form-help">Uncheck if this group is just for labeling, not seating.</p>
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <input type="text" name="notes" placeholder="e.g., All from St. Mary's parish">
+            </div>
+        </div>
+        <button type="submit" class="btn-primary btn-small">Create Group</button>
+    </form>
+</div>
+
+{# Existing Groups #}
+<div class="module-section">
+    <h2>Groups ({{ groups|length }})</h2>
+    {% if groups %}
+    <div class="seating-tables-grid">
+        {% for group in groups %}
+        <div class="seating-detail-card" style="border-left-color: {{ group.color or '#e91e63' }};">
+            <div class="table-detail-header">
+                <h3>
+                    {% if group.color %}<span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:{{ group.color }}; margin-right:4px;"></span>{% endif %}
+                    {{ group.name }}
+                </h3>
+                <span class="table-capacity">{{ group_counts.get(group.id, 0) }} guests</span>
+            </div>
+
+            {% if group.seat_together %}
+            <span class="role-badge" style="background: #e8f5e9; color: #2e7d32;">Seat Together (priority {{ group.priority }})</span>
+            {% else %}
+            <span class="role-badge">Label Only</span>
+            {% endif %}
+
+            {% if group.notes %}
+            <p class="table-notes"><small>{{ group.notes }}</small></p>
+            {% endif %}
+
+            {# Show members #}
+            {% set members = [] %}
+            {% for guest in guests %}
+                {% if guest.social_groups and group.name in guest.social_groups.split(',') | map('trim') | list %}
+                    {% if members.append(guest) %}{% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% if members %}
+            <ul class="table-guest-list" style="margin-top: 0.5rem;">
+                {% for guest in guests %}
+                {% if guest.social_groups %}
+                {% set tags = guest.social_groups.split(',') %}
+                {% set clean_tags = [] %}
+                {% for t in tags %}{% if clean_tags.append(t.strip()) %}{% endif %}{% endfor %}
+                {% if group.name in clean_tags %}
+                <li>
+                    <span>{{ guest.name }}</span>
+                    <form method="POST" action="{{ url_for('guest_group_remove_guest', wedding_id=wedding.id, group_id=group.id, guest_id=guest.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-tiny" title="Remove from group">&times;</button>
+                    </form>
+                </li>
+                {% endif %}
+                {% endif %}
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty-message" style="margin-top: 0.5rem;">No guests tagged yet</p>
+            {% endif %}
+
+            {# Add guests to this group #}
+            <details style="margin-top: 0.75rem;">
+                <summary style="cursor: pointer; font-size: 0.85rem; color: #e91e63;">Add guests to this group</summary>
+                <form method="POST" action="{{ url_for('guest_group_bulk_assign', wedding_id=wedding.id, group_id=group.id) }}" style="margin-top: 0.5rem;">
+                    <div style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 0.5rem; border-radius: 4px; background: #fff; font-size: 0.85rem;">
+                        {% for guest in guests %}
+                        {% set already_in = false %}
+                        {% if guest.social_groups %}
+                            {% set tags = guest.social_groups.split(',') %}
+                            {% for t in tags %}{% if t.strip() == group.name %}{% set already_in = true %}{% endif %}{% endfor %}
+                        {% endif %}
+                        {% if not already_in %}
+                        <label style="display: block; padding: 2px 0; cursor: pointer;">
+                            <input type="checkbox" name="guest_ids" value="{{ guest.id }}">
+                            {{ guest.name }}{% if guest.side %} <small>({{ guest.side }})</small>{% endif %}
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn-primary btn-tiny" style="margin-top: 0.5rem;">Add Selected</button>
+                </form>
+            </details>
+
+            <div class="table-detail-actions">
+                <form method="POST" action="{{ url_for('guest_group_delete', wedding_id=wedding.id, group_id=group.id) }}" class="form-inline">
+                    <button type="submit" class="btn-danger btn-tiny" onclick="return confirm('Delete group &quot;{{ group.name }}&quot;? Guest tags will not be removed.')">Delete Group</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>No Groups Yet</h2>
+        <p>Create social groups above to organize your guests for seating.</p>
+    </div>
+    {% endif %}
+</div>
+
+{# Tags in use but no group defined #}
+{% set defined_names = groups|map(attribute='name')|list %}
+{% set orphan_tags = [] %}
+{% for tag in all_tags %}
+    {% if tag not in defined_names %}
+        {% if orphan_tags.append(tag) %}{% endif %}
+    {% endif %}
+{% endfor %}
+{% if orphan_tags %}
+<div class="module-section">
+    <h2>Tags Without Group Definitions</h2>
+    <p class="form-help">These tags appear on guests but don't have a group definition. Create groups for them to control seating priority.</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+        {% for tag in orphan_tags %}
+        <form method="POST" action="{{ url_for('guest_group_add', wedding_id=wedding.id) }}" style="display: inline;">
+            <input type="hidden" name="name" value="{{ tag }}">
+            <input type="hidden" name="priority" value="5">
+            <button type="submit" class="btn-secondary btn-small">+ {{ tag }}</button>
+        </form>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# Tips #}
+<div class="module-section">
+    <h2>Seating Group Tips</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Church / Religious Groups:</strong> Seat church friends together, especially if they don't know many other guests. They'll feel more comfortable.
+        </div>
+        <div class="info-item">
+            <strong>Work Colleagues:</strong> Group coworkers together but consider mixing departments if they're already friendly across teams.
+        </div>
+        <div class="info-item">
+            <strong>College Friends:</strong> These groups often have strong bonds. Seating them together usually creates the most fun tables.
+        </div>
+        <div class="info-item">
+            <strong>Extended Family:</strong> Keep family branches together. Cousins who haven't seen each other in years appreciate reconnecting.
+        </div>
+        <div class="info-item">
+            <strong>Mixed Groups:</strong> If someone belongs to multiple groups, the algorithm picks the table where they'll have the most connections.
+        </div>
+        <div class="info-item">
+            <strong>Priority Levels:</strong> Set higher priority (8-10) for tight-knit groups like close friend circles, lower (3-5) for looser associations like "neighbors."
+        </div>
+    </div>
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('seating_chart', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Seating Chart</a>
+</div>
+{% endblock %}

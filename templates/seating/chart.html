@@ -6,6 +6,7 @@
 <div class="page-header">
     <h1>Seating Chart Builder</h1>
     <div class="header-actions">
+        <a href="{{ url_for('guest_groups_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Social Groups</a>
         <a href="{{ url_for('seating_preferences', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Preferences (Together/Apart)</a>
         <a href="{{ url_for('print_seating', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print</a>
     </div>
@@ -222,6 +223,7 @@
                 <li>
                     <span class="guest-info">
                         {{ guest.name }}
+                        {% if guest.social_groups %}{% for tag in guest.social_groups.split(',') %}<span class="social-tag">{{ tag.strip() }}</span>{% endfor %}{% endif %}
                         {% if guest.dietary_restrictions %}<span class="dietary-tag">{{ guest.dietary_restrictions }}</span>{% endif %}
                         {% if guest.meal_choice %}<span class="meal-tag">{{ guest.meal_choice }}</span>{% endif %}
                     </span>
@@ -296,6 +298,7 @@
                 <th>Type</th>
                 <th>Side</th>
                 <th>Household</th>
+                <th>Groups</th>
                 <th>Dietary</th>
                 {% if tables %}<th>Assign</th>{% endif %}
             </tr>
@@ -307,6 +310,7 @@
                 <td>{{ guest.guest_type or '-' }}</td>
                 <td>{{ guest.side or '-' }}</td>
                 <td>{{ guest.household_group or '-' }}</td>
+                <td>{% if guest.social_groups %}{% for tag in guest.social_groups.split(',') %}<span class="social-tag">{{ tag.strip() }}</span> {% endfor %}{% else %}-{% endif %}</td>
                 <td>{{ guest.dietary_restrictions or '-' }}</td>
                 {% if tables %}
                 <td>
