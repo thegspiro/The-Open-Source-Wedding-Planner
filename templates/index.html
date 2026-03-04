@@ -15,7 +15,7 @@
     {% endif %}
 
     {% if user.user_type != 'self' or not weddings %}
-        <a href="{{ url_for('new_wedding') }}" class="btn-primary">+ Add New Wedding</a>
+        <a href="{{ url_for('new_wedding') }}" class="btn-primary">+ New Wedding</a>
     {% endif %}
 </div>
 
@@ -28,12 +28,23 @@
                     <span class="wedding-date">{{ wedding.wedding_date.strftime('%B %d, %Y') }}</span>
                 </div>
                 <div class="wedding-card-body">
-                    <p><strong>Email:</strong> {{ wedding.email }}</p>
-                    <p><strong>Tasks:</strong> {{ wedding.tasks|selectattr('completed', 'equalto', False)|list|length }} pending</p>
-                    <p><strong>Guests:</strong> {{ wedding.guests|length }} total</p>
+                    <p>
+                        <span style="color: var(--color-text-muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em;">Contact</span><br>
+                        {{ wedding.email }}
+                    </p>
+                    <div style="display: flex; gap: 1.5rem; margin-top: 0.75rem;">
+                        <div>
+                            <span style="font-weight: 600; color: var(--color-primary); font-size: 1.15rem;">{{ wedding.tasks|selectattr('completed', 'equalto', False)|list|length }}</span>
+                            <span style="color: var(--color-text-muted); font-size: 0.82rem;"> tasks</span>
+                        </div>
+                        <div>
+                            <span style="font-weight: 600; color: var(--color-primary); font-size: 1.15rem;">{{ wedding.guests|length }}</span>
+                            <span style="color: var(--color-text-muted); font-size: 0.82rem;"> guests</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="wedding-card-footer">
-                    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-primary">Open Dashboard</a>
+                    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-primary" style="width: 100%; text-align: center;">Open Dashboard</a>
                 </div>
             </div>
         {% endfor %}
@@ -41,12 +52,15 @@
 {% else %}
     <div class="empty-state">
         {% if user.user_type == 'professional' %}
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
             <h2>No client weddings yet</h2>
             <p>Add your first client wedding to start organizing.</p>
         {% elif user.user_type == 'friend' %}
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🤝</div>
             <h2>No weddings yet</h2>
             <p>Add a wedding you're helping plan to get started.</p>
         {% else %}
+            <div style="font-size: 3rem; margin-bottom: 1rem;">💍</div>
             <h2>Let's plan your wedding!</h2>
             <p>Create your wedding to start organizing every detail in one place.</p>
         {% endif %}

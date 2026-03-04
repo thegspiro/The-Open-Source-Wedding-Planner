@@ -9,7 +9,7 @@
         <p class="wedding-date-large">{{ wedding.wedding_date.strftime('%B %d, %Y') }}</p>
         {% set days_until = (wedding.wedding_date.date() - today).days if today else 0 %}
         {% if days_until > 0 %}
-        <p class="countdown-badge">{{ days_until }} days to go!</p>
+        <p class="countdown-badge">{{ days_until }} days to go</p>
         {% elif days_until == 0 %}
         <p class="countdown-badge countdown-today">Today is the day!</p>
         {% endif %}
@@ -24,6 +24,40 @@
     </div>
 </div>
 
+<!-- Key Metrics -->
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.pending_tasks }}</div>
+        <div class="stat-label">Open Tasks</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.rsvp_yes }}</div>
+        <div class="stat-label">Confirmed Guests</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">${{ "{:,.0f}".format(stats.budget_spent) }}</div>
+        <div class="stat-label">Budget Spent</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.total_vendors }}</div>
+        <div class="stat-label">Vendors</div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions" style="margin-bottom: 2rem;">
+    <h2>Quick Actions</h2>
+    <div class="action-buttons">
+        <a href="{{ url_for('task_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Task</a>
+        <a href="{{ url_for('guest_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Guest</a>
+        <a href="{{ url_for('vendor_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Vendor</a>
+        <a href="{{ url_for('day_of_add', wedding_id=wedding.id) }}" class="btn-secondary">+ Timeline Item</a>
+        <a href="{{ url_for('more_modules', wedding_id=wedding.id) }}" class="btn-secondary">All Modules</a>
+    </div>
+</div>
+
+<!-- Planning Modules -->
+<h2 style="font-family: var(--font-heading); color: var(--color-text); margin-bottom: 1rem; font-size: 1.3rem;">Planning Overview</h2>
 <div class="dashboard-grid">
     <div class="dashboard-card">
         <div class="card-icon">📅</div>
@@ -31,8 +65,10 @@
         <div class="stat-large">{{ wedding.day_of_items|length }}</div>
         <p class="stat-label">Scheduled Items</p>
         <p class="stat-small">{{ wedding.participants|length }} participant(s)</p>
-        <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">View Timeline</a>
-        <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Itineraries</a>
+        <div style="display: flex; gap: 0.4rem; justify-content: center; margin-top: 0.5rem;">
+            <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">View Timeline</a>
+            <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Itineraries</a>
+        </div>
     </div>
 
     <div class="dashboard-card">
@@ -110,7 +146,11 @@
         <p class="stat-label">Members</p>
         <a href="{{ url_for('bridal_party_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">View Party</a>
     </div>
+</div>
 
+<!-- Creative Details -->
+<h2 style="font-family: var(--font-heading); color: var(--color-text); margin: 2rem 0 1rem; font-size: 1.3rem;">Details &amp; Design</h2>
+<div class="dashboard-grid">
     <div class="dashboard-card">
         <div class="card-icon">📸</div>
         <h3>Photography</h3>
@@ -129,7 +169,7 @@
 
     <div class="dashboard-card">
         <div class="card-icon">💐</div>
-        <h3>Flowers & Decor</h3>
+        <h3>Flowers &amp; Decor</h3>
         <div class="stat-large">{{ wedding.floral_items|length }}</div>
         <p class="stat-label">Arrangements</p>
         <a href="{{ url_for('flowers_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">View Flowers</a>
@@ -144,43 +184,35 @@
     </div>
 </div>
 
-<div class="quick-actions">
-    <h2>Quick Actions</h2>
-    <div class="action-buttons">
-        <a href="{{ url_for('task_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Task</a>
-        <a href="{{ url_for('guest_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Guest</a>
-        <a href="{{ url_for('vendor_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Vendor</a>
-        <a href="{{ url_for('day_of_add', wedding_id=wedding.id) }}" class="btn-primary">+ Timeline Item</a>
-        <a href="{{ url_for('more_modules', wedding_id=wedding.id) }}" class="btn-secondary">All Modules</a>
+<!-- Export & Collaboration -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 2rem;">
+    <div class="quick-actions">
+        <h2>Export &amp; Print</h2>
+        <div class="action-buttons">
+            <a href="{{ url_for('export_guests_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Guests CSV</a>
+            <a href="{{ url_for('export_budget_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Budget CSV</a>
+            <a href="{{ url_for('export_tasks_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Tasks CSV</a>
+            <a href="{{ url_for('print_timeline', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Timeline</a>
+            <a href="{{ url_for('print_vendor_contacts', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Vendor Contacts</a>
+            <a href="{{ url_for('calendar_export_ical', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Calendar (.ics)</a>
+        </div>
     </div>
-</div>
 
-<div class="quick-actions" style="margin-top: 1rem;">
-    <h2>Export & Print</h2>
-    <div class="action-buttons">
-        <a href="{{ url_for('export_guests_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export Guests CSV</a>
-        <a href="{{ url_for('export_budget_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export Budget CSV</a>
-        <a href="{{ url_for('export_tasks_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export Tasks CSV</a>
-        <a href="{{ url_for('print_timeline', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Timeline</a>
-        <a href="{{ url_for('print_vendor_contacts', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Vendor Contacts</a>
-        <a href="{{ url_for('calendar_export_ical', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export Calendar (.ics)</a>
-    </div>
-</div>
-
-<div class="quick-actions" style="margin-top: 1rem;">
-    <h2>Collaboration</h2>
-    <div class="action-buttons">
-        <a href="{{ url_for('collaborators_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Manage Collaborators</a>
-        <a href="{{ url_for('activity_log_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Activity Log</a>
-        {% if wedding.share_token %}
-        <span style="background: #e8f5e9; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.9rem;">
-            Share link: {{ request.host_url }}shared/{{ wedding.share_token }}
-        </span>
-        {% else %}
-        <form method="POST" action="{{ url_for('share_enable', wedding_id=wedding.id) }}" style="display: inline;">
-            <button type="submit" class="btn-secondary btn-small">Generate Shareable Link</button>
-        </form>
-        {% endif %}
+    <div class="quick-actions">
+        <h2>Collaboration</h2>
+        <div class="action-buttons">
+            <a href="{{ url_for('collaborators_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Manage Collaborators</a>
+            <a href="{{ url_for('activity_log_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Activity Log</a>
+            {% if wedding.share_token %}
+            <span style="background: var(--color-success-bg); padding: 0.35rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.82rem; color: var(--color-success); border: 1px solid #c6dece;">
+                Share link: {{ request.host_url }}shared/{{ wedding.share_token }}
+            </span>
+            {% else %}
+            <form method="POST" action="{{ url_for('share_enable', wedding_id=wedding.id) }}" style="display: inline;">
+                <button type="submit" class="btn-secondary btn-small">Generate Share Link</button>
+            </form>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}
