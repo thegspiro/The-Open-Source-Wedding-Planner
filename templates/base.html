@@ -30,7 +30,21 @@
             
             <ul class="nav-links">
                 <li><a href="{{ url_for('traditional_elements') }}">Traditional Elements</a></li>
-                <li><a href="{{ url_for('index') }}">All Weddings</a></li>
+                {% if current_user %}
+                    <li><a href="{{ url_for('index') }}">My Weddings</a></li>
+                    <li class="user-info">
+                        <span class="user-name">{{ current_user.name }}</span>
+                        <span class="user-type-badge badge-{{ current_user.user_type }}">
+                            {% if current_user.user_type == 'professional' %}Pro
+                            {% elif current_user.user_type == 'friend' %}Helper
+                            {% else %}Planner{% endif %}
+                        </span>
+                    </li>
+                    <li><a href="{{ url_for('logout') }}" class="btn-logout">Log Out</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}">Log In</a></li>
+                    <li><a href="{{ url_for('register') }}">Sign Up</a></li>
+                {% endif %}
             </ul>
         </div>
     </nav>

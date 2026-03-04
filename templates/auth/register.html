@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Create Account - Wedding Organizer{% endblock %}
+{% block content %}
+<div class="auth-page">
+    <div class="auth-container">
+        <h1>Create Your Account</h1>
+        <p class="auth-subtitle">Tell us a bit about yourself to get started.</p>
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Your Name *</label>
+                <input type="text" name="name" required value="{{ name|default('') }}" placeholder="e.g., Sarah Johnson">
+            </div>
+
+            <div class="form-group">
+                <label>Email *</label>
+                <input type="email" name="email" required value="{{ email|default('') }}" placeholder="you@example.com">
+            </div>
+
+            <div class="form-group">
+                <label>Password * (at least 6 characters)</label>
+                <input type="password" name="password" required minlength="6" placeholder="Choose a password">
+            </div>
+
+            <div class="form-group">
+                <label>Confirm Password *</label>
+                <input type="password" name="confirm_password" required minlength="6" placeholder="Confirm your password">
+            </div>
+
+            <div class="form-group">
+                <label>How will you be using Wedding Organizer? *</label>
+                <div class="user-type-cards">
+                    <label class="user-type-card">
+                        <input type="radio" name="user_type" value="professional" {{ 'checked' if user_type|default('') == 'professional' }}>
+                        <div class="user-type-content">
+                            <div class="user-type-icon">&#x1F4BC;</div>
+                            <h3>Professional Planner</h3>
+                            <p>I organize weddings for clients and manage multiple events at once.</p>
+                        </div>
+                    </label>
+
+                    <label class="user-type-card">
+                        <input type="radio" name="user_type" value="friend" {{ 'checked' if user_type|default('') == 'friend' }}>
+                        <div class="user-type-content">
+                            <div class="user-type-icon">&#x1F91D;</div>
+                            <h3>Helping a Friend</h3>
+                            <p>I'm helping someone plan their wedding. I might help with more in the future!</p>
+                        </div>
+                    </label>
+
+                    <label class="user-type-card">
+                        <input type="radio" name="user_type" value="self" {{ 'checked' if user_type|default('') == 'self' }}>
+                        <div class="user-type-content">
+                            <div class="user-type-icon">&#x1F48D;</div>
+                            <h3>Planning My Own Wedding</h3>
+                            <p>I'm getting married and want to organize everything in one place.</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Create Account</button>
+            </div>
+        </form>
+
+        <p class="auth-link">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+    </div>
+</div>
+{% endblock %}

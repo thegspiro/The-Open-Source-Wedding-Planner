@@ -141,6 +141,36 @@ main { min-height: calc(100vh - 200px); padding: 2rem 0; }
 footer { background: #333; color: white; text-align: center; padding: 2rem 0; margin-top: 3rem; }
 footer p { margin: 0; }
 
+/* Auth Pages */
+.auth-page { display: flex; justify-content: center; padding: 2rem 0; }
+.auth-container { max-width: 600px; width: 100%; background: white; padding: 2.5rem; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+.auth-container h1 { color: #e91e63; margin-bottom: 0.5rem; text-align: center; }
+.auth-subtitle { color: #666; text-align: center; margin-bottom: 2rem; }
+.auth-link { text-align: center; margin-top: 1.5rem; color: #666; }
+.auth-link a { color: #e91e63; font-weight: 500; text-decoration: none; }
+.auth-link a:hover { text-decoration: underline; }
+
+/* User Type Cards (Registration) */
+.user-type-cards { display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; }
+.user-type-card { cursor: pointer; }
+.user-type-card input[type="radio"] { display: none; }
+.user-type-content { border: 2px solid #ddd; border-radius: 8px; padding: 1.2rem; transition: all 0.3s; display: flex; align-items: center; gap: 1rem; }
+.user-type-content:hover { border-color: #e91e63; background: #fff5f8; }
+.user-type-card input[type="radio"]:checked + .user-type-content { border-color: #e91e63; background: #fce4ec; box-shadow: 0 0 0 2px rgba(233,30,99,0.2); }
+.user-type-icon { font-size: 2rem; flex-shrink: 0; }
+.user-type-content h3 { color: #333; margin-bottom: 0.3rem; font-size: 1.05rem; }
+.user-type-content p { color: #666; font-size: 0.9rem; margin: 0; }
+
+/* User Nav Info */
+.user-info { display: flex; align-items: center; gap: 0.5rem; }
+.user-name { color: white; font-weight: 500; }
+.user-type-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+.badge-professional { background: #ffc107; color: #333; }
+.badge-friend { background: #8bc34a; color: white; }
+.badge-self { background: #03a9f4; color: white; }
+.btn-logout { opacity: 0.8; }
+.btn-logout:hover { opacity: 1; }
+
 /* Responsive */
 @media (max-width: 768px) {
     .page-header { flex-direction: column; align-items: flex-start; }

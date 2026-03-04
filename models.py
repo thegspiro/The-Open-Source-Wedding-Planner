@@ -1,7 +1,36 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
+
+# ============================================
+# USER & ACCESS MODELS
+# ============================================
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    user_type = db.Column(db.String(20), nullable=False)  # 'professional', 'friend', 'self'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    wedding_access = db.relationship('WeddingAccess', backref='user', lazy=True, cascade='all, delete-orphan')
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
+class WeddingAccess(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='owner')  # 'owner', 'planner', 'viewer'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ============================================
 # MAIN WEDDING MODEL
@@ -33,6 +62,7 @@ class Wedding(db.Model):
     vendors = db.relationship('Vendor', backref='wedding', lazy=True, cascade='all, delete-orphan')
     registry_items = db.relationship('RegistryItem', backref='wedding', lazy=True, cascade='all, delete-orphan')
     attire = db.relationship('Attire', backref='wedding', lazy=True, cascade='all, delete-orphan')
+    access_list = db.relationship('WeddingAccess', backref='wedding', lazy=True, cascade='all, delete-orphan')
 
 # ============================================
 # PERSON MODEL (People Getting Married)
