@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Music Stats - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Music Stats</h1>
+    <a href="{{ url_for('music_view', wedding_id=wedding.id) }}" class="btn-secondary">&larr; Back to Music</a>
+</div>
+
+<div class="module-section">
+    <h2>Overview</h2>
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <h3>{{ total_songs }}</h3>
+            <p class="stat-label">Total Songs</p>
+        </div>
+        <div class="dashboard-card">
+            <h3>
+                {% set hours = (total_duration // 60)|int %}
+                {% set minutes = (total_duration % 60)|int %}
+                {% if hours > 0 %}{{ hours }}h {% endif %}{{ minutes }}m
+            </h3>
+            <p class="stat-label">Total Duration</p>
+        </div>
+    </div>
+</div>
+
+{% if moments %}
+<div class="module-section">
+    <h2>By Moment</h2>
+    {% for moment_key, moment_data in moments.items() %}
+    <div class="module-section">
+        <h3>{{ moment_data.name }}</h3>
+        <p class="stat-label">
+            {{ moment_data.songs|length }} song{{ 's' if moment_data.songs|length != 1 else '' }}
+            &middot;
+            {% set m_hours = (moment_data.duration // 60)|int %}
+            {% set m_minutes = (moment_data.duration % 60)|int %}
+            {% if m_hours > 0 %}{{ m_hours }}h {% endif %}{{ m_minutes }}m
+        </p>
+        {% if moment_data.songs %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Artist</th>
+                    <th>Duration</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for song in moment_data.songs %}
+                <tr>
+                    <td>{{ song.title }}</td>
+                    <td>{{ song.artist or '-' }}</td>
+                    <td>
+                        {% if song.duration %}
+                        {{ (song.duration // 60)|int }}:{{ '%02d' % (song.duration % 60)|int }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>{{ song.notes or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if do_not_play %}
+<div class="module-section">
+    <h2 style="color: #c0392b;">Do Not Play</h2>
+    <div style="border: 2px solid #c0392b; background: #fdf0ef; padding: 15px; border-radius: 4px;">
+        <p style="color: #c0392b; font-weight: bold; margin-bottom: 10px;">
+            These songs should NOT be played at any point during the wedding.
+        </p>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Artist</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for song in do_not_play %}
+                <tr style="background: #fdf0ef;">
+                    <td style="color: #c0392b; font-weight: bold;">{{ song.title }}</td>
+                    <td>{{ song.artist or '-' }}</td>
+                    <td>{{ song.notes or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('music_view', wedding_id=wedding.id) }}" class="btn-secondary">&larr; Back to Music</a>
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&larr; Back to Dashboard</a>
+</div>
+{% endblock %}

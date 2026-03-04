@@ -77,6 +77,20 @@
             <textarea name="cake_design" rows="3" placeholder="Describe the cake design...">{{ reception.cake_design or '' }}</textarea>
         </div>
 
+        <h2>Cocktail Hour</h2>
+        <div class="form-group">
+            <label>Cocktail Menu</label>
+            <textarea name="cocktail_menu" rows="3" placeholder="Signature cocktails, appetizers...">{{ reception.cocktail_menu or '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label>Cocktail Entertainment</label>
+            <input type="text" name="cocktail_entertainment" value="{{ reception.cocktail_entertainment or '' }}" placeholder="e.g., String quartet, lawn games">
+        </div>
+        <div class="form-group">
+            <label>Cocktail Hour Notes</label>
+            <textarea name="cocktail_hour_notes" rows="2" placeholder="Location, timing, flow...">{{ reception.cocktail_hour_notes or '' }}</textarea>
+        </div>
+
         <h2>Entertainment</h2>
         <div class="form-row">
             <div class="form-group">
@@ -92,6 +106,26 @@
             <div class="form-group">
                 <label>First Dance Song</label>
                 <input type="text" name="first_dance_song" value="{{ reception.first_dance_song or '' }}" placeholder="e.g., At Last - Etta James">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Dance Floor Size</label>
+            <input type="text" name="dance_floor_size" value="{{ reception.dance_floor_size or '' }}" placeholder="e.g., 20x20 feet">
+        </div>
+
+        <h2>Kids & Family</h2>
+        <div class="form-group">
+            <label>Kids Activities</label>
+            <textarea name="kids_activities" rows="2" placeholder="Coloring books, games, movie room...">{{ reception.kids_activities or '' }}</textarea>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Sitter Name</label>
+                <input type="text" name="kids_sitter_name" value="{{ reception.kids_sitter_name or '' }}" placeholder="Childcare provider name">
+            </div>
+            <div class="form-group">
+                <label>Sitter Phone</label>
+                <input type="text" name="kids_sitter_phone" value="{{ reception.kids_sitter_phone or '' }}" placeholder="Phone number">
             </div>
         </div>
 

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSVP - {{ wedding.couple_names }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);">
+    <main class="container" style="max-width: 600px; margin: 2rem auto; padding: 2rem;">
+        <div class="form-container" style="text-align: center;">
+            <h1 style="color: #e91e63; margin-bottom: 0.5rem;">{{ wedding.couple_names }}</h1>
+            <p style="color: #666; font-size: 1.1rem; margin-bottom: 0.5rem;">
+                {{ wedding.wedding_date.strftime('%B %d, %Y') }}
+            </p>
+            {% if wedding.rsvp_message %}
+            <p style="color: #555; margin-bottom: 1.5rem; font-style: italic;">{{ wedding.rsvp_message }}</p>
+            {% endif %}
+            {% if wedding.rsvp_deadline %}
+            <p style="color: #c62828; font-weight: 500;">Please respond by {{ wedding.rsvp_deadline.strftime('%B %d, %Y') }}</p>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('rsvp_submit', token=token) }}" style="text-align: left; margin-top: 2rem;">
+                <div class="form-group">
+                    <label>Your Name *</label>
+                    <input type="text" name="guest_name" required placeholder="Enter your full name as it appears on the invitation">
+                </div>
+                <div class="form-group">
+                    <label>Will you be attending? *</label>
+                    <select name="rsvp_status" required>
+                        <option value="">-- Please Select --</option>
+                        <option value="accepted">Joyfully Accept</option>
+                        <option value="declined">Respectfully Decline</option>
+                    </select>
+                </div>
+                {% if menu_items %}
+                <div class="form-group">
+                    <label>Meal Selection</label>
+                    <select name="meal_choice">
+                        <option value="">-- Select Meal --</option>
+                        {% for item in menu_items %}
+                        <option value="{{ item.name }}">{{ item.name }}{% if item.dietary_tags %} ({{ item.dietary_tags }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                <div class="form-group">
+                    <label>Dietary Restrictions</label>
+                    <input type="text" name="dietary_restrictions" placeholder="e.g., vegetarian, gluten-free, nut allergy">
+                </div>
+                <div class="form-group">
+                    <label>Plus One Name (if applicable)</label>
+                    <input type="text" name="plus_one_name" placeholder="Guest name">
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea name="rsvp_notes" rows="3" placeholder="Any message for the couple..."></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; padding: 1rem;">Submit RSVP</button>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

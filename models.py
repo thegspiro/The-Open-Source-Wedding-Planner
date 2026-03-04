@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
@@ -48,7 +49,16 @@ class Wedding(db.Model):
     onboarding_step = db.Column(db.String(50))  # Current step in onboarding
     onboarding_preferences = db.Column(db.Text)  # JSON storing preferences like ceremony_style, etc.
     modules_completed = db.Column(db.Text)  # JSON array of completed module names
-    
+
+    # RSVP Portal
+    rsvp_enabled = db.Column(db.Boolean, default=False)
+    rsvp_token = db.Column(db.String(64), unique=True)  # public access token
+    rsvp_deadline = db.Column(db.Date)
+    rsvp_message = db.Column(db.Text)  # custom message on RSVP page
+
+    # Shareable read-only link
+    share_token = db.Column(db.String(64), unique=True)
+
     # Relationships
     people = db.relationship('Person', backref='wedding', lazy=True, cascade='all, delete-orphan')
     tasks = db.relationship('Task', backref='wedding', lazy=True, cascade='all, delete-orphan')
@@ -102,7 +112,13 @@ class Task(db.Model):
     reminder_sent = db.Column(db.Boolean, default=False)
     priority = db.Column(db.String(20), default='medium')
     category = db.Column(db.String(50))  # ceremony, reception, honeymoon, etc.
+    assigned_to = db.Column(db.String(200))  # name of person assigned
+    depends_on_id = db.Column(db.Integer, db.ForeignKey('task.id'))  # task dependency
+    is_milestone = db.Column(db.Boolean, default=False)
+    months_before = db.Column(db.Integer)  # auto-generated milestone: months before wedding
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    depends_on = db.relationship('Task', remote_side='Task.id', backref='dependent_tasks')
 
 # ============================================
 # CEREMONY MODULE
@@ -143,6 +159,11 @@ class Ceremony(db.Model):
     unity_ceremony_type = db.Column(db.String(100))  # candle, sand, wine, etc.
     has_special_readings = db.Column(db.Boolean, default=False)
     vow_type = db.Column(db.String(50))  # traditional, custom, mixed
+
+    # Vow Writing Workspace
+    vow_draft_person1 = db.Column(db.Text)  # private vow draft
+    vow_draft_person2 = db.Column(db.Text)  # private vow draft
+    ceremony_script = db.Column(db.Text)  # full ceremony script
     
     # Relationships
     timeline_items = db.relationship('CeremonyTimelineItem', backref='ceremony', lazy=True, cascade='all, delete-orphan')
@@ -202,6 +223,19 @@ class Reception(db.Model):
     centerpiece_description = db.Column(db.Text)
     lighting_notes = db.Column(db.Text)
     
+    # Cocktail Hour
+    cocktail_hour_notes = db.Column(db.Text)
+    cocktail_menu = db.Column(db.Text)
+    cocktail_entertainment = db.Column(db.Text)
+
+    # Dance Floor & Layout
+    dance_floor_size = db.Column(db.String(50))  # calculated or custom size
+
+    # Kids Entertainment
+    kids_activities = db.Column(db.Text)
+    kids_sitter_name = db.Column(db.String(200))
+    kids_sitter_phone = db.Column(db.String(50))
+
     # Guest Count
     expected_guest_count = db.Column(db.Integer)
     
@@ -232,12 +266,75 @@ class SeatingTable(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     reception_id = db.Column(db.Integer, db.ForeignKey('reception.id'), nullable=False)
     table_number = db.Column(db.String(50), nullable=False)
+    table_name = db.Column(db.String(100))  # custom name (e.g., "Rose Table")
     capacity = db.Column(db.Integer, nullable=False)
-    table_shape = db.Column(db.String(50))  # round, rectangular, square
+    table_shape = db.Column(db.String(50))  # round, rectangular, square, oval, serpentine
+    table_size = db.Column(db.String(50))  # e.g., "60in", "72in", "6ft", "8ft"
+    table_role = db.Column(db.String(50))  # head, sweetheart, kings, guest, kids, vip
+    x_position = db.Column(db.Float, default=0)  # for visual floor plan
+    y_position = db.Column(db.Float, default=0)  # for visual floor plan
     notes = db.Column(db.Text)
-    
+
     # Relationship
     assigned_guests = db.relationship('Guest', backref='seating_table', lazy=True)
+
+
+class SeatingPreference(db.Model):
+    """Tracks which guests should sit together or apart."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    guest_id = db.Column(db.Integer, db.ForeignKey('guest.id'), nullable=False)
+    other_guest_id = db.Column(db.Integer, db.ForeignKey('guest.id'), nullable=False)
+    preference_type = db.Column(db.String(20), nullable=False)  # 'together' or 'apart'
+    priority = db.Column(db.Integer, default=5)  # 1-10, higher = more important
+    notes = db.Column(db.String(200))
+
+    guest = db.relationship('Guest', foreign_keys=[guest_id], backref='seating_prefs_as_guest')
+    other_guest = db.relationship('Guest', foreign_keys=[other_guest_id], backref='seating_prefs_as_other')
+
+
+class GuestGroup(db.Model):
+    """Named social groups for organizing guests (e.g., Church, Work, College)."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)  # "Church Group", "Work Friends", etc.
+    color = db.Column(db.String(7))  # optional hex color for visual tagging
+    seat_together = db.Column(db.Boolean, default=True)  # should algorithm try to seat together?
+    priority = db.Column(db.Integer, default=5)  # 1-10 how important is grouping
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('guest_groups', lazy=True, cascade='all, delete-orphan'))
+
+
+SUGGESTED_GROUP_TYPES = [
+    'Church Group', 'Work Colleagues', 'College Friends', 'High School Friends',
+    'Neighbors', 'Book Club', 'Sports Team', 'Gym Friends',
+    'Parents of Kids\' Friends', 'Extended Family', 'Travel Friends',
+    'Volunteering Group', 'Music/Band Friends', 'Online Friends',
+]
+
+
+# Table size reference data (inches)
+TABLE_SIZE_REFERENCE = {
+    'round_48': {'shape': 'round', 'label': '48" Round', 'capacity': 6, 'diameter': 48},
+    'round_60': {'shape': 'round', 'label': '60" Round (5ft)', 'capacity': 8, 'diameter': 60},
+    'round_72': {'shape': 'round', 'label': '72" Round (6ft)', 'capacity': 10, 'diameter': 72},
+    'round_84': {'shape': 'round', 'label': '84" Round (7ft)', 'capacity': 12, 'diameter': 84},
+    'banquet_6ft': {'shape': 'rectangular', 'label': '6ft Banquet', 'capacity': 6, 'length': 72, 'width': 30},
+    'banquet_8ft': {'shape': 'rectangular', 'label': '8ft Banquet', 'capacity': 8, 'length': 96, 'width': 30},
+    'kings_8ft': {'shape': 'rectangular', 'label': "8ft King's Table", 'capacity': 10, 'length': 96, 'width': 42},
+    'square_48': {'shape': 'square', 'label': '48" Square', 'capacity': 4, 'side': 48},
+    'sweetheart': {'shape': 'round', 'label': 'Sweetheart (couple)', 'capacity': 2, 'diameter': 36},
+}
+
+TABLE_ROLES = {
+    'guest': 'Guest Table',
+    'head': 'Head Table (traditional)',
+    'sweetheart': 'Sweetheart Table (couple only)',
+    'kings': "King's Table (couple + party + SOs)",
+    'vip': 'VIP / Family Table',
+    'kids': 'Kids Table',
+}
 
 # ============================================
 # HONEYMOON MODULE
@@ -375,6 +472,10 @@ class Guest(db.Model):
     # Guest Category
     guest_type = db.Column(db.String(50))  # family, friend, colleague, etc.
     side = db.Column(db.String(100))  # Flexible: person name, "both", "shared", etc.
+    household_group = db.Column(db.String(200))  # group name for household tracking
+    social_groups = db.Column(db.Text)  # comma-separated group tags: "Church Group, Book Club, Work"
+    rsvp_token = db.Column(db.String(64), unique=True)  # individual RSVP link token
+    rsvp_notes = db.Column(db.Text)  # guest notes from RSVP form
     
     # Plus One
     is_plus_one = db.Column(db.Boolean, default=False)
@@ -414,6 +515,8 @@ class BudgetExpense(db.Model):
     payment_due_date = db.Column(db.Date)
     payment_status = db.Column(db.String(50))  # unpaid, deposit, partial, paid
     covered_by = db.Column(db.String(200))  # name of person purchasing on couple's behalf
+    refund_amount = db.Column(db.Float, default=0)
+    refund_notes = db.Column(db.String(500))
     notes = db.Column(db.Text)
 
 # ============================================
@@ -434,7 +537,13 @@ class Vendor(db.Model):
     # Contract
     contract_signed = db.Column(db.Boolean, default=False)
     contract_date = db.Column(db.Date)
-    
+    cancellation_policy = db.Column(db.Text)
+    contract_notes = db.Column(db.Text)
+
+    # Backup
+    backup_contact = db.Column(db.String(200))
+    backup_phone = db.Column(db.String(50))
+
     # Financial
     total_cost = db.Column(db.Float)
     deposit_amount = db.Column(db.Float)
@@ -446,6 +555,10 @@ class Vendor(db.Model):
     service_date = db.Column(db.Date)
     service_time = db.Column(db.Time)
     service_location = db.Column(db.String(200))
+    setup_instructions = db.Column(db.Text)  # day-of setup requirements
+    meals_needed = db.Column(db.Integer, default=0)  # vendor meals to provide
+    rating = db.Column(db.Integer)  # 1-5 star rating
+    review_notes = db.Column(db.Text)  # post-wedding review
     notes = db.Column(db.Text)
 
 # ============================================
@@ -532,6 +645,7 @@ class PhotoShot(db.Model):
     people = db.Column(db.String(500))  # who should be in the shot
     priority = db.Column(db.String(20), default='nice_to_have')  # must_have, nice_to_have
     captured = db.Column(db.Boolean, default=False)
+    timeline_slot = db.Column(db.String(100))  # linked day-of timeline slot
     notes = db.Column(db.Text)
 
     wedding = db.relationship('Wedding', backref=db.backref('photo_shots', lazy=True, cascade='all, delete-orphan'))
@@ -547,6 +661,8 @@ class Song(db.Model):
     title = db.Column(db.String(200), nullable=False)
     artist = db.Column(db.String(200))
     moment = db.Column(db.String(100))  # processional, first_dance, dinner, dancing, do_not_play, etc.
+    spotify_url = db.Column(db.String(500))
+    duration_minutes = db.Column(db.Float)  # song length
     notes = db.Column(db.Text)
     order = db.Column(db.Integer, default=0)
 
@@ -627,6 +743,13 @@ class Accommodation(db.Model):
     block_code = db.Column(db.String(100))  # for hotel blocks
     rate = db.Column(db.String(100))  # nightly rate or shuttle cost
     deadline = db.Column(db.Date)  # booking deadline
+    rooms_reserved = db.Column(db.Integer)
+
+    # Welcome/Gift Bags
+    welcome_bag = db.Column(db.Boolean, default=False)
+    welcome_bag_items = db.Column(db.Text)  # description of bag contents
+    welcome_bags_delivered = db.Column(db.Boolean, default=False)
+
     notes = db.Column(db.Text)
 
     wedding = db.relationship('Wedding', backref=db.backref('accommodations', lazy=True, cascade='all, delete-orphan'))
@@ -722,7 +845,7 @@ DayOfTimelineItem.assigned_participants = db.relationship(
 class TraditionalElement(db.Model):
     """Library of traditional wedding elements that couples can browse"""
     id = db.Column(db.Integer, primary_key=True)
-    
+
     category = db.Column(db.String(100), nullable=False)  # ceremony, reception, cultural, religious
     subcategory = db.Column(db.String(100))
     name = db.Column(db.String(200), nullable=False)
@@ -731,3 +854,259 @@ class TraditionalElement(db.Model):
     typical_timing = db.Column(db.String(200))  # when in ceremony/reception
     what_you_need = db.Column(db.Text)  # items/people needed
     how_to_do_it = db.Column(db.Text)  # instructions
+
+# ============================================
+# CONTINGENCY PLAN MODULE
+# ============================================
+
+class ContingencyPlan(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    category = db.Column(db.String(100), nullable=False)  # weather, vendor_backup, venue_backup, emergency, transportation, power_outage, other
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    contact_name = db.Column(db.String(200))
+    contact_phone = db.Column(db.String(50))
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('contingency_plans', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# BUDGET CATEGORY LIMIT MODULE
+# ============================================
+
+class BudgetCategoryLimit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    budget_id = db.Column(db.Integer, db.ForeignKey('budget.id'), nullable=False)
+
+    category = db.Column(db.String(100), nullable=False)
+    limit_amount = db.Column(db.Float, nullable=False)
+
+    budget = db.relationship('Budget', backref=db.backref('category_limits', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# TIPPING TRACKER MODULE
+# ============================================
+
+class TipItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    recipient = db.Column(db.String(200), nullable=False)  # e.g., "Lead Photographer", "DJ", "Catering Staff"
+    service_category = db.Column(db.String(100))  # photography, catering, music, beauty, transportation, venue, planner, officiant, other
+    suggested_amount = db.Column(db.Float)
+    actual_amount = db.Column(db.Float)
+    payment_method = db.Column(db.String(50))  # cash, check, venmo, other
+    envelope_prepared = db.Column(db.Boolean, default=False)
+    given = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('tips', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# GIFT TRACKING MODULE
+# ============================================
+
+class Gift(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    event = db.Column(db.String(50), nullable=False)  # shower, wedding, engagement, other
+    from_name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    estimated_value = db.Column(db.Float)
+    date_received = db.Column(db.Date)
+    thank_you_sent = db.Column(db.Boolean, default=False)
+    thank_you_sent_date = db.Column(db.Date)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('gifts', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# VENDOR COMMUNICATION LOG
+# ============================================
+
+class VendorNote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    vendor_id = db.Column(db.Integer, db.ForeignKey('vendor.id'), nullable=False)
+    note_type = db.Column(db.String(50))  # email, call, meeting, other
+    subject = db.Column(db.String(200))
+    content = db.Column(db.Text)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+
+    vendor = db.relationship('Vendor', backref=db.backref('communication_log', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# VENDOR QUOTE COMPARISON
+# ============================================
+
+class VendorQuote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    category = db.Column(db.String(100), nullable=False)  # photographer, caterer, etc.
+    vendor_name = db.Column(db.String(200), nullable=False)
+    contact_info = db.Column(db.String(200))
+    quote_amount = db.Column(db.Float)
+    package_details = db.Column(db.Text)
+    pros = db.Column(db.Text)
+    cons = db.Column(db.Text)
+    is_selected = db.Column(db.Boolean, default=False)
+    date_received = db.Column(db.Date)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('vendor_quotes', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# SPEECHES & TOASTS TRACKER
+# ============================================
+
+class SpeechToast(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    speaker_name = db.Column(db.String(200), nullable=False)
+    speech_type = db.Column(db.String(50))  # toast, speech, blessing, roast
+    order = db.Column(db.Integer, default=0)
+    duration_minutes = db.Column(db.Integer)
+    reviewed = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('speeches', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# WEDDING FAVORS
+# ============================================
+
+class WeddingFavor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    description = db.Column(db.String(500), nullable=False)
+    quantity = db.Column(db.Integer)
+    cost_per_item = db.Column(db.Float)
+    total_cost = db.Column(db.Float)
+    assembled = db.Column(db.Boolean, default=False)
+    assembly_notes = db.Column(db.Text)
+    vendor = db.Column(db.String(200))
+    order_date = db.Column(db.Date)
+    arrival_date = db.Column(db.Date)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('favors', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# ACTIVITY LOG (AUDIT TRAIL)
+# ============================================
+
+class ActivityLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_name = db.Column(db.String(200))
+    action = db.Column(db.String(50), nullable=False)  # created, updated, deleted
+    entity_type = db.Column(db.String(100))  # guest, vendor, task, expense, etc.
+    entity_name = db.Column(db.String(200))
+    details = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    wedding = db.relationship('Wedding', backref=db.backref('activity_log', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# COMMENTS ON ITEMS
+# ============================================
+
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_name = db.Column(db.String(200))
+    entity_type = db.Column(db.String(100), nullable=False)  # vendor, task, expense, etc.
+    entity_id = db.Column(db.Integer, nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    wedding = db.relationship('Wedding', backref=db.backref('comments', lazy=True, cascade='all, delete-orphan'))
+
+# ============================================
+# BUDGET TEMPLATES
+# ============================================
+
+BUDGET_TEMPLATES = {
+    'small': {
+        'name': 'Small Wedding (under 50 guests)',
+        'total': 15000,
+        'categories': {
+            'Venue': 3000, 'Catering': 3000, 'Photography': 2000,
+            'Attire': 1500, 'Flowers': 800, 'Music/DJ': 800,
+            'Invitations': 300, 'Officiant': 300, 'Hair & Makeup': 500,
+            'Decorations': 500, 'Transportation': 300, 'Favors': 200,
+            'Cake': 300, 'Rings': 1000, 'Miscellaneous': 500
+        }
+    },
+    'medium': {
+        'name': 'Medium Wedding (50-150 guests)',
+        'total': 30000,
+        'categories': {
+            'Venue': 6000, 'Catering': 7000, 'Photography': 3500,
+            'Videography': 2000, 'Attire': 2500, 'Flowers': 2000,
+            'Music/DJ': 1500, 'Invitations': 600, 'Officiant': 500,
+            'Hair & Makeup': 800, 'Decorations': 1000, 'Transportation': 600,
+            'Favors': 400, 'Cake': 500, 'Rings': 1500, 'Miscellaneous': 600
+        }
+    },
+    'large': {
+        'name': 'Large Wedding (150+ guests)',
+        'total': 50000,
+        'categories': {
+            'Venue': 10000, 'Catering': 12000, 'Photography': 5000,
+            'Videography': 3000, 'Attire': 4000, 'Flowers': 3500,
+            'Music/Band': 3000, 'Invitations': 1000, 'Officiant': 700,
+            'Hair & Makeup': 1200, 'Decorations': 2000, 'Transportation': 1000,
+            'Favors': 700, 'Cake': 800, 'Rings': 2000, 'Miscellaneous': 1100
+        }
+    }
+}
+
+# ============================================
+# POST-WEDDING TASK TEMPLATES
+# ============================================
+
+POST_WEDDING_TASKS = [
+    ('Send thank-you notes for gifts', 'gifts', 'high'),
+    ('Preserve wedding dress/attire', 'attire', 'medium'),
+    ('Back up all wedding photos and videos', 'photography', 'high'),
+    ('Return rental items (suits, decor, etc.)', 'vendors', 'high'),
+    ('Review and rate vendors', 'vendors', 'medium'),
+    ('Submit name change paperwork (if applicable)', 'legal', 'high'),
+    ('Update driver\'s license and Social Security card', 'legal', 'medium'),
+    ('Update bank accounts and insurance', 'legal', 'medium'),
+    ('File marriage certificate', 'legal', 'high'),
+    ('Update emergency contacts', 'legal', 'low'),
+    ('Write reviews for vendors online', 'vendors', 'low'),
+    ('Create a wedding photo album', 'photography', 'low'),
+    ('Return or exchange duplicate gifts', 'gifts', 'low'),
+    ('Send final vendor payments if outstanding', 'budget', 'high'),
+    ('Donate or preserve wedding flowers', 'flowers', 'low'),
+]
+
+# ============================================
+# INVITATION WORDING TEMPLATES
+# ============================================
+
+INVITATION_WORDING_TEMPLATES = {
+    'formal': {
+        'name': 'Traditional Formal',
+        'text': 'Mr. and Mrs. [Parent Names]\nrequest the honour of your presence\nat the marriage of their daughter\n[Bride Name]\nto\n[Groom Name]\non [Date]\nat [Time]\n[Venue Name]\n[Address]'
+    },
+    'semiformal': {
+        'name': 'Semi-Formal',
+        'text': 'Together with their families\n[Name] and [Name]\ninvite you to celebrate their marriage\non [Date]\nat [Time]\n[Venue Name]\n[Address]\nDinner and dancing to follow'
+    },
+    'casual': {
+        'name': 'Casual & Fun',
+        'text': '[Name] and [Name]\nare tying the knot!\nJoin us for the celebration\n[Date] at [Time]\n[Venue Name]\n[Address]\nFood, drinks, and dancing!'
+    },
+    'couple_hosted': {
+        'name': 'Couple-Hosted',
+        'text': '[Name] and [Name]\njoyfully invite you\nto share in the celebration of their marriage\n[Date]\nat [Time]\n[Venue Name]\n[Address]\nReception to follow'
+    }
+}

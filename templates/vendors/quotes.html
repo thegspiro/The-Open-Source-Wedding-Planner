@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Vendor Quote Comparison - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Vendor Quote Comparison</h1>
+    <a href="{{ url_for('vendor_quote_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Quote</a>
+</div>
+
+{% if grouped_quotes %}
+{% for category, quotes in grouped_quotes.items() %}
+<div class="module-section">
+    <h2>{{ category|replace('_', ' ')|title }}</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Vendor</th>
+                <th>Quote Amount</th>
+                <th>Package</th>
+                <th>Pros</th>
+                <th>Cons</th>
+                <th>Selected</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for quote in quotes %}
+            <tr{% if quote.is_selected %} style="background-color: #d4edda;"{% endif %}>
+                <td>
+                    <strong>{{ quote.vendor_name }}</strong>
+                    {% if quote.contact_info %}<br><small>{{ quote.contact_info }}</small>{% endif %}
+                </td>
+                <td>${{ "{:,.2f}".format(quote.quote_amount) if quote.quote_amount else '-' }}</td>
+                <td>{{ quote.package_details or '-' }}</td>
+                <td>{{ quote.pros or '-' }}</td>
+                <td>{{ quote.cons or '-' }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('vendor_quote_select', wedding_id=wedding.id, quote_id=quote.id) }}" class="form-inline">
+                        <button type="submit" class="btn-{% if quote.is_selected %}primary{% else %}secondary{% endif %} btn-small">
+                            {% if quote.is_selected %}Selected{% else %}Select{% endif %}
+                        </button>
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('vendor_quote_delete', wedding_id=wedding.id, quote_id=quote.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this quote?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+    <h2>No Quotes Yet</h2>
+    <p>Start comparing vendor quotes to find the best deals for your wedding.</p>
+    <a href="{{ url_for('vendor_quote_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Quote</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('vendors_view', wedding_id=wedding.id) }}" class="btn-secondary">&larr; Back to Vendors</a>
+</div>
+{% endblock %}

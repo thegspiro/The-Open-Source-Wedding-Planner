@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Reception Calculators - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Reception Calculators</h1>
+    <a href="{{ url_for('reception_view', wedding_id=wedding.id) }}" class="btn-secondary">Back to Reception</a>
+</div>
+
+<div class="module-section">
+    <h2>Bar Calculator</h2>
+    <p>Estimated drink quantities for your reception.</p>
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-num">{{ bar_calc.guest_count }}</div>
+            <div class="stat-label">Guests</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-num">{{ bar_calc.hours }}</div>
+            <div class="stat-label">Hours</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-num">{{ bar_calc.total_drinks }}</div>
+            <div class="stat-label">Total Drinks</div>
+        </div>
+    </div>
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-num">{{ bar_calc.beer_cases }}</div>
+            <div class="stat-label">Beer Cases</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-num">{{ bar_calc.wine_bottles }}</div>
+            <div class="stat-label">Wine Bottles</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-num">{{ bar_calc.liquor_bottles }}</div>
+            <div class="stat-label">Liquor Bottles</div>
+        </div>
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Dance Floor Calculator</h2>
+    <p>Recommended dance floor size based on your guest count.</p>
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-num">{{ dance_calc.dancers }}</div>
+            <div class="stat-label">Expected Dancers</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-num">{{ dance_calc.sq_feet }}</div>
+            <div class="stat-label">Sq. Feet Needed</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-num">{{ dance_calc.dimensions }}</div>
+            <div class="stat-label">Recommended Size</div>
+        </div>
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Postage Calculator</h2>
+    <p>Stamp estimates for your invitations and RSVPs.</p>
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-num">{{ postage_calc.invitation_count }}</div>
+            <div class="stat-label">Invitations</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-num">{{ postage_calc.invitation_count }}</div>
+            <div class="stat-label">Invite Stamps</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-num">{{ postage_calc.invitation_count }}</div>
+            <div class="stat-label">RSVP Stamps</div>
+        </div>
+    </div>
+    <p class="calc-note">Total stamps needed: <strong>{{ postage_calc.invitation_count * 2 }}</strong> (one for each invitation + one for each RSVP envelope)</p>
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+
+<style>
+.stats-row {
+    display: flex;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+    flex-wrap: wrap;
+}
+.stat-box {
+    flex: 1;
+    min-width: 140px;
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+.stat-num {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #e91e63;
+    line-height: 1.2;
+}
+.stat-label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+.calc-note {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+</style>
+{% endblock %}

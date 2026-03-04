@@ -39,13 +39,32 @@
             <label>Block Code</label>
             <input type="text" name="block_code" placeholder="e.g., SMITH2026">
         </div>
-        <div class="form-group">
-            <label>Rate</label>
-            <input type="text" name="rate" placeholder="e.g., $149/night">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Rate</label>
+                <input type="text" name="rate" placeholder="e.g., $149/night">
+            </div>
+            <div class="form-group">
+                <label>Rooms Reserved</label>
+                <input type="number" name="rooms_reserved" min="0" placeholder="e.g., 20">
+            </div>
         </div>
         <div class="form-group">
             <label>Deadline</label>
             <input type="date" name="deadline">
+        </div>
+
+        <h2>Welcome / Gift Bags</h2>
+        <p class="form-help">Track welcome bags or gifts placed in guest hotel rooms.</p>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="welcome_bag">
+                Providing Welcome Bags
+            </label>
+        </div>
+        <div class="form-group">
+            <label>Welcome Bag Contents</label>
+            <textarea name="welcome_bag_items" rows="3" placeholder="e.g., Water bottles, snacks, local map, itinerary card, hangover kit"></textarea>
         </div>
         <div class="form-group">
             <label>Notes</label>

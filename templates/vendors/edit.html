@@ -64,6 +64,27 @@
             <label>Contract Date</label>
             <input type="date" name="contract_date" value="{{ vendor.contract_date.strftime('%Y-%m-%d') if vendor.contract_date else '' }}">
         </div>
+        <div class="form-group">
+            <label>Cancellation Policy</label>
+            <textarea name="cancellation_policy" rows="3" placeholder="e.g., Full refund 90+ days, 50% refund 30-89 days, no refund under 30 days">{{ vendor.cancellation_policy or '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label>Contract Notes</label>
+            <textarea name="contract_notes" rows="3" placeholder="Key contract terms, what's included, exclusions, overtime rates...">{{ vendor.contract_notes or '' }}</textarea>
+        </div>
+
+        <h2>Backup Contact</h2>
+        <p class="form-help">In case the primary contact is unavailable on the wedding day.</p>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Backup Contact Name</label>
+                <input type="text" name="backup_contact" value="{{ vendor.backup_contact or '' }}" placeholder="Alternate contact person">
+            </div>
+            <div class="form-group">
+                <label>Backup Contact Phone</label>
+                <input type="text" name="backup_phone" value="{{ vendor.backup_phone or '' }}" placeholder="Phone number">
+            </div>
+        </div>
 
         <h2>Financial</h2>
         <div class="form-row">
@@ -107,6 +128,35 @@
         <div class="form-group">
             <label>Service Location</label>
             <input type="text" name="service_location" value="{{ vendor.service_location or '' }}" placeholder="Where the service will be provided">
+        </div>
+
+        <h2>Day-Of Details</h2>
+        <div class="form-group">
+            <label>Setup Instructions</label>
+            <textarea name="setup_instructions" rows="3" placeholder="Where to set up, access details, timing...">{{ vendor.setup_instructions or '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label>Vendor Meals Needed</label>
+            <input type="number" name="meals_needed" value="{{ vendor.meals_needed or '' }}" min="0" placeholder="Number of vendor meals required">
+        </div>
+
+        <h2>Rating & Review</h2>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Rating (1-5)</label>
+                <select name="rating">
+                    <option value="">-- Select --</option>
+                    <option value="1" {% if vendor.rating == 1 %}selected{% endif %}>1 - Poor</option>
+                    <option value="2" {% if vendor.rating == 2 %}selected{% endif %}>2 - Fair</option>
+                    <option value="3" {% if vendor.rating == 3 %}selected{% endif %}>3 - Good</option>
+                    <option value="4" {% if vendor.rating == 4 %}selected{% endif %}>4 - Very Good</option>
+                    <option value="5" {% if vendor.rating == 5 %}selected{% endif %}>5 - Excellent</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Review Notes</label>
+            <textarea name="review_notes" rows="3" placeholder="Your experience with this vendor...">{{ vendor.review_notes or '' }}</textarea>
         </div>
 
         <h2>Notes</h2>

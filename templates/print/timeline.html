@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day-Of Timeline - {{ wedding.couple_names }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            color: #333;
+            line-height: 1.5;
+            padding: 20px 40px;
+        }
+
+        .print-header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .print-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .print-header .wedding-date {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .print-btn {
+            display: inline-block;
+            padding: 8px 20px;
+            background: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        .print-btn:hover {
+            background: #555;
+        }
+
+        .timeline-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .timeline-table th,
+        .timeline-table td {
+            border: 1px solid #ccc;
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 12px;
+        }
+
+        .timeline-table th {
+            background: #f0f0f0;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .timeline-table tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        .timeline-time {
+            white-space: nowrap;
+            font-weight: bold;
+        }
+
+        .timeline-title {
+            font-weight: bold;
+        }
+
+        .category-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #888;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .participants {
+            font-size: 11px;
+            color: #555;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        @media print {
+            .print-btn {
+                display: none;
+            }
+
+            body {
+                padding: 0;
+                font-size: 11px;
+            }
+
+            .timeline-table th,
+            .timeline-table td {
+                font-size: 11px;
+                padding: 5px 8px;
+            }
+
+            .print-header h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">Print</button>
+
+    <div class="print-header">
+        <h1>Day-Of Timeline - {{ wedding.couple_names }}</h1>
+        {% if wedding.date %}
+        <div class="wedding-date">{{ wedding.date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+    </div>
+
+    {% if items %}
+    <table class="timeline-table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Location</th>
+                <th>Description</th>
+                <th>Who</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="timeline-time">
+                    {% if item.time %}
+                    {{ item.time.strftime('%I:%M %p') }}
+                    {% else %}
+                    --
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="timeline-title">{{ item.title }}</span>
+                    {% if item.category %}
+                    <span class="category-label">{{ item.category|replace('_', ' ') }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.location or '' }}</td>
+                <td>{{ item.description or '' }}</td>
+                <td>
+                    {% if item.who %}
+                    {{ item.who }}
+                    {% endif %}
+                    {% if item.assigned_participants %}
+                    <div class="participants">
+                        {% for p in item.assigned_participants %}
+                        {{ p.name }}{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No timeline items to display.</p>
+    {% endif %}
+
+    <div class="footer-note">
+        Printed from Wedding Organizer &mdash; {{ wedding.couple_names }}
+    </div>
+</body>
+</html>

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Contingency Plans - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Contingency Plans</h1>
+    <a href="{{ url_for('contingency_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Plan</a>
+</div>
+
+<p class="form-help">Plan B for weather, vendor no-shows, venue issues, and other emergencies. Having backup plans ensures your day goes smoothly no matter what.</p>
+
+{% if plans %}
+<div class="dashboard-grid">
+    {% for plan in plans %}
+    <div class="dashboard-card">
+        <span class="category-badge">{{ plan.category|replace('_', ' ')|title }}</span>
+        <h3>{{ plan.title }}</h3>
+        {% if plan.description %}
+        <p>{{ plan.description }}</p>
+        {% endif %}
+        <div class="info-grid">
+            {% if plan.contact_name %}
+            <div class="info-item">
+                <strong>Contact:</strong> {{ plan.contact_name }}
+            </div>
+            {% endif %}
+            {% if plan.contact_phone %}
+            <div class="info-item">
+                <strong>Phone:</strong> {{ plan.contact_phone }}
+            </div>
+            {% endif %}
+            {% if plan.notes %}
+            <div class="info-item">
+                <strong>Notes:</strong> {{ plan.notes }}
+            </div>
+            {% endif %}
+        </div>
+        <div class="form-actions">
+            <form method="POST" action="{{ url_for('contingency_delete', wedding_id=wedding.id, plan_id=plan.id) }}" class="form-inline">
+                <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this plan?')">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Contingency Plans Yet</h2>
+    <p>Add backup plans for weather, vendor emergencies, transportation issues, and more.</p>
+    <a href="{{ url_for('contingency_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Plan</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

@@ -63,6 +63,21 @@
 </div>
 
 <div class="module-section">
+    <h2>Cocktail Hour</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Cocktail Menu:</strong> {{ reception.cocktail_menu or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Entertainment:</strong> {{ reception.cocktail_entertainment or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Notes:</strong> {{ reception.cocktail_hour_notes or 'Not set' }}
+        </div>
+    </div>
+</div>
+
+<div class="module-section">
     <h2>Entertainment</h2>
     <div class="info-grid">
         <div class="info-item">
@@ -70,6 +85,24 @@
         </div>
         <div class="info-item">
             <strong>First Dance Song:</strong> {{ reception.first_dance_song or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Dance Floor Size:</strong> {{ reception.dance_floor_size or 'Not set' }}
+        </div>
+    </div>
+</div>
+
+<div class="module-section">
+    <h2>Kids & Family</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>Kids Activities:</strong> {{ reception.kids_activities or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Sitter Name:</strong> {{ reception.kids_sitter_name or 'Not set' }}
+        </div>
+        <div class="info-item">
+            <strong>Sitter Phone:</strong> {{ reception.kids_sitter_phone or 'Not set' }}
         </div>
     </div>
 </div>

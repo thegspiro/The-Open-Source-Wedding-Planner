@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Processional Order - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Processional Order</h1>
+    <a href="{{ url_for('bridal_party_view', wedding_id=wedding.id) }}" class="btn-secondary">Back to Wedding Party</a>
+</div>
+
+{% if members %}
+<div class="module-section">
+    <h2>Wedding Party Lineup</h2>
+    <div class="processional-list">
+        {% for member in members|sort(attribute='processional_order') %}
+        <div class="processional-entry">
+            <div class="processional-number">{{ member.processional_order }}</div>
+            <div class="processional-info">
+                <h3>{{ member.name }}</h3>
+                {% if member.role %}
+                <span class="role-badge">{{ member.role }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Processional Members</h2>
+    <p>Add members to the wedding party and set their processional order.</p>
+    <a href="{{ url_for('bridal_party_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Member</a>
+</div>
+{% endif %}
+
+{% if people %}
+<div class="module-section">
+    <h2>The Couple</h2>
+    <div class="processional-finale">
+        {% for person in people %}
+        <div class="processional-entry finale-entry">
+            <div class="processional-star">&#9734;</div>
+            <div class="processional-info">
+                <h3>{{ person.name }}</h3>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+
+<style>
+.processional-list {
+    max-width: 600px;
+}
+.processional-entry {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.5rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border-left: 4px solid #e91e63;
+}
+.processional-number {
+    width: 40px;
+    height: 40px;
+    background: #e91e63;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.processional-info h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #333;
+}
+.role-badge {
+    background: #fff3f8;
+    color: #e91e63;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    display: inline-block;
+    margin-top: 0.25rem;
+}
+.processional-finale {
+    max-width: 600px;
+}
+.finale-entry {
+    border-left-color: #ffd700;
+    background: #fffdf5;
+}
+.processional-star {
+    width: 40px;
+    height: 40px;
+    background: #ffd700;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+</style>
+{% endblock %}

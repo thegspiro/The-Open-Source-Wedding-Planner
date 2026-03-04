@@ -218,6 +218,124 @@
 </div>
 {% endif %}
 
+<div class="module-section">
+    <div class="section-header">
+        <h2>Category Budget Limits</h2>
+    </div>
+    <p class="form-help">Set spending caps per category to keep individual areas in check.</p>
+
+    {% if limit_warnings %}
+    <div class="budget-warnings">
+        {% for w in limit_warnings %}
+        <div class="budget-warning">
+            <strong>{{ w.category|replace('_', ' ')|title }}</strong> is over budget by ${{ "{:,.0f}".format(w.over) }}
+            (spent ${{ "{:,.0f}".format(w.spent) }} of ${{ "{:,.0f}".format(w.limit) }} limit)
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if category_limits %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>Limit</th>
+                <th>Spent</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cl in category_limits %}
+            {% set spent = category_spending.get(cl.category, 0) %}
+            <tr>
+                <td><span class="category-badge">{{ cl.category|replace('_', ' ')|title }}</span></td>
+                <td>${{ "{:,.0f}".format(cl.limit_amount) }}</td>
+                <td>${{ "{:,.0f}".format(spent) }}</td>
+                <td>
+                    {% if spent > cl.limit_amount %}
+                    <span class="payment-status status-unpaid">Over by ${{ "{:,.0f}".format(spent - cl.limit_amount) }}</span>
+                    {% elif spent > cl.limit_amount * 0.8 %}
+                    <span class="payment-status status-deposit">{{ ((spent / cl.limit_amount) * 100)|int }}% used</span>
+                    {% else %}
+                    <span class="payment-status status-paid">{{ ((spent / cl.limit_amount) * 100)|int if cl.limit_amount else 0 }}% used</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('budget_category_limit_delete', wedding_id=wedding.id, limit_id=cl.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-small" onclick="return confirm('Remove this limit?')">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('budget_category_limit_add', wedding_id=wedding.id) }}" class="form-inline" style="margin-top: 1rem;">
+        <div class="form-row">
+            <div class="form-group">
+                <select name="category" required>
+                    <option value="">-- Category --</option>
+                    <option value="venue">Venue</option>
+                    <option value="catering">Catering</option>
+                    <option value="photography">Photography</option>
+                    <option value="videography">Videography</option>
+                    <option value="flowers">Flowers & Decor</option>
+                    <option value="music">Music & Entertainment</option>
+                    <option value="attire">Attire</option>
+                    <option value="hair_makeup">Hair & Makeup</option>
+                    <option value="stationery">Stationery</option>
+                    <option value="transportation">Transportation</option>
+                    <option value="accommodations">Accommodations</option>
+                    <option value="gifts">Gifts</option>
+                    <option value="favors">Favors</option>
+                    <option value="rehearsal">Rehearsal Dinner</option>
+                    <option value="honeymoon">Honeymoon</option>
+                    <option value="tips">Tips & Gratuities</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <input type="number" name="limit_amount" step="1" min="0" placeholder="Limit ($)" required>
+            </div>
+            <button type="submit" class="btn-primary btn-small">Set Limit</button>
+        </div>
+    </form>
+</div>
+
+<div class="module-section">
+    <div class="section-header">
+        <h2>Budget Templates</h2>
+    </div>
+    <p class="form-help">Apply a pre-built budget template to auto-create expense categories. This will add items that don't already exist.</p>
+    <div class="form-row">
+        <form method="POST" action="{{ url_for('budget_apply_template', wedding_id=wedding.id) }}" style="display:inline;">
+            <input type="hidden" name="template_name" value="small">
+            <button type="submit" class="btn-secondary btn-small">Small Wedding (~50 guests)</button>
+        </form>
+        <form method="POST" action="{{ url_for('budget_apply_template', wedding_id=wedding.id) }}" style="display:inline;">
+            <input type="hidden" name="template_name" value="medium">
+            <button type="submit" class="btn-secondary btn-small">Medium Wedding (~100 guests)</button>
+        </form>
+        <form method="POST" action="{{ url_for('budget_apply_template', wedding_id=wedding.id) }}" style="display:inline;">
+            <input type="hidden" name="template_name" value="large">
+            <button type="submit" class="btn-secondary btn-small">Large Wedding (~200 guests)</button>
+        </form>
+    </div>
+</div>
+
+<div class="module-section">
+    <div class="section-header">
+        <h2>Quick Links</h2>
+    </div>
+    <div class="action-buttons">
+        <a href="{{ url_for('budget_payment_schedule', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Payment Schedule</a>
+        <a href="{{ url_for('export_budget_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
+    </div>
+</div>
+
 <div class="page-actions">
     <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
 </div>

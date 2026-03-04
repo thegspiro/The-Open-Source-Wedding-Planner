@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Contacts - {{ wedding.couple_names }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            color: #333;
+            line-height: 1.5;
+            padding: 20px 40px;
+        }
+
+        .print-header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .print-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .print-header .wedding-date {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .print-btn {
+            display: inline-block;
+            padding: 8px 20px;
+            background: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        .print-btn:hover {
+            background: #555;
+        }
+
+        .vendor-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .vendor-table th,
+        .vendor-table td {
+            border: 1px solid #ccc;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 11px;
+        }
+
+        .vendor-table th {
+            background: #f0f0f0;
+            font-weight: bold;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+
+        .vendor-table tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        @media print {
+            .print-btn {
+                display: none;
+            }
+
+            body {
+                padding: 0;
+                font-size: 10px;
+            }
+
+            .vendor-table th,
+            .vendor-table td {
+                font-size: 10px;
+                padding: 4px 6px;
+            }
+
+            .print-header h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">Print</button>
+
+    <div class="print-header">
+        <h1>Vendor Contacts - {{ wedding.couple_names }}</h1>
+        {% if wedding.date %}
+        <div class="wedding-date">{{ wedding.date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+    </div>
+
+    {% if vendors %}
+    <table class="vendor-table">
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>Business Name</th>
+                <th>Contact Name</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Service Date</th>
+                <th>Service Time</th>
+                <th>Backup Contact</th>
+                <th>Backup Phone</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vendor in vendors %}
+            <tr>
+                <td>{{ vendor.category or '' }}</td>
+                <td>{{ vendor.business_name or '' }}</td>
+                <td>{{ vendor.contact_name or '' }}</td>
+                <td>{{ vendor.phone or '' }}</td>
+                <td>{{ vendor.email or '' }}</td>
+                <td>{{ vendor.service_date.strftime('%m/%d/%Y') if vendor.service_date else '' }}</td>
+                <td>{{ vendor.service_time.strftime('%I:%M %p') if vendor.service_time else '' }}</td>
+                <td>{{ vendor.backup_contact or '' }}</td>
+                <td>{{ vendor.backup_phone or '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No vendors to display.</p>
+    {% endif %}
+
+    <div class="footer-note">
+        Printed from Wedding Organizer &mdash; {{ wedding.couple_names }}
+    </div>
+</body>
+</html>

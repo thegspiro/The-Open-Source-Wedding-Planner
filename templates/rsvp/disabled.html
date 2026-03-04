@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSVP - {{ wedding.couple_names }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);">
+    <main class="container" style="max-width: 600px; margin: 2rem auto; padding: 2rem;">
+        <div class="form-container" style="text-align: center;">
+            <h1 style="color: #e91e63;">{{ wedding.couple_names }}</h1>
+            <p style="color: #666; font-size: 1.1rem; margin: 2rem 0;">
+                The RSVP portal is currently not accepting responses. Please contact the couple directly.
+            </p>
+        </div>
+    </main>
+</body>
+</html>
