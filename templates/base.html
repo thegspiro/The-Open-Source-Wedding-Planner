@@ -76,5 +76,39 @@
             <p>Wedding Organizer &middot; Making your special day perfect</p>
         </div>
     </footer>
+
+    <!-- CSRF token auto-injection: adds a hidden CSRF field to every form on the page -->
+    <script>
+    (function() {
+        var token = "{{ csrf_token() }}";
+        document.querySelectorAll('form[method="post"], form[method="POST"]').forEach(function(form) {
+            if (!form.querySelector('input[name="_csrf_token"]')) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = '_csrf_token';
+                input.value = token;
+                form.appendChild(input);
+            }
+        });
+        // Also handle forms without explicit method (defaults to GET, skip those)
+        // and forms added dynamically
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.tagName === 'FORM' && (node.method === 'post')) {
+                        if (!node.querySelector('input[name="_csrf_token"]')) {
+                            var input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = '_csrf_token';
+                            input.value = token;
+                            node.appendChild(input);
+                        }
+                    }
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+    </script>
 </body>
 </html>
