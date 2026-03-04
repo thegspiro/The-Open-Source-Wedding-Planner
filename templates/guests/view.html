@@ -19,64 +19,71 @@
     <div class="stat-box"><div class="stat-num">{{ stats.rsvp_pending }}</div><div>Pending</div></div>
 </div>
 
-<!-- RSVP Portal Section -->
-<div class="module-section" style="margin-bottom: 1.5rem;">
-    <div class="section-header">
-        <h2>Online RSVP Portal</h2>
-        <form method="POST" action="{{ url_for('rsvp_enable', wedding_id=wedding.id) }}">
-            {% if not wedding.rsvp_enabled %}
-            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                <input type="date" name="rsvp_deadline" class="form-group" style="margin: 0; padding: 0.4rem;">
-                <input type="text" name="rsvp_message" placeholder="Custom message for guests" style="padding: 0.4rem; border: 1px solid #ddd; border-radius: 4px;">
-                <button type="submit" class="btn-success btn-small">Enable RSVP Portal</button>
-            </div>
-            {% else %}
-            <button type="submit" class="btn-danger btn-small">Disable RSVP Portal</button>
-            {% endif %}
-        </form>
-    </div>
+<!-- RSVP Portal Card -->
+<div class="portal-card">
+    <h3>Online RSVP Portal</h3>
     {% if wedding.rsvp_enabled and wedding.rsvp_token %}
-    <p>Share this link with your guests: <strong style="color: #e91e63;">{{ request.host_url }}rsvp/{{ wedding.rsvp_token }}</strong></p>
-    {% if wedding.rsvp_deadline %}
-    <p style="color: #666;">RSVP Deadline: {{ wedding.rsvp_deadline.strftime('%B %d, %Y') }}</p>
-    {% endif %}
+        <p style="margin-bottom: 0.5rem; color: var(--color-text-light); font-size: 0.9rem;">Share this link with your guests so they can RSVP online:</p>
+        <div class="portal-link">{{ request.host_url }}rsvp/{{ wedding.rsvp_token }}</div>
+        {% if wedding.rsvp_deadline %}
+        <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.5rem;">Deadline: {{ wedding.rsvp_deadline.strftime('%B %d, %Y') }}</p>
+        {% endif %}
+        <form method="POST" action="{{ url_for('rsvp_enable', wedding_id=wedding.id) }}" style="margin-top: 0.75rem;">
+            <button type="submit" class="btn-danger btn-small">Disable Portal</button>
+        </form>
     {% else %}
-    <p style="color: #999;">Enable the RSVP portal to let guests respond online.</p>
+        <p style="color: var(--color-text-light); font-size: 0.9rem; margin-bottom: 0.75rem;">Let guests respond to your invitation online. Enable the portal and share the link.</p>
+        <form method="POST" action="{{ url_for('rsvp_enable', wedding_id=wedding.id) }}" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <input type="date" name="rsvp_deadline" style="padding: 0.45rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.85rem;">
+            <input type="text" name="rsvp_message" placeholder="Custom message for guests" style="padding: 0.45rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.85rem; flex: 1; min-width: 180px;">
+            <button type="submit" class="btn-success btn-small">Enable RSVP Portal</button>
+        </form>
     {% endif %}
 </div>
 
-<table class="data-table">
-    <thead>
-        <tr>
-            <th>Name</th><th>Email</th><th>RSVP</th><th>Meal</th>
-            <th>Side</th><th>Dietary</th><th>Household</th><th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
+<!-- Filter Tabs -->
+{% set filter = request.args.get('rsvp', 'all') %}
+<div class="tab-links">
+    <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}" class="tab-link {% if filter == 'all' %}active{% endif %}">All <span class="tab-count" style="background: var(--color-border-light); padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.75rem; margin-left: 0.2rem;">{{ stats.total }}</span></a>
+    <a href="{{ url_for('guests_view', wedding_id=wedding.id, rsvp='accepted') }}" class="tab-link {% if filter == 'accepted' %}active{% endif %}">Accepted <span class="tab-count" style="background: var(--color-success-bg); color: var(--color-success); padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.75rem; margin-left: 0.2rem;">{{ stats.rsvp_yes }}</span></a>
+    <a href="{{ url_for('guests_view', wedding_id=wedding.id, rsvp='declined') }}" class="tab-link {% if filter == 'declined' %}active{% endif %}">Declined <span class="tab-count" style="background: var(--color-danger-bg); color: var(--color-danger); padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.75rem; margin-left: 0.2rem;">{{ stats.rsvp_no }}</span></a>
+    <a href="{{ url_for('guests_view', wedding_id=wedding.id, rsvp='pending') }}" class="tab-link {% if filter == 'pending' %}active{% endif %}">Pending <span class="tab-count" style="background: var(--color-warning-bg); color: var(--color-warning); padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.75rem; margin-left: 0.2rem;">{{ stats.rsvp_pending }}</span></a>
+</div>
+
+{% if guests %}
+<!-- Guest Cards -->
+<div class="guest-list-cards">
     {% for guest in guests %}
-    <tr>
-        <td>
+    {% set rsvp = guest.rsvp_status or 'pending' %}
+    {% if filter == 'all' or (filter == 'accepted' and rsvp == 'accepted') or (filter == 'declined' and rsvp == 'declined') or (filter == 'pending' and rsvp == 'pending') %}
+    <div class="guest-card">
+        <div class="guest-name">
             {{ guest.name }}
-            {% if guest.is_plus_one %}<span class="category-badge">+1 of {{ guest.plus_one_of }}</span>{% endif %}
-        </td>
-        <td>{{ guest.email or '-' }}</td>
-        <td><span class="rsvp-{{ guest.rsvp_status or 'pending' }}">{{ guest.rsvp_status or 'pending' }}</span></td>
-        <td>{{ guest.meal_choice or '-' }}</td>
-        <td>{{ guest.side or '-' }}</td>
-        <td>{{ guest.dietary_restrictions or '-' }}</td>
-        <td>{{ guest.household_group or '-' }}</td>
-        <td>
+            {% if guest.is_plus_one %}<span class="category-badge" style="font-size: 0.75rem;">+1 of {{ guest.plus_one_of }}</span>{% endif %}
+            {% if guest.email %}<span class="guest-email">{{ guest.email }}</span>{% endif %}
+        </div>
+        <div>
+            <span class="rsvp-chip {{ rsvp }}">{{ rsvp }}</span>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--color-text-light);">
+            {{ guest.meal_choice or '—' }}
+        </div>
+        <div style="font-size: 0.85rem; color: var(--color-text-muted);">
+            {% if guest.side %}{{ guest.side }}{% endif %}
+            {% if guest.household_group %} · {{ guest.household_group }}{% endif %}
+            {% if guest.dietary_restrictions %}<br><span style="color: var(--color-warning);">{{ guest.dietary_restrictions }}</span>{% endif %}
+        </div>
+        <div style="display: flex; gap: 0.3rem;">
             <a href="{{ url_for('guest_edit', wedding_id=wedding.id, guest_id=guest.id) }}" class="btn-secondary btn-small">Edit</a>
             <form method="POST" action="{{ url_for('guest_delete', wedding_id=wedding.id, guest_id=guest.id) }}" style="display:inline;">
                 <button type="submit" class="btn-danger btn-small" onclick="return confirm('Remove this guest?')">Delete</button>
             </form>
-        </td>
-    </tr>
+        </div>
+    </div>
+    {% endif %}
     {% endfor %}
-    </tbody>
-</table>
-
-{% if not guests %}
+</div>
+{% else %}
 <div class="empty-state">
     <h2>No guests yet</h2>
     <p>Start building your guest list!</p>

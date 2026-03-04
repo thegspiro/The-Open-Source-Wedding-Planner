@@ -5,136 +5,133 @@
 {% block content %}
 <div class="page-header">
     <h1>Reception Details</h1>
-    <a href="{{ url_for('reception_edit', wedding_id=wedding.id) }}" class="btn-primary">Edit Details</a>
+    <div class="header-actions">
+        <a href="{{ url_for('reception_edit', wedding_id=wedding.id) }}" class="btn-primary">Edit Details</a>
+        <a href="{{ url_for('reception_calculators', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Calculators</a>
+    </div>
 </div>
 
-<div class="module-section">
-    <h2>Venue</h2>
-    <div class="info-grid">
-        <div class="info-item">
-            <strong>Venue Name:</strong> {{ reception.venue_name or 'Not set' }}
+<!-- Tabs -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(event, 'venue-tab')">Venue & Timing</button>
+    <button class="tab-btn" onclick="switchTab(event, 'catering-tab')">Catering & Menu</button>
+    <button class="tab-btn" onclick="switchTab(event, 'entertainment-tab')">Entertainment</button>
+    <button class="tab-btn" onclick="switchTab(event, 'timeline-tab')">Timeline</button>
+    <button class="tab-btn" onclick="switchTab(event, 'seating-tab')">Seating</button>
+</div>
+
+<!-- Tab: Venue & Timing -->
+<div class="tab-panel active" id="venue-tab">
+    <div class="info-cards-grid">
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">📍</span>
+                <h3>Venue</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value {% if not reception.venue_name %}not-set{% endif %}">{{ reception.venue_name or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Address</span><span class="detail-value {% if not reception.venue_address %}not-set{% endif %}">{{ reception.venue_address or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Contact</span><span class="detail-value {% if not reception.venue_contact %}not-set{% endif %}">{{ reception.venue_contact or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value {% if not reception.venue_phone %}not-set{% endif %}">{{ reception.venue_phone or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Capacity</span><span class="detail-value {% if not reception.venue_capacity %}not-set{% endif %}">{{ reception.venue_capacity or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Expected Guests</span><span class="detail-value {% if not reception.expected_guest_count %}not-set{% endif %}">{{ reception.expected_guest_count or 'Not set' }}</span></div>
         </div>
-        <div class="info-item">
-            <strong>Address:</strong> {{ reception.venue_address or 'Not set' }}
+
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">🕐</span>
+                <h3>Timing</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Date</span><span class="detail-value {% if not reception.reception_date %}not-set{% endif %}">{{ reception.reception_date.strftime('%B %d, %Y') if reception.reception_date else 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Start Time</span><span class="detail-value {% if not reception.start_time %}not-set{% endif %}">{{ reception.start_time.strftime('%I:%M %p') if reception.start_time else 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">End Time</span><span class="detail-value {% if not reception.end_time %}not-set{% endif %}">{{ reception.end_time.strftime('%I:%M %p') if reception.end_time else 'Not set' }}</span></div>
         </div>
-        <div class="info-item">
-            <strong>Contact:</strong> {{ reception.venue_contact or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Phone:</strong> {{ reception.venue_phone or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Capacity:</strong> {{ reception.venue_capacity or 'Not set' }}
+
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">🎨</span>
+                <h3>Decor</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Theme</span><span class="detail-value {% if not reception.theme %}not-set{% endif %}">{{ reception.theme or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Centerpiece</span><span class="detail-value {% if not reception.centerpiece_description %}not-set{% endif %}">{{ reception.centerpiece_description or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Lighting</span><span class="detail-value {% if not reception.lighting_notes %}not-set{% endif %}">{{ reception.lighting_notes or 'Not set' }}</span></div>
         </div>
     </div>
 </div>
 
-<div class="module-section">
-    <h2>Timing</h2>
-    <div class="info-grid">
-        <div class="info-item">
-            <strong>Start Time:</strong> {{ reception.start_time.strftime('%I:%M %p') if reception.start_time else 'Not set' }}
+<!-- Tab: Catering & Menu -->
+<div class="tab-panel" id="catering-tab">
+    <div class="info-cards-grid" style="margin-bottom: 1.5rem;">
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">🍽️</span>
+                <h3>Catering</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Style</span><span class="detail-value {% if not reception.catering_style %}not-set{% endif %}">{{ reception.catering_style or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Bar Service</span><span class="detail-value {% if not reception.bar_service %}not-set{% endif %}">{{ reception.bar_service or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Cake Flavor</span><span class="detail-value {% if not reception.cake_flavor %}not-set{% endif %}">{{ reception.cake_flavor or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Cake Design</span><span class="detail-value {% if not reception.cake_design %}not-set{% endif %}">{{ reception.cake_design or 'Not set' }}</span></div>
         </div>
-        <div class="info-item">
-            <strong>End Time:</strong> {{ reception.end_time.strftime('%I:%M %p') if reception.end_time else 'Not set' }}
+
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">🍸</span>
+                <h3>Cocktail Hour</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Menu</span><span class="detail-value {% if not reception.cocktail_menu %}not-set{% endif %}">{{ reception.cocktail_menu or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Entertainment</span><span class="detail-value {% if not reception.cocktail_entertainment %}not-set{% endif %}">{{ reception.cocktail_entertainment or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Notes</span><span class="detail-value {% if not reception.cocktail_hour_notes %}not-set{% endif %}">{{ reception.cocktail_hour_notes or 'Not set' }}</span></div>
         </div>
-        <div class="info-item">
-            <strong>Date:</strong> {{ reception.reception_date.strftime('%B %d, %Y') if reception.reception_date else 'Not set' }}
+
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">👶</span>
+                <h3>Kids & Family</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Activities</span><span class="detail-value {% if not reception.kids_activities %}not-set{% endif %}">{{ reception.kids_activities or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Sitter</span><span class="detail-value {% if not reception.kids_sitter_name %}not-set{% endif %}">{{ reception.kids_sitter_name or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Sitter Phone</span><span class="detail-value {% if not reception.kids_sitter_phone %}not-set{% endif %}">{{ reception.kids_sitter_phone or 'Not set' }}</span></div>
+        </div>
+    </div>
+
+    {% if menu_items %}
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin-bottom: 0.75rem;">Menu Items</h3>
+    <table class="data-table">
+        <thead>
+            <tr><th>Course</th><th>Name</th><th>Description</th><th>Dietary Tags</th></tr>
+        </thead>
+        <tbody>
+            {% for item in menu_items %}
+            <tr>
+                <td>{{ item.course or '-' }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.description or '-' }}</td>
+                <td>{{ item.dietary_tags or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-message">No menu items yet. Edit reception details to add menu items.</p>
+    {% endif %}
+</div>
+
+<!-- Tab: Entertainment -->
+<div class="tab-panel" id="entertainment-tab">
+    <div class="info-cards-grid">
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">🎵</span>
+                <h3>Music & Dancing</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Music Type</span><span class="detail-value {% if not reception.music_type %}not-set{% endif %}">{{ reception.music_type or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">First Dance Song</span><span class="detail-value {% if not reception.first_dance_song %}not-set{% endif %}">{{ reception.first_dance_song or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Dance Floor Size</span><span class="detail-value {% if not reception.dance_floor_size %}not-set{% endif %}">{{ reception.dance_floor_size or 'Not set' }}</span></div>
         </div>
     </div>
 </div>
 
-<div class="module-section">
-    <h2>Catering</h2>
-    <div class="info-grid">
-        <div class="info-item">
-            <strong>Catering Style:</strong> {{ reception.catering_style or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Bar Service:</strong> {{ reception.bar_service or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Cake Flavor:</strong> {{ reception.cake_flavor or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Cake Design:</strong> {{ reception.cake_design or 'Not set' }}
-        </div>
-    </div>
-</div>
-
-<div class="module-section">
-    <h2>Cocktail Hour</h2>
-    <div class="info-grid">
-        <div class="info-item">
-            <strong>Cocktail Menu:</strong> {{ reception.cocktail_menu or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Entertainment:</strong> {{ reception.cocktail_entertainment or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Notes:</strong> {{ reception.cocktail_hour_notes or 'Not set' }}
-        </div>
-    </div>
-</div>
-
-<div class="module-section">
-    <h2>Entertainment</h2>
-    <div class="info-grid">
-        <div class="info-item">
-            <strong>Music Type:</strong> {{ reception.music_type or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>First Dance Song:</strong> {{ reception.first_dance_song or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Dance Floor Size:</strong> {{ reception.dance_floor_size or 'Not set' }}
-        </div>
-    </div>
-</div>
-
-<div class="module-section">
-    <h2>Kids & Family</h2>
-    <div class="info-grid">
-        <div class="info-item">
-            <strong>Kids Activities:</strong> {{ reception.kids_activities or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Sitter Name:</strong> {{ reception.kids_sitter_name or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Sitter Phone:</strong> {{ reception.kids_sitter_phone or 'Not set' }}
-        </div>
-    </div>
-</div>
-
-<div class="module-section">
-    <h2>Decor</h2>
-    <div class="info-grid">
-        <div class="info-item">
-            <strong>Theme:</strong> {{ reception.theme or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Centerpiece:</strong> {{ reception.centerpiece_description or 'Not set' }}
-        </div>
-        <div class="info-item">
-            <strong>Lighting:</strong> {{ reception.lighting_notes or 'Not set' }}
-        </div>
-    </div>
-</div>
-
-<div class="module-section">
-    <h2>Guest Count</h2>
-    <div class="info-grid">
-        <div class="info-item">
-            <strong>Expected Guests:</strong> {{ reception.expected_guest_count or 'Not set' }}
-        </div>
-    </div>
-</div>
-
-<div class="module-section">
-    <div class="section-header">
-        <h2>Reception Timeline</h2>
-    </div>
+<!-- Tab: Timeline -->
+<div class="tab-panel" id="timeline-tab">
     {% if timeline_items %}
     <div class="timeline-list">
         {% for item in timeline_items %}
@@ -156,71 +153,47 @@
         {% endfor %}
     </div>
     {% else %}
-    <p class="empty-message">No timeline items yet.</p>
+    <p class="empty-message">No timeline items yet. Edit reception details to build your reception timeline.</p>
     {% endif %}
 </div>
 
-<div class="module-section">
-    <div class="section-header">
-        <h2>Menu Items</h2>
-    </div>
-    {% if menu_items %}
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Course</th>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Dietary Tags</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in menu_items %}
-            <tr>
-                <td>{{ item.course or '-' }}</td>
-                <td>{{ item.name }}</td>
-                <td>{{ item.description or '-' }}</td>
-                <td>{{ item.dietary_tags or '-' }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="empty-message">No menu items yet.</p>
-    {% endif %}
-</div>
-
-<div class="module-section">
-    <div class="section-header">
-        <h2>Seating Tables</h2>
-    </div>
+<!-- Tab: Seating -->
+<div class="tab-panel" id="seating-tab">
     {% if tables %}
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Table Number</th>
-                <th>Capacity</th>
-                <th>Shape</th>
-                <th>Assigned Guests</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for table in tables %}
-            <tr>
-                <td>{{ table.table_number }}</td>
-                <td>{{ table.capacity }}</td>
-                <td>{{ table.table_shape or '-' }}</td>
-                <td>{{ table.assigned_guests|length }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="info-cards-grid">
+        {% for table in tables %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <span class="card-icon-sm">🪑</span>
+                <h3>Table {{ table.table_number }}</h3>
+            </div>
+            <div class="detail-row"><span class="detail-label">Capacity</span><span class="detail-value">{{ table.capacity }}</span></div>
+            <div class="detail-row"><span class="detail-label">Shape</span><span class="detail-value {% if not table.table_shape %}not-set{% endif %}">{{ table.table_shape or 'Not set' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Assigned</span><span class="detail-value">{{ table.assigned_guests|length }} guests</span></div>
+        </div>
+        {% endfor %}
+    </div>
+    <div style="margin-top: 1rem;">
+        <a href="{{ url_for('seating_chart', wedding_id=wedding.id) }}" class="btn-primary btn-small">Open Seating Chart</a>
+    </div>
     {% else %}
-    <p class="empty-message">No seating tables configured yet.</p>
+    <div class="empty-state">
+        <p>No seating tables configured yet.</p>
+        <a href="{{ url_for('seating_chart', wedding_id=wedding.id) }}" class="btn-primary btn-small">Set Up Seating Chart</a>
+    </div>
     {% endif %}
 </div>
 
-<div class="page-actions">
+<div class="page-actions" style="margin-top: 2rem;">
     <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
 </div>
+
+<script>
+function switchTab(e, tabId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+}
+</script>
 {% endblock %}

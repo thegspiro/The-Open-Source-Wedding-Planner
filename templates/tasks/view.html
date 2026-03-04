@@ -15,11 +15,25 @@
     </div>
 </div>
 
-<p class="form-help">Wedding Date: {{ wedding.wedding_date.strftime('%B %d, %Y') }}. Use "Generate Milestones" to create a countdown checklist.</p>
+<!-- Progress -->
+{% set total_count = pending_tasks|length + completed_tasks|length %}
+{% if total_count > 0 %}
+<div style="margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; font-size: 0.88rem; color: var(--color-text-light); margin-bottom: 0.4rem;">
+        <span>{{ completed_tasks|length }} of {{ total_count }} tasks completed</span>
+        <span>{{ ((completed_tasks|length / total_count) * 100)|int }}%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: {{ ((completed_tasks|length / total_count) * 100)|int }}%"></div>
+    </div>
+</div>
+{% endif %}
 
-<!-- Filter by category -->
-<div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-    <a href="{{ url_for('tasks_view', wedding_id=wedding.id) }}" class="btn-small {% if not request.args.get('category') %}btn-primary{% else %}btn-secondary{% endif %}">All</a>
+<p class="form-help" style="margin-bottom: 1rem;">Wedding Date: {{ wedding.wedding_date.strftime('%B %d, %Y') }}</p>
+
+<!-- Category Filter Tabs -->
+<div class="tab-links">
+    <a href="{{ url_for('tasks_view', wedding_id=wedding.id) }}" class="tab-link {% if not request.args.get('category') %}active{% endif %}">All</a>
     {% set categories = [] %}
     {% for t in pending_tasks + completed_tasks %}
         {% if t.category and t.category not in categories %}
@@ -27,59 +41,77 @@
         {% endif %}
     {% endfor %}
     {% for cat in categories|sort %}
-    <a href="{{ url_for('tasks_view', wedding_id=wedding.id, category=cat) }}" class="btn-small {% if request.args.get('category') == cat %}btn-primary{% else %}btn-secondary{% endif %}">{{ cat }}</a>
+    <a href="{{ url_for('tasks_view', wedding_id=wedding.id, category=cat) }}" class="tab-link {% if request.args.get('category') == cat %}active{% endif %}">{{ cat }}</a>
     {% endfor %}
 </div>
 
-<h2>Pending Tasks ({{ pending_tasks|length }})</h2>
-{% if pending_tasks %}
-<div class="task-list">
-    {% for task in pending_tasks|sort(attribute='due_date') %}
-    {% if not request.args.get('category') or task.category == request.args.get('category') %}
-    <div class="task-card priority-{{ task.priority }}">
-        <div class="task-header">
-            <div>
+<!-- Pending Tasks -->
+<div class="tabs" style="margin-bottom: 0;">
+    <button class="tab-btn active" onclick="switchTab(event, 'pending-tab')" style="font-size: 0.95rem;">Pending <span class="tab-count">{{ pending_tasks|length }}</span></button>
+    <button class="tab-btn" onclick="switchTab(event, 'completed-tab')" style="font-size: 0.95rem;">Completed <span class="tab-count">{{ completed_tasks|length }}</span></button>
+</div>
+
+<div class="tab-panel active" id="pending-tab">
+    {% if pending_tasks %}
+    <div class="task-list">
+        {% for task in pending_tasks|sort(attribute='due_date') %}
+        {% if not request.args.get('category') or task.category == request.args.get('category') %}
+        <div class="task-card priority-{{ task.priority }}">
+            <div class="task-header">
+                <div>
+                    <h3>{{ task.title }}</h3>
+                    <span class="priority-badge priority-{{ task.priority }}">{{ task.priority }}</span>
+                    {% if task.is_milestone %}<span class="category-badge">Milestone{% if task.months_before is not none %} &middot; {{ task.months_before }}mo before{% endif %}</span>{% endif %}
+                    {% if task.assigned_to %}<span class="category-badge">{{ task.assigned_to }}</span>{% endif %}
+                </div>
+                <div style="display: flex; gap: 0.3rem;">
+                    <form method="POST" action="{{ url_for('task_toggle', task_id=task.id) }}" style="display:inline;"><button type="submit" class="btn-success">&#10003;</button></form>
+                    <a href="{{ url_for('task_edit', wedding_id=wedding.id, task_id=task.id) }}" class="btn-secondary btn-small">Edit</a>
+                    <form method="POST" action="{{ url_for('task_delete', wedding_id=wedding.id, task_id=task.id) }}" style="display:inline;">
+                        <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this task?')">X</button>
+                    </form>
+                </div>
+            </div>
+            {% if task.description %}<p>{{ task.description }}</p>{% endif %}
+            <div class="task-footer">
+                <span>Due: {{ task.due_date.strftime('%b %d, %Y') }}</span>
+                {% if task.category %}<span class="category-badge">{{ task.category }}</span>{% endif %}
+                {% if task.depends_on %}<span style="color: var(--color-text-muted);">Depends on: {{ task.depends_on.title }}</span>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% else %}<p class="empty-message">No pending tasks!</p>{% endif %}
+</div>
+
+<div class="tab-panel" id="completed-tab">
+    {% if completed_tasks %}
+    <div class="task-list">
+        {% for task in completed_tasks %}
+        <div class="task-card task-completed">
+            <div class="task-header">
                 <h3>{{ task.title }}</h3>
-                <span class="priority-badge priority-{{ task.priority }}">{{ task.priority }}</span>
-                {% if task.is_milestone %}<span class="category-badge">Milestone{% if task.months_before is not none %} &middot; {{ task.months_before }}mo before{% endif %}</span>{% endif %}
-                {% if task.assigned_to %}<span class="category-badge">{{ task.assigned_to }}</span>{% endif %}
-            </div>
-            <div style="display: flex; gap: 0.3rem;">
-                <form method="POST" action="{{ url_for('task_toggle', task_id=task.id) }}" style="display:inline;"><button type="submit" class="btn-success">&#10003;</button></form>
-                <a href="{{ url_for('task_edit', wedding_id=wedding.id, task_id=task.id) }}" class="btn-secondary btn-small">Edit</a>
-                <form method="POST" action="{{ url_for('task_delete', wedding_id=wedding.id, task_id=task.id) }}" style="display:inline;">
-                    <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this task?')">X</button>
-                </form>
+                <div style="display: flex; gap: 0.3rem;">
+                    <form method="POST" action="{{ url_for('task_toggle', task_id=task.id) }}" style="display:inline;"><button type="submit" class="btn-secondary btn-small">Reopen</button></form>
+                    <form method="POST" action="{{ url_for('task_delete', wedding_id=wedding.id, task_id=task.id) }}" style="display:inline;">
+                        <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this task?')">X</button>
+                    </form>
+                </div>
             </div>
         </div>
-        {% if task.description %}<p>{{ task.description }}</p>{% endif %}
-        <div class="task-footer">
-            <span>Due: {{ task.due_date.strftime('%b %d, %Y') }}</span>
-            {% if task.category %}<span class="category-badge">{{ task.category }}</span>{% endif %}
-            {% if task.depends_on %}<span style="color: #999;">Depends on: {{ task.depends_on.title }}</span>{% endif %}
-        </div>
+        {% endfor %}
     </div>
-    {% endif %}
-    {% endfor %}
+    {% else %}<p class="empty-message">No completed tasks yet.</p>{% endif %}
 </div>
-{% else %}<p class="empty-message">No pending tasks!</p>{% endif %}
 
-<h2 style="margin-top: 2rem;">Completed ({{ completed_tasks|length }})</h2>
-{% if completed_tasks %}
-<div class="task-list">
-    {% for task in completed_tasks %}
-    <div class="task-card task-completed">
-        <div class="task-header">
-            <h3>{{ task.title }}</h3>
-            <div style="display: flex; gap: 0.3rem;">
-                <form method="POST" action="{{ url_for('task_toggle', task_id=task.id) }}" style="display:inline;"><button type="submit" class="btn-secondary btn-small">Reopen</button></form>
-                <form method="POST" action="{{ url_for('task_delete', wedding_id=wedding.id, task_id=task.id) }}" style="display:inline;">
-                    <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this task?')">X</button>
-                </form>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
+<script>
+function switchTab(e, tabId) {
+    var container = e.currentTarget.closest('.tabs').parentElement;
+    container.querySelectorAll(':scope > .tabs .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    container.querySelectorAll(':scope > .tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    e.currentTarget.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+}
+</script>
 {% endblock %}
