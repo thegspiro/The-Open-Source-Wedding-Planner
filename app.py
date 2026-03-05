@@ -12,7 +12,7 @@ from models import (
     ContingencyPlan, TipItem, Gift,
     VendorNote, VendorQuote, SpeechToast, WeddingFavor,
     ActivityLog, Comment,
-    InventoryItem, InventoryBin,
+    InventoryItem, InventoryBin, WeddingElement,
     BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES,
     TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES,
     INVENTORY_CATEGORIES, INVENTORY_AREAS
@@ -1054,15 +1054,22 @@ def more_modules(wedding_id):
 @app.route('/traditional-elements')
 def traditional_elements():
     elements = TraditionalElement.query.order_by(TraditionalElement.category, TraditionalElement.name).all()
-    
+
     # Group by category
     grouped = {}
     for elem in elements:
         if elem.category not in grouped:
             grouped[elem.category] = []
         grouped[elem.category].append(elem)
-    
-    return render_template('traditional_elements.html', grouped_elements=grouped)
+
+    # If logged in, find their wedding for "Include" buttons
+    wedding = None
+    if 'user_id' in session:
+        access = WeddingAccess.query.filter_by(user_id=session['user_id']).first()
+        if access:
+            wedding = Wedding.query.get(access.wedding_id)
+
+    return render_template('traditional_elements.html', grouped_elements=grouped, wedding=wedding)
 
 # ============================================
 # PEOPLE ROUTES
@@ -1105,8 +1112,10 @@ def ceremony_view(wedding_id):
     ceremony = wedding.ceremony
     timeline_items = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony else []
     readings = sorted(ceremony.readings, key=lambda x: x.order or 999) if ceremony else []
+    included_elements = WeddingElement.query.filter_by(wedding_id=wedding_id).all()
     return render_template('ceremony/view.html', wedding=wedding, ceremony=ceremony,
-                         timeline_items=timeline_items, readings=readings)
+                         timeline_items=timeline_items, readings=readings,
+                         included_elements=included_elements)
 
 @app.route('/wedding/<int:wedding_id>/ceremony/edit', methods=['GET', 'POST'])
 @login_required
@@ -1155,6 +1164,104 @@ def ceremony_timeline_add(wedding_id):
     db.session.commit()
     flash('Timeline item added!', 'success')
     return redirect(url_for('ceremony_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/ceremony/ideas')
+@login_required
+def ceremony_ideas(wedding_id):
+    """Browse traditional elements and include them in the wedding"""
+    wedding = get_wedding_or_403(wedding_id)
+    from templates_data import CEREMONY_ELEMENT_TASKS
+    elements = TraditionalElement.query.order_by(TraditionalElement.category, TraditionalElement.name).all()
+    included_ids = {we.element_id for we in WeddingElement.query.filter_by(wedding_id=wedding_id).all()}
+    # Group by category
+    grouped = {}
+    for el in elements:
+        grouped.setdefault(el.category, []).append(el)
+    return render_template('ceremony/ideas.html', wedding=wedding, grouped=grouped,
+                         included_ids=included_ids, element_tasks=CEREMONY_ELEMENT_TASKS,
+                         onboarding=False)
+
+@app.route('/wedding/<int:wedding_id>/ceremony/ideas/<int:element_id>/include', methods=['POST'])
+@login_required
+def ceremony_idea_include(wedding_id, element_id):
+    """Include a traditional element and generate tasks"""
+    wedding = get_wedding_or_403(wedding_id)
+    from templates_data import CEREMONY_ELEMENT_TASKS
+
+    element = TraditionalElement.query.get_or_404(element_id)
+
+    # Check if already included
+    existing = WeddingElement.query.filter_by(wedding_id=wedding_id, element_id=element_id).first()
+    if existing:
+        flash(f'{element.name} is already included!', 'info')
+        return redirect(request.referrer or url_for('ceremony_ideas', wedding_id=wedding_id))
+
+    # Create the WeddingElement record
+    we = WeddingElement(wedding_id=wedding_id, element_id=element_id)
+    db.session.add(we)
+
+    # Generate tasks from template
+    tasks = CEREMONY_ELEMENT_TASKS.get(element.name, [])
+    today_dt = date.today()
+    count = 0
+    for title, description, category, priority, months_before in tasks:
+        due_date = wedding.wedding_date - timedelta(days=months_before * 30)
+        if due_date.date() < today_dt:
+            due_date = datetime.combine(today_dt + timedelta(days=7), datetime.min.time())
+        task = Task(
+            wedding_id=wedding_id,
+            title=title,
+            description=description,
+            due_date=due_date,
+            priority=priority,
+            category=category,
+            months_before=months_before,
+            assigned_to=f'[{element.name}]'
+        )
+        db.session.add(task)
+        count += 1
+
+    db.session.commit()
+    if count > 0:
+        flash(f'{element.name} included! {count} tasks added to your task list.', 'success')
+    else:
+        flash(f'{element.name} included!', 'success')
+    return redirect(request.referrer or url_for('ceremony_ideas', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/ceremony/ideas/<int:element_id>/remove', methods=['POST'])
+@login_required
+def ceremony_idea_remove(wedding_id, element_id):
+    """Remove an included element, optionally deleting associated tasks"""
+    wedding = get_wedding_or_403(wedding_id)
+    element = TraditionalElement.query.get_or_404(element_id)
+
+    we = WeddingElement.query.filter_by(wedding_id=wedding_id, element_id=element_id).first()
+    if we:
+        db.session.delete(we)
+
+    delete_tasks = request.form.get('delete_tasks') == 'true'
+    if delete_tasks:
+        # Delete tasks that were auto-generated for this element
+        Task.query.filter_by(wedding_id=wedding_id, assigned_to=f'[{element.name}]').delete()
+
+    db.session.commit()
+    flash(f'{element.name} removed from your ceremony.', 'info')
+    return redirect(request.referrer or url_for('ceremony_ideas', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/onboarding/ceremony/ideas')
+@login_required
+def onboarding_ceremony_ideas(wedding_id):
+    """Browse ceremony ideas during onboarding"""
+    wedding = get_wedding_or_403(wedding_id)
+    from templates_data import CEREMONY_ELEMENT_TASKS
+    elements = TraditionalElement.query.order_by(TraditionalElement.category, TraditionalElement.name).all()
+    included_ids = {we.element_id for we in WeddingElement.query.filter_by(wedding_id=wedding_id).all()}
+    grouped = {}
+    for el in elements:
+        grouped.setdefault(el.category, []).append(el)
+    return render_template('ceremony/ideas.html', wedding=wedding, grouped=grouped,
+                         included_ids=included_ids, element_tasks=CEREMONY_ELEMENT_TASKS,
+                         onboarding=True)
 
 # ============================================
 # RECEPTION ROUTES

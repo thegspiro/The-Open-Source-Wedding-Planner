@@ -107,6 +107,13 @@
                 <p class="timeline-note">💡 You can view and edit the full timeline from your Ceremony dashboard after setup</p>
             </div>
             {% endif %}
+
+            <!-- Ceremony Ideas -->
+            <div class="form-section">
+                <h2>✨ Ceremony &amp; Reception Ideas</h2>
+                <p class="section-help">Browse traditional elements like Unity Candle, Sand Ceremony, Handfasting, and more. Including an idea automatically creates preparation tasks on your task list.</p>
+                <a href="{{ url_for('onboarding_ceremony_ideas', wedding_id=wedding.id) }}" class="btn-secondary">Browse Ideas &rarr;</a>
+            </div>
         </div>
 
         <div class="form-actions">

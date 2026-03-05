@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Ceremony Ideas - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Ceremony &amp; Reception Ideas</h1>
+    <div class="header-actions">
+        {% if onboarding %}
+        <a href="{{ url_for('onboarding_ceremony_customize', wedding_id=wedding.id) }}" class="btn-secondary">&larr; Back to Customize</a>
+        {% else %}
+        <a href="{{ url_for('ceremony_view', wedding_id=wedding.id) }}" class="btn-secondary">&larr; Back to Ceremony</a>
+        {% endif %}
+    </div>
+</div>
+
+<p class="page-subtitle">Browse traditional elements and include them in your wedding. When you include an idea, preparation tasks are automatically added to your task list.</p>
+
+{% if included_ids %}
+<div class="included-summary">
+    <strong>{{ included_ids|length }} element{{ 's' if included_ids|length != 1 else '' }} included</strong> &mdash;
+    <a href="{{ url_for('tasks_view', wedding_id=wedding.id) }}">View ceremony tasks &rarr;</a>
+</div>
+{% endif %}
+
+{% for category, elements in grouped.items() %}
+<div class="module-section">
+    <h2>{{ category|title }} Elements</h2>
+    <div class="elements-grid">
+        {% for elem in elements %}
+        <div class="element-card {% if elem.id in included_ids %}element-included{% endif %}">
+            <div class="element-header">
+                <h3>{{ elem.name }}</h3>
+                {% if elem.id in included_ids %}
+                <span class="badge-included">Included</span>
+                {% endif %}
+            </div>
+            {% if elem.origin %}<p class="element-origin">{{ elem.origin }}</p>{% endif %}
+            <p>{{ elem.description }}</p>
+            {% if elem.typical_timing %}<p><strong>Timing:</strong> {{ elem.typical_timing }}</p>{% endif %}
+            {% if elem.what_you_need %}<p><strong>What you need:</strong> {{ elem.what_you_need }}</p>{% endif %}
+            {% if elem.how_to_do_it %}
+            <details><summary>How to do it</summary><p>{{ elem.how_to_do_it }}</p></details>
+            {% endif %}
+
+            {% set task_count = element_tasks.get(elem.name, [])|length %}
+
+            <div class="element-actions">
+                {% if elem.id in included_ids %}
+                <form method="POST" action="{{ url_for('ceremony_idea_remove', wedding_id=wedding.id, element_id=elem.id) }}" class="inline-form" onsubmit="return confirmRemove(this, '{{ elem.name }}', {{ task_count }})">
+                    <input type="hidden" name="delete_tasks" value="false">
+                    <button type="submit" class="btn-outline btn-small btn-danger">Remove</button>
+                </form>
+                {% else %}
+                <form method="POST" action="{{ url_for('ceremony_idea_include', wedding_id=wedding.id, element_id=elem.id) }}" class="inline-form">
+                    <button type="submit" class="btn-primary btn-small">
+                        Include This{% if task_count %} ({{ task_count }} task{{ 's' if task_count != 1 else '' }}){% endif %}
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+
+{% if onboarding %}
+<div class="form-actions" style="margin-top: 2rem; text-align: center;">
+    <a href="{{ url_for('onboarding_ceremony_customize', wedding_id=wedding.id) }}" class="btn-primary btn-large">Continue to Ceremony Setup &rarr;</a>
+</div>
+{% endif %}
+
+<style>
+.page-subtitle {
+    color: #666;
+    margin-bottom: 1.5rem;
+    font-size: 1.05rem;
+}
+
+.included-summary {
+    background: #e8f5e9;
+    border-left: 4px solid #4caf50;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
+
+.elements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.element-card {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+}
+
+.element-card:hover {
+    border-color: #ccc;
+}
+
+.element-card.element-included {
+    border-color: #4caf50;
+    background: #fafff9;
+}
+
+.element-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.element-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.badge-included {
+    background: #4caf50;
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.element-origin {
+    color: #888;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.element-actions {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #eee;
+}
+
+.inline-form {
+    display: inline;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid currentColor;
+    cursor: pointer;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.btn-danger {
+    color: #e53935;
+}
+
+.btn-danger:hover {
+    background: #ffebee;
+}
+
+details {
+    margin-top: 0.5rem;
+}
+
+details summary {
+    cursor: pointer;
+    color: var(--color-primary, #e91e63);
+    font-weight: 500;
+}
+</style>
+
+<script>
+function confirmRemove(form, name, taskCount) {
+    if (taskCount > 0) {
+        var msg = 'Remove "' + name + '" from your ceremony?\n\n' +
+                  'Also delete the ' + taskCount + ' task' + (taskCount !== 1 ? 's' : '') + ' generated for it?';
+        if (confirm(msg)) {
+            // User wants to delete tasks too
+            form.querySelector('input[name="delete_tasks"]').value = 'true';
+            return true;
+        }
+        // Ask if they want to keep tasks but still remove
+        if (confirm('Remove "' + name + '" but keep the tasks on your task list?')) {
+            form.querySelector('input[name="delete_tasks"]').value = 'false';
+            return true;
+        }
+        return false;
+    }
+    return confirm('Remove "' + name + '" from your ceremony?');
+}
+</script>
+{% endblock %}

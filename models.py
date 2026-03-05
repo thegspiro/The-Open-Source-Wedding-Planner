@@ -77,6 +77,7 @@ class Wedding(db.Model):
     access_list = db.relationship('WeddingAccess', backref='wedding', lazy=True, cascade='all, delete-orphan')
     inventory_items = db.relationship('InventoryItem', backref='wedding', lazy=True, cascade='all, delete-orphan')
     inventory_bins = db.relationship('InventoryBin', backref='wedding', lazy=True, cascade='all, delete-orphan')
+    wedding_elements = db.relationship('WeddingElement', backref='wedding', lazy=True, cascade='all, delete-orphan')
 
 # ============================================
 # PERSON MODEL (People Getting Married)
@@ -859,6 +860,17 @@ class TraditionalElement(db.Model):
     typical_timing = db.Column(db.String(200))  # when in ceremony/reception
     what_you_need = db.Column(db.Text)  # items/people needed
     how_to_do_it = db.Column(db.Text)  # instructions
+
+
+class WeddingElement(db.Model):
+    """Tracks which traditional elements a wedding has included"""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    element_id = db.Column(db.Integer, db.ForeignKey('traditional_element.id'), nullable=False)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    element = db.relationship('TraditionalElement')
 
 # ============================================
 # CONTINGENCY PLAN MODULE

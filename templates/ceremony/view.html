@@ -7,6 +7,7 @@
     <h1>Ceremony Details</h1>
     <div class="header-actions">
         <a href="{{ url_for('ceremony_edit', wedding_id=wedding.id) }}" class="btn-primary">Edit Details</a>
+        <a href="{{ url_for('ceremony_ideas', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Browse Ideas</a>
         <a href="{{ url_for('ceremony_vows', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Vows</a>
         <a href="{{ url_for('ceremony_script', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Script</a>
         <a href="{{ url_for('processional_order', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Processional</a>
@@ -19,6 +20,7 @@
     <button class="tab-btn active" onclick="switchTab(event, 'details-tab')">Details</button>
     <button class="tab-btn" onclick="switchTab(event, 'timeline-tab')">Timeline <span class="tab-count">{{ timeline_items|length }}</span></button>
     {% if ceremony.has_special_readings %}<button class="tab-btn" onclick="switchTab(event, 'readings-tab')">Readings</button>{% endif %}
+    <button class="tab-btn" onclick="switchTab(event, 'ideas-tab')">Ideas {% if included_elements %}<span class="tab-count">{{ included_elements|length }}</span>{% endif %}</button>
 </div>
 
 <!-- Tab: Details -->
@@ -164,6 +166,29 @@
     {% endif %}
 </div>
 {% endif %}
+
+<!-- Tab: Ideas -->
+<div class="tab-panel" id="ideas-tab" data-print-title="Included Ideas">
+    {% if included_elements %}
+    <div class="info-cards-grid">
+        {% for we in included_elements %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <h3>{{ we.element.name }}</h3>
+            </div>
+            <p>{{ we.element.description }}</p>
+            {% if we.element.typical_timing %}<div class="detail-row"><span class="detail-label">Timing</span><span class="detail-value">{{ we.element.typical_timing }}</span></div>{% endif %}
+            {% if we.element.what_you_need %}<div class="detail-row"><span class="detail-label">What you need</span><span class="detail-value">{{ we.element.what_you_need }}</span></div>{% endif %}
+            <div style="margin-top: 0.75rem;">
+                <a href="{{ url_for('tasks_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">View Tasks</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-message">No ceremony ideas included yet. <a href="{{ url_for('ceremony_ideas', wedding_id=wedding.id) }}">Browse ideas</a> to find traditions and elements you'd like to include.</p>
+    {% endif %}
+</div>
 
 <div class="page-actions" style="margin-top: 2rem;">
     <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>

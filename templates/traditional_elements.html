@@ -2,6 +2,9 @@
 {% block content %}
 <h1>Traditional Wedding Elements</h1>
 <p>Browse traditional wedding elements to inspire your ceremony and reception.</p>
+{% if wedding %}
+<p style="margin-bottom: 1.5rem;"><a href="{{ url_for('ceremony_ideas', wedding_id=wedding.id) }}" class="btn-primary btn-small">Browse &amp; Include Ideas for Your Wedding &rarr;</a></p>
+{% endif %}
 {% for category, elements in grouped_elements.items() %}
 <div class="module-section">
     <h2>{{ category|title }} Elements</h2>
@@ -14,6 +17,13 @@
             <p><strong>Timing:</strong> {{ elem.typical_timing }}</p>
             {% if elem.what_you_need %}<p><strong>What you need:</strong> {{ elem.what_you_need }}</p>{% endif %}
             {% if elem.how_to_do_it %}<details><summary>How to do it</summary><p>{{ elem.how_to_do_it }}</p></details>{% endif %}
+            {% if wedding %}
+            <div style="margin-top: 0.75rem;">
+                <form method="POST" action="{{ url_for('ceremony_idea_include', wedding_id=wedding.id, element_id=elem.id) }}" class="inline-form">
+                    <button type="submit" class="btn-secondary btn-small">Include in My Wedding</button>
+                </form>
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
     </div>
