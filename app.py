@@ -12,8 +12,10 @@ from models import (
     ContingencyPlan, TipItem, Gift,
     VendorNote, VendorQuote, SpeechToast, WeddingFavor,
     ActivityLog, Comment,
+    InventoryItem, InventoryBin,
     BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES,
-    TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES
+    TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES,
+    INVENTORY_CATEGORIES, INVENTORY_AREAS
 )
 import random
 from datetime import datetime, timedelta, date
@@ -4854,6 +4856,265 @@ def start_reminder_thread():
     """Start the background reminder thread (once per process)."""
     reminder_thread = threading.Thread(target=check_reminders, daemon=True)
     reminder_thread.start()
+
+# ============================================
+# INVENTORY & ITEM TRACKING
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/inventory')
+@login_required
+def inventory_view(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    items = InventoryItem.query.filter_by(wedding_id=wedding_id).all()
+    bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
+
+    # Stats
+    total_items = len(items)
+    total_quantity = sum(i.quantity or 1 for i in items)
+    packed_count = sum(1 for i in items if i.status == 'packed')
+    setup_count = sum(1 for i in items if i.status == 'setup')
+    unassigned_count = sum(1 for i in items if not i.bin_id)
+    rental_count = sum(1 for i in items if i.source == 'rented')
+    total_cost = sum(i.cost or 0 for i in items)
+
+    # Group by category
+    by_category = {}
+    for item in items:
+        cat = item.category or 'other'
+        by_category.setdefault(cat, []).append(item)
+
+    # Group by area
+    by_area = {}
+    for item in items:
+        area = item.area or 'other'
+        by_area.setdefault(area, []).append(item)
+
+    stats = dict(
+        total_items=total_items,
+        total_quantity=total_quantity,
+        packed_count=packed_count,
+        setup_count=setup_count,
+        unassigned_count=unassigned_count,
+        rental_count=rental_count,
+        total_cost=total_cost
+    )
+    return render_template('inventory/view.html', wedding=wedding, items=items, bins=bins,
+                         stats=stats, by_category=by_category, by_area=by_area,
+                         categories=INVENTORY_CATEGORIES, areas=INVENTORY_AREAS)
+
+
+@app.route('/wedding/<int:wedding_id>/inventory/add', methods=['GET', 'POST'])
+@login_required
+def inventory_item_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
+    if request.method == 'POST':
+        item = InventoryItem(
+            wedding_id=wedding_id,
+            name=request.form.get('name'),
+            category=request.form.get('category'),
+            quantity=request.form.get('quantity', type=int) or 1,
+            source=request.form.get('source'),
+            source_detail=request.form.get('source_detail'),
+            area=request.form.get('area'),
+            table_number=request.form.get('table_number', type=int),
+            status=request.form.get('status', 'needed'),
+            condition=request.form.get('condition'),
+            cost=request.form.get('cost', type=float),
+            notes=request.form.get('notes'),
+            setup_instructions=request.form.get('setup_instructions'),
+            return_to=request.form.get('return_to')
+        )
+        bin_id = request.form.get('bin_id', type=int)
+        if bin_id:
+            item.bin_id = bin_id
+        if request.form.get('return_by'):
+            item.return_by = datetime.strptime(request.form.get('return_by'), '%Y-%m-%d').date()
+        db.session.add(item)
+        db.session.commit()
+        flash('Item added to inventory!', 'success')
+        return redirect(url_for('inventory_view', wedding_id=wedding_id))
+    return render_template('inventory/add.html', wedding=wedding, bins=bins,
+                         categories=INVENTORY_CATEGORIES, areas=INVENTORY_AREAS)
+
+
+@app.route('/wedding/<int:wedding_id>/inventory/<int:item_id>/edit', methods=['GET', 'POST'])
+@login_required
+def inventory_item_edit(wedding_id, item_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    item = InventoryItem.query.get_or_404(item_id)
+    bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
+    if request.method == 'POST':
+        item.name = request.form.get('name')
+        item.category = request.form.get('category')
+        item.quantity = request.form.get('quantity', type=int) or 1
+        item.source = request.form.get('source')
+        item.source_detail = request.form.get('source_detail')
+        item.area = request.form.get('area')
+        item.table_number = request.form.get('table_number', type=int)
+        item.status = request.form.get('status', 'needed')
+        item.condition = request.form.get('condition')
+        item.cost = request.form.get('cost', type=float)
+        item.notes = request.form.get('notes')
+        item.setup_instructions = request.form.get('setup_instructions')
+        item.return_to = request.form.get('return_to')
+        bin_id = request.form.get('bin_id', type=int)
+        item.bin_id = bin_id if bin_id else None
+        if request.form.get('return_by'):
+            item.return_by = datetime.strptime(request.form.get('return_by'), '%Y-%m-%d').date()
+        else:
+            item.return_by = None
+        db.session.commit()
+        flash('Item updated!', 'success')
+        return redirect(url_for('inventory_view', wedding_id=wedding_id))
+    return render_template('inventory/edit.html', wedding=wedding, item=item, bins=bins,
+                         categories=INVENTORY_CATEGORIES, areas=INVENTORY_AREAS)
+
+
+@app.route('/wedding/<int:wedding_id>/inventory/<int:item_id>/delete', methods=['POST'])
+@login_required
+def inventory_item_delete(wedding_id, item_id):
+    item = InventoryItem.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Item removed from inventory.', 'success')
+    return redirect(url_for('inventory_view', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/inventory/<int:item_id>/status', methods=['POST'])
+@login_required
+def inventory_item_status(wedding_id, item_id):
+    item = InventoryItem.query.get_or_404(item_id)
+    new_status = request.form.get('status')
+    if new_status in ('needed', 'acquired', 'packed', 'setup', 'returned', 'lost'):
+        item.status = new_status
+        db.session.commit()
+    return redirect(request.referrer or url_for('inventory_view', wedding_id=wedding_id))
+
+
+# --- Bins ---
+
+@app.route('/wedding/<int:wedding_id>/inventory/bins/add', methods=['GET', 'POST'])
+@login_required
+def inventory_bin_add(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    if request.method == 'POST':
+        bin = InventoryBin(
+            wedding_id=wedding_id,
+            label=request.form.get('label'),
+            area=request.form.get('area'),
+            table_number=request.form.get('table_number', type=int),
+            color_code=request.form.get('color_code'),
+            storage_location=request.form.get('storage_location'),
+            assigned_to=request.form.get('assigned_to'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(bin)
+        db.session.commit()
+        flash('Bin created!', 'success')
+        return redirect(url_for('inventory_view', wedding_id=wedding_id))
+    return render_template('inventory/bin_add.html', wedding=wedding, areas=INVENTORY_AREAS)
+
+
+@app.route('/wedding/<int:wedding_id>/inventory/bins/<int:bin_id>')
+@login_required
+def inventory_bin_view(wedding_id, bin_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    bin = InventoryBin.query.get_or_404(bin_id)
+    # Get unassigned items for quick-assign
+    unassigned = InventoryItem.query.filter_by(wedding_id=wedding_id, bin_id=None).all()
+    return render_template('inventory/bin_view.html', wedding=wedding, bin=bin,
+                         unassigned=unassigned, categories=INVENTORY_CATEGORIES)
+
+
+@app.route('/wedding/<int:wedding_id>/inventory/bins/<int:bin_id>/edit', methods=['GET', 'POST'])
+@login_required
+def inventory_bin_edit(wedding_id, bin_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    bin = InventoryBin.query.get_or_404(bin_id)
+    if request.method == 'POST':
+        bin.label = request.form.get('label')
+        bin.area = request.form.get('area')
+        bin.table_number = request.form.get('table_number', type=int)
+        bin.color_code = request.form.get('color_code')
+        bin.storage_location = request.form.get('storage_location')
+        bin.assigned_to = request.form.get('assigned_to')
+        bin.notes = request.form.get('notes')
+        db.session.commit()
+        flash('Bin updated!', 'success')
+        return redirect(url_for('inventory_bin_view', wedding_id=wedding_id, bin_id=bin_id))
+    return render_template('inventory/bin_edit.html', wedding=wedding, bin=bin, areas=INVENTORY_AREAS)
+
+
+@app.route('/wedding/<int:wedding_id>/inventory/bins/<int:bin_id>/delete', methods=['POST'])
+@login_required
+def inventory_bin_delete(wedding_id, bin_id):
+    bin = InventoryBin.query.get_or_404(bin_id)
+    # Unassign items from this bin before deleting
+    for item in bin.items:
+        item.bin_id = None
+    db.session.delete(bin)
+    db.session.commit()
+    flash('Bin deleted. Items have been unassigned.', 'success')
+    return redirect(url_for('inventory_view', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/inventory/bins/<int:bin_id>/assign', methods=['POST'])
+@login_required
+def inventory_bin_assign(wedding_id, bin_id):
+    """Quick-assign items to a bin."""
+    item_ids = request.form.getlist('item_ids', type=int)
+    for item_id in item_ids:
+        item = InventoryItem.query.get(item_id)
+        if item and item.wedding_id == wedding_id:
+            item.bin_id = bin_id
+    db.session.commit()
+    flash(f'{len(item_ids)} item(s) assigned to bin.', 'success')
+    return redirect(url_for('inventory_bin_view', wedding_id=wedding_id, bin_id=bin_id))
+
+
+@app.route('/wedding/<int:wedding_id>/inventory/bins/<int:bin_id>/print')
+@login_required
+def inventory_bin_print(wedding_id, bin_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    bin = InventoryBin.query.get_or_404(bin_id)
+    return render_template('inventory/bin_print.html', wedding=wedding, bin=bin)
+
+
+@app.route('/wedding/<int:wedding_id>/inventory/print')
+@login_required
+def inventory_print_all(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
+    unassigned = InventoryItem.query.filter_by(wedding_id=wedding_id, bin_id=None).all()
+    return render_template('inventory/print_all.html', wedding=wedding, bins=bins, unassigned=unassigned)
+
+
+@app.route('/wedding/<int:wedding_id>/inventory/labels')
+@login_required
+def inventory_labels_print(wedding_id):
+    wedding = Wedding.query.get_or_404(wedding_id)
+    bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
+    return render_template('inventory/labels_print.html', wedding=wedding, bins=bins)
+
+
+@app.route('/wedding/<int:wedding_id>/inventory/export')
+@login_required
+def inventory_export_csv(wedding_id):
+    items = InventoryItem.query.filter_by(wedding_id=wedding_id).all()
+    bins_map = {b.id: b.label for b in InventoryBin.query.filter_by(wedding_id=wedding_id).all()}
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Name', 'Category', 'Qty', 'Source', 'Source Detail', 'Area', 'Table #',
+                     'Status', 'Condition', 'Cost', 'Bin', 'Return By', 'Return To', 'Notes'])
+    for i in items:
+        writer.writerow([i.name, i.category, i.quantity, i.source, i.source_detail,
+                        i.area, i.table_number, i.status, i.condition, i.cost,
+                        bins_map.get(i.bin_id, ''), i.return_by, i.return_to, i.notes])
+    output.seek(0)
+    return Response(output, mimetype='text/csv',
+                   headers={'Content-Disposition': 'attachment;filename=inventory.csv'})
+
 
 # Start reminder thread:
 # - Under gunicorn: __name__ != '__main__', start immediately

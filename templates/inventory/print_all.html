@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Full Inventory - {{ wedding.couple_names }}</title>
+    <style>
+        body { font-family: 'Inter', Arial, sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; color: #333; }
+        h1 { font-size: 1.4rem; border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
+        h2 { font-size: 1.1rem; margin-top: 2rem; margin-bottom: 0.5rem; border-bottom: 1px solid #999; padding-bottom: 0.3rem; }
+        .meta { color: #666; font-size: 0.85rem; margin-bottom: 0.25rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 1.5rem; }
+        th { text-align: left; border-bottom: 2px solid #333; padding: 0.35rem 0.4rem; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        td { padding: 0.4rem; border-bottom: 1px solid #ddd; }
+        .check { width: 24px; text-align: center; }
+        .check-box { display: inline-block; width: 14px; height: 14px; border: 2px solid #333; border-radius: 2px; }
+        .qty { width: 35px; text-align: center; }
+        .page-break { page-break-before: always; }
+        @media print { body { margin: 0.5in; } .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom: 1rem;">
+        <button onclick="window.print()" style="padding: 0.5rem 1.5rem; font-size: 0.9rem; cursor: pointer; background: #b76e79; color: #fff; border: none; border-radius: 6px;">Print All</button>
+        <a href="{{ url_for('inventory_view', wedding_id=wedding.id) }}" style="margin-left: 0.5rem; color: #666;">Back to Inventory</a>
+    </div>
+
+    <h1>{{ wedding.couple_names }} — Full Inventory</h1>
+
+    {% for bin in bins %}
+    <h2>{{ bin.label }}
+        {% if bin.area %}<span style="font-weight: 400; font-size: 0.85rem; color: #888;"> — {{ bin.area|replace('_', ' ')|title }}</span>{% endif %}
+        {% if bin.table_number %}<span style="font-weight: 400; font-size: 0.85rem; color: #888;"> — Table {{ bin.table_number }}</span>{% endif %}
+    </h2>
+    {% if bin.assigned_to %}<div class="meta">Transport: {{ bin.assigned_to }}</div>{% endif %}
+    {% if bin.notes %}<div class="meta">Notes: {{ bin.notes }}</div>{% endif %}
+
+    {% if bin.items %}
+    <table>
+        <thead><tr><th class="check">&#10003;</th><th>Item</th><th class="qty">Qty</th><th>Category</th><th>Source</th></tr></thead>
+        <tbody>
+            {% for item in bin.items %}
+            <tr>
+                <td class="check"><span class="check-box"></span></td>
+                <td>{{ item.name }}{% if item.condition == 'fragile' %} <strong style="color: #c45c5c;">FRAGILE</strong>{% endif %}</td>
+                <td class="qty">{{ item.quantity }}</td>
+                <td>{{ item.category|replace('_', ' ')|title if item.category else '' }}</td>
+                <td>{{ item.source or '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #999; font-size: 0.85rem;">No items in this bin.</p>
+    {% endif %}
+    {% endfor %}
+
+    {% if unassigned %}
+    <h2>Unassigned Items</h2>
+    <table>
+        <thead><tr><th class="check">&#10003;</th><th>Item</th><th class="qty">Qty</th><th>Category</th><th>Area</th><th>Source</th></tr></thead>
+        <tbody>
+            {% for item in unassigned %}
+            <tr>
+                <td class="check"><span class="check-box"></span></td>
+                <td>{{ item.name }}</td>
+                <td class="qty">{{ item.quantity }}</td>
+                <td>{{ item.category|replace('_', ' ')|title if item.category else '' }}</td>
+                <td>{{ item.area|replace('_', ' ')|title if item.area else '' }}</td>
+                <td>{{ item.source or '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ bin.label }} - Packing Checklist</title>
+    <style>
+        body { font-family: 'Inter', Arial, sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; color: #333; }
+        h1 { font-size: 1.4rem; border-bottom: 2px solid #333; padding-bottom: 0.5rem; margin-bottom: 0.25rem; }
+        .meta { color: #666; font-size: 0.88rem; margin-bottom: 1.25rem; }
+        .meta span { margin-right: 1.5rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        th { text-align: left; border-bottom: 2px solid #333; padding: 0.4rem 0.5rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        td { padding: 0.5rem; border-bottom: 1px solid #ddd; }
+        .check { width: 28px; text-align: center; }
+        .check-box { display: inline-block; width: 16px; height: 16px; border: 2px solid #333; border-radius: 3px; }
+        .qty { width: 40px; text-align: center; }
+        .notes { color: #888; font-size: 0.82rem; font-style: italic; }
+        .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; font-size: 0.82rem; color: #999; display: flex; justify-content: space-between; }
+        @media print { body { margin: 0.5in; } .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom: 1rem;">
+        <button onclick="window.print()" style="padding: 0.5rem 1.5rem; font-size: 0.9rem; cursor: pointer; background: #b76e79; color: #fff; border: none; border-radius: 6px;">Print Checklist</button>
+        <a href="{{ url_for('inventory_bin_view', wedding_id=wedding.id, bin_id=bin.id) }}" style="margin-left: 0.5rem; color: #666;">Back to Bin</a>
+    </div>
+
+    <h1>{{ bin.label }}</h1>
+    <div class="meta">
+        {% if bin.area %}<span>Area: {{ bin.area|replace('_', ' ')|title }}</span>{% endif %}
+        {% if bin.table_number %}<span>Table: #{{ bin.table_number }}</span>{% endif %}
+        {% if bin.assigned_to %}<span>Transport: {{ bin.assigned_to }}</span>{% endif %}
+        <span>Items: {{ bin.item_count }}</span>
+    </div>
+
+    {% if bin.notes %}
+    <div style="background: #f5f5f5; padding: 0.6rem 0.8rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.85rem;">
+        <strong>Notes:</strong> {{ bin.notes }}
+    </div>
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th class="check">&#10003;</th>
+                <th>Item</th>
+                <th>Category</th>
+                <th class="qty">Qty</th>
+                <th>Setup Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in bin.items %}
+            <tr>
+                <td class="check"><span class="check-box"></span></td>
+                <td>
+                    <strong>{{ item.name }}</strong>
+                    {% if item.condition == 'fragile' %}<span style="color: #c45c5c; font-size: 0.78rem;"> FRAGILE</span>{% endif %}
+                </td>
+                <td>{{ item.category|replace('_', ' ')|title if item.category else '-' }}</td>
+                <td class="qty">{{ item.quantity }}</td>
+                <td class="notes">{{ item.setup_instructions or '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <span>{{ wedding.couple_names }}</span>
+        <span>Printed checklist for {{ bin.label }}</span>
+    </div>
+</body>
+</html>

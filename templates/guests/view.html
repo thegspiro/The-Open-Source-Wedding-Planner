@@ -10,6 +10,7 @@
         <a href="{{ url_for('export_guests_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
         <a href="{{ url_for('export_mailing_labels', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Mailing Labels</a>
         <a href="{{ url_for('guest_links', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Guest Links &amp; Check-In</a>
+        <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
     </div>
 </div>
 

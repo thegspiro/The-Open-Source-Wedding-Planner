@@ -8,6 +8,7 @@
     <div class="header-actions">
         <a href="{{ url_for('reception_edit', wedding_id=wedding.id) }}" class="btn-primary">Edit Details</a>
         <a href="{{ url_for('reception_calculators', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Calculators</a>
+        <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
     </div>
 </div>
 
@@ -21,7 +22,7 @@
 </div>
 
 <!-- Tab: Venue & Timing -->
-<div class="tab-panel active" id="venue-tab">
+<div class="tab-panel active" id="venue-tab" data-print-title="Venue & Timing">
     <div class="info-cards-grid">
         <div class="info-card">
             <div class="info-card-header">
@@ -59,7 +60,7 @@
 </div>
 
 <!-- Tab: Catering & Menu -->
-<div class="tab-panel" id="catering-tab">
+<div class="tab-panel" id="catering-tab" data-print-title="Catering & Menu">
     <div class="info-cards-grid" style="margin-bottom: 1.5rem;">
         <div class="info-card">
             <div class="info-card-header">
@@ -116,7 +117,7 @@
 </div>
 
 <!-- Tab: Entertainment -->
-<div class="tab-panel" id="entertainment-tab">
+<div class="tab-panel" id="entertainment-tab" data-print-title="Entertainment">
     <div class="info-cards-grid">
         <div class="info-card">
             <div class="info-card-header">
@@ -131,7 +132,7 @@
 </div>
 
 <!-- Tab: Timeline -->
-<div class="tab-panel" id="timeline-tab">
+<div class="tab-panel" id="timeline-tab" data-print-title="Reception Timeline">
     {% if timeline_items %}
     <div class="timeline-list">
         {% for item in timeline_items %}
@@ -158,7 +159,7 @@
 </div>
 
 <!-- Tab: Seating -->
-<div class="tab-panel" id="seating-tab">
+<div class="tab-panel" id="seating-tab" data-print-title="Seating">
     {% if tables %}
     <div class="info-cards-grid">
         {% for table in tables %}

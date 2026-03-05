@@ -2356,3 +2356,188 @@ footer p { margin: 0; }
         gap: 0.5rem;
     }
 }
+
+/* ============================================
+   Print Button Component
+   ============================================ */
+.btn-print {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--color-text-light);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    font-family: var(--font-body);
+    text-decoration: none;
+}
+.btn-print:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary-light);
+    background: var(--color-primary-bg);
+}
+.btn-print .print-icon::before {
+    content: '\1F5B6';
+    font-size: 0.9rem;
+}
+
+/* ============================================
+   Print Styles (Global)
+   ============================================ */
+@media print {
+    /* Hide interactive / non-content elements */
+    .navbar,
+    footer,
+    .no-print,
+    .btn-print,
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger,
+    .btn-success,
+    .btn-logout,
+    .header-actions,
+    .page-actions,
+    .action-buttons,
+    .form-actions,
+    .quick-actions,
+    .tab-links,
+    .tabs,
+    .collapsible-toggle,
+    .search-form-inline,
+    .search-input-inline,
+    form[method="POST"],
+    .portal-card form,
+    select[onchange] {
+        display: none !important;
+    }
+
+    /* Show all tab panels when printing */
+    .tab-panel {
+        display: block !important;
+    }
+    .tab-panel::before {
+        content: attr(data-print-title);
+        display: block;
+        font-family: 'Playfair Display', Georgia, serif;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 1.5rem 0 0.5rem;
+        padding-bottom: 0.3rem;
+        border-bottom: 1px solid #ccc;
+    }
+
+    /* Layout */
+    body {
+        background: #fff !important;
+        color: #222 !important;
+        font-size: 11pt;
+    }
+    .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+    main.container {
+        padding-top: 0 !important;
+    }
+
+    /* Cards and sections */
+    .info-card,
+    .dashboard-card,
+    .module-section,
+    .stat-box,
+    .guest-card {
+        box-shadow: none !important;
+        border-color: #ccc !important;
+        break-inside: avoid;
+    }
+    .info-card:hover,
+    .dashboard-card:hover,
+    .guest-card:hover {
+        box-shadow: none !important;
+    }
+
+    /* Split layout: stack for print */
+    .split-layout {
+        display: block !important;
+    }
+    .side-panel {
+        position: static !important;
+        margin-top: 1rem;
+    }
+
+    /* Tables */
+    .data-table {
+        font-size: 9pt;
+    }
+    .data-table th {
+        background: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Stats */
+    .stats-row {
+        border: 1px solid #ccc;
+        border-radius: 0;
+    }
+    .stat-box {
+        border-color: #ccc !important;
+    }
+
+    /* Progress bar */
+    .progress-bar {
+        border: 1px solid #ccc;
+    }
+    .progress-fill {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* RSVP chips and badges */
+    .rsvp-chip,
+    .category-badge,
+    .payment-status {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        border: 1px solid #ccc;
+    }
+
+    /* Links */
+    a { color: #222 !important; text-decoration: none !important; }
+
+    /* Page header */
+    .page-header {
+        border-bottom: 2px solid #333;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .page-header h1 {
+        font-size: 16pt;
+    }
+
+    /* Page breaks */
+    h1, h2, h3 {
+        break-after: avoid;
+    }
+    .info-card, .dashboard-card, tr {
+        break-inside: avoid;
+    }
+}
+
+/* Printable section wrapper — used by printSection() JS */
+.print-section-only {
+    display: none;
+}
+@media print {
+    body.printing-section > *:not(.print-section-only) {
+        display: none !important;
+    }
+    body.printing-section .print-section-only {
+        display: block !important;
+    }
+}

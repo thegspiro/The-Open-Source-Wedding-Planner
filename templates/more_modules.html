@@ -139,6 +139,9 @@
     <span style="color: #8d6e63;">&#9679;</span> Events &amp; Logistics
 </h2>
 <div class="dashboard-grid">
+    <a href="{{ url_for('inventory_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">📦</div><h3>Inventory &amp; Items</h3><p class="stat-label">Track items, bins &amp; setup</p>
+    </a>
     <a href="{{ url_for('honeymoon_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">✈️</div><h3>Honeymoon</h3><p class="stat-label">Travel &amp; packing</p>
     </a>

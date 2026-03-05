@@ -12,6 +12,7 @@
             <button type="submit" class="btn-secondary btn-small" onclick="return confirm('Generate post-wedding tasks?')">Post-Wedding Tasks</button>
         </form>
         <a href="{{ url_for('export_tasks_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
+        <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
     </div>
 </div>
 
