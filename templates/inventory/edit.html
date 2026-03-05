@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Edit Item - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Edit: {{ item.name }}</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Item Name *</label>
+                <input type="text" name="name" required value="{{ item.name }}">
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select name="category">
+                    <option value="">-- Select --</option>
+                    {% for key, label in categories %}
+                    <option value="{{ key }}" {% if item.category == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Quantity</label>
+                <input type="number" name="quantity" min="1" value="{{ item.quantity or 1 }}">
+            </div>
+            <div class="form-group">
+                <label>Area</label>
+                <select name="area">
+                    <option value="">-- Select --</option>
+                    {% for key, label in areas %}
+                    <option value="{{ key }}" {% if item.area == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Table Number</label>
+                <input type="number" name="table_number" min="1" value="{{ item.table_number or '' }}">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Source</label>
+                <select name="source">
+                    <option value="">-- Select --</option>
+                    <option value="purchased" {% if item.source == 'purchased' %}selected{% endif %}>Purchased</option>
+                    <option value="rented" {% if item.source == 'rented' %}selected{% endif %}>Rented</option>
+                    <option value="borrowed" {% if item.source == 'borrowed' %}selected{% endif %}>Borrowed</option>
+                    <option value="owned" {% if item.source == 'owned' %}selected{% endif %}>Already Owned</option>
+                    <option value="diy" {% if item.source == 'diy' %}selected{% endif %}>DIY / Handmade</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Source Detail</label>
+                <input type="text" name="source_detail" value="{{ item.source_detail or '' }}">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Status</label>
+                <select name="status">
+                    <option value="needed" {% if item.status == 'needed' %}selected{% endif %}>Needed</option>
+                    <option value="acquired" {% if item.status == 'acquired' %}selected{% endif %}>Acquired</option>
+                    <option value="packed" {% if item.status == 'packed' %}selected{% endif %}>Packed</option>
+                    <option value="setup" {% if item.status == 'setup' %}selected{% endif %}>Set Up</option>
+                    <option value="returned" {% if item.status == 'returned' %}selected{% endif %}>Returned</option>
+                    <option value="lost" {% if item.status == 'lost' %}selected{% endif %}>Lost</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Condition</label>
+                <select name="condition">
+                    <option value="">-- Select --</option>
+                    <option value="new" {% if item.condition == 'new' %}selected{% endif %}>New</option>
+                    <option value="good" {% if item.condition == 'good' %}selected{% endif %}>Good</option>
+                    <option value="fair" {% if item.condition == 'fair' %}selected{% endif %}>Fair</option>
+                    <option value="fragile" {% if item.condition == 'fragile' %}selected{% endif %}>Fragile</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Cost ($)</label>
+                <input type="number" name="cost" step="0.01" min="0" value="{{ item.cost or '' }}">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Assign to Bin</label>
+                <select name="bin_id">
+                    <option value="">-- No Bin --</option>
+                    {% for bin in bins %}
+                    <option value="{{ bin.id }}" {% if item.bin_id == bin.id %}selected{% endif %}>{{ bin.label }}{% if bin.table_number %} (Table {{ bin.table_number }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Return By (for rentals)</label>
+                <input type="date" name="return_by" value="{{ item.return_by.strftime('%Y-%m-%d') if item.return_by else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Return To</label>
+                <input type="text" name="return_to" value="{{ item.return_to or '' }}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Setup Instructions</label>
+            <textarea name="setup_instructions" rows="2">{{ item.setup_instructions or '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="2">{{ item.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('inventory_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bin Labels - {{ wedding.couple_names }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', Arial, Helvetica, sans-serif; color: #222; }
+
+        /* ---- Controls (hidden when printing) ---- */
+        .no-print { padding: 1.5rem; max-width: 750px; margin: 0 auto; }
+        .no-print h2 { font-size: 1.2rem; margin-bottom: 0.25rem; }
+        .no-print .subtitle { color: #666; font-size: 0.88rem; margin-bottom: 1.25rem; }
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+        .control-group { background: #f8f8f6; border: 1px solid #e5e5e0; border-radius: 8px; padding: 1rem; }
+        .control-group h3 { font-size: 0.88rem; font-weight: 600; margin-bottom: 0.6rem; color: #444; }
+        .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; }
+        .preset-btn {
+            padding: 0.45rem 0.5rem; font-size: 0.78rem; cursor: pointer;
+            border: 1px solid #ccc; background: #fff; border-radius: 4px; text-align: left;
+            transition: all 0.15s ease;
+        }
+        .preset-btn:hover { border-color: #999; background: #f5f5f5; }
+        .preset-btn.active { background: #333; color: #fff; border-color: #333; }
+        .preset-btn .preset-name { font-weight: 600; display: block; }
+        .preset-btn .preset-dim { font-size: 0.72rem; color: #888; }
+        .preset-btn.active .preset-dim { color: #bbb; }
+        .option-row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem; }
+        .option-row label { font-size: 0.82rem; color: #555; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; }
+        .action-bar { display: flex; gap: 0.75rem; align-items: center; }
+        .print-btn { padding: 0.55rem 1.75rem; font-size: 0.95rem; cursor: pointer; background: #b76e79; color: #fff; border: none; border-radius: 6px; font-weight: 600; }
+        .print-btn:hover { background: #9c5563; }
+        .back-link { color: #666; text-decoration: none; font-size: 0.88rem; }
+
+        /* ---- Label container ---- */
+        .labels-container { max-width: 750px; margin: 0 auto; padding: 0 1rem; }
+
+        /* ---- Individual label (default: full page) ---- */
+        .bin-label {
+            border: 2px dashed #aaa;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            page-break-inside: avoid;
+            overflow: hidden;
+        }
+        .bin-label-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 2px solid #333;
+        }
+        .bin-label-title { font-size: 1.4rem; font-weight: 700; }
+        .bin-label-badge { text-align: right; }
+        .bin-label-badge .area-tag {
+            display: inline-block; background: #333; color: #fff;
+            padding: 0.15rem 0.5rem; border-radius: 3px;
+            font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+        }
+        .bin-label-badge .table-tag { display: block; font-size: 1rem; font-weight: 700; margin-top: 0.15rem; }
+        .bin-label-meta {
+            display: flex; gap: 1rem; font-size: 0.8rem; color: #555; margin-bottom: 0.4rem; flex-wrap: wrap;
+        }
+        .bin-label-meta strong { color: #222; }
+        .bin-label-items { font-size: 0.78rem; line-height: 1.45; }
+        .bin-label-items .item-line {
+            display: flex; justify-content: space-between; padding: 0.1rem 0; border-bottom: 1px dotted #ddd;
+        }
+        .bin-label-items .item-line:last-child { border-bottom: none; }
+        .item-qty { color: #888; font-weight: 600; min-width: 35px; text-align: right; }
+        .fragile-flag { color: #c45c5c; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; }
+        .bin-label-notes { margin-top: 0.3rem; font-size: 0.72rem; color: #888; font-style: italic; }
+        .bin-label-footer {
+            margin-top: 0.4rem; padding-top: 0.3rem; border-top: 1px solid #ddd;
+            font-size: 0.72rem; color: #999; display: flex; justify-content: space-between;
+        }
+        .color-dot {
+            display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+            border: 2px solid #333; vertical-align: middle; margin-right: 0.3rem;
+        }
+
+        /* ============================================
+           LABEL SIZE PRESETS
+           Applied via body class
+           ============================================ */
+
+        /* -- Dymo 30256 Shipping: 2.3125" x 4" -- */
+        body.size-dymo-30256 .labels-container { max-width: 4in; }
+        body.size-dymo-30256 .bin-label {
+            width: 4in; min-height: 2.3125in; padding: 0.3in 0.25in;
+            margin: 0 auto 0.3rem; border-width: 1px;
+        }
+        body.size-dymo-30256 .bin-label-title { font-size: 0.95rem; }
+        body.size-dymo-30256 .bin-label-badge .area-tag { font-size: 0.6rem; padding: 0.1rem 0.3rem; }
+        body.size-dymo-30256 .bin-label-badge .table-tag { font-size: 0.8rem; }
+        body.size-dymo-30256 .bin-label-meta { font-size: 0.65rem; gap: 0.5rem; }
+        body.size-dymo-30256 .bin-label-items { font-size: 0.6rem; line-height: 1.3; }
+        body.size-dymo-30256 .bin-label-items .item-line { padding: 0.05rem 0; }
+        body.size-dymo-30256 .bin-label-footer { font-size: 0.58rem; }
+        body.size-dymo-30256 .bin-label-notes { font-size: 0.58rem; }
+        body.size-dymo-30256 .color-dot { width: 10px; height: 10px; }
+
+        /* -- Dymo 30252 Address: 1.125" x 3.5" -- */
+        body.size-dymo-30252 .labels-container { max-width: 3.5in; }
+        body.size-dymo-30252 .bin-label {
+            width: 3.5in; min-height: 1.125in; max-height: 1.125in;
+            padding: 0.1in 0.15in; margin: 0 auto 0.2rem; border-width: 1px;
+            overflow: hidden;
+        }
+        body.size-dymo-30252 .bin-label-header { margin-bottom: 0.15rem; padding-bottom: 0.1rem; border-bottom-width: 1px; }
+        body.size-dymo-30252 .bin-label-title { font-size: 0.7rem; }
+        body.size-dymo-30252 .bin-label-badge .area-tag { font-size: 0.5rem; padding: 0.05rem 0.2rem; }
+        body.size-dymo-30252 .bin-label-badge .table-tag { font-size: 0.6rem; margin-top: 0; }
+        body.size-dymo-30252 .bin-label-meta { font-size: 0.5rem; gap: 0.4rem; margin-bottom: 0.1rem; }
+        body.size-dymo-30252 .bin-label-items { display: none; }
+        body.size-dymo-30252 .bin-label-notes { display: none; }
+        body.size-dymo-30252 .bin-label-footer { font-size: 0.48rem; margin-top: 0.1rem; padding-top: 0.1rem; }
+        body.size-dymo-30252 .color-dot { width: 8px; height: 8px; margin-right: 0.15rem; }
+
+        /* -- Dymo 30321 Large Address: 1.4" x 3.5" -- */
+        body.size-dymo-30321 .labels-container { max-width: 3.5in; }
+        body.size-dymo-30321 .bin-label {
+            width: 3.5in; min-height: 1.4in; max-height: 1.4in;
+            padding: 0.12in 0.15in; margin: 0 auto 0.2rem; border-width: 1px;
+            overflow: hidden;
+        }
+        body.size-dymo-30321 .bin-label-header { margin-bottom: 0.15rem; padding-bottom: 0.12rem; }
+        body.size-dymo-30321 .bin-label-title { font-size: 0.78rem; }
+        body.size-dymo-30321 .bin-label-badge .area-tag { font-size: 0.52rem; padding: 0.05rem 0.25rem; }
+        body.size-dymo-30321 .bin-label-badge .table-tag { font-size: 0.65rem; }
+        body.size-dymo-30321 .bin-label-meta { font-size: 0.55rem; gap: 0.4rem; margin-bottom: 0.12rem; }
+        body.size-dymo-30321 .bin-label-items { font-size: 0.5rem; line-height: 1.2; }
+        body.size-dymo-30321 .bin-label-items .item-line { padding: 0; }
+        body.size-dymo-30321 .bin-label-footer { font-size: 0.5rem; }
+        body.size-dymo-30321 .color-dot { width: 8px; height: 8px; }
+
+        /* -- Rollo 4x6: 4" x 6" -- */
+        body.size-rollo-4x6 .labels-container { max-width: 4in; }
+        body.size-rollo-4x6 .bin-label {
+            width: 4in; min-height: 6in; padding: 0.35in 0.3in;
+            margin: 0 auto 0.5rem; border-width: 1px;
+        }
+        body.size-rollo-4x6 .bin-label-title { font-size: 1.1rem; }
+        body.size-rollo-4x6 .bin-label-items { font-size: 0.72rem; }
+
+        /* -- Rollo 2x1: 2" x 1" -- */
+        body.size-rollo-2x1 .labels-container { max-width: 2in; }
+        body.size-rollo-2x1 .bin-label {
+            width: 2in; min-height: 1in; max-height: 1in;
+            padding: 0.06in 0.1in; margin: 0 auto 0.15rem; border-width: 1px;
+            overflow: hidden;
+        }
+        body.size-rollo-2x1 .bin-label-header { margin-bottom: 0.05rem; padding-bottom: 0.05rem; border-bottom-width: 1px; }
+        body.size-rollo-2x1 .bin-label-title { font-size: 0.58rem; }
+        body.size-rollo-2x1 .bin-label-badge .area-tag { font-size: 0.42rem; padding: 0.02rem 0.15rem; }
+        body.size-rollo-2x1 .bin-label-badge .table-tag { font-size: 0.48rem; margin-top: 0; }
+        body.size-rollo-2x1 .bin-label-meta { font-size: 0.42rem; gap: 0.25rem; margin-bottom: 0; }
+        body.size-rollo-2x1 .bin-label-items { display: none; }
+        body.size-rollo-2x1 .bin-label-notes { display: none; }
+        body.size-rollo-2x1 .bin-label-footer { display: none; }
+        body.size-rollo-2x1 .color-dot { width: 6px; height: 6px; margin-right: 0.1rem; }
+
+        /* -- Avery 5163 / Standard Sheet: 2" x 4" (10 per sheet) -- */
+        body.size-avery-5163 .labels-container { max-width: 4in; }
+        body.size-avery-5163 .bin-label {
+            width: 4in; min-height: 2in; max-height: 2in;
+            padding: 0.15in 0.2in; margin: 0 auto 0.25rem; border-width: 1px;
+            overflow: hidden;
+        }
+        body.size-avery-5163 .bin-label-title { font-size: 0.85rem; }
+        body.size-avery-5163 .bin-label-badge .area-tag { font-size: 0.55rem; }
+        body.size-avery-5163 .bin-label-badge .table-tag { font-size: 0.72rem; }
+        body.size-avery-5163 .bin-label-meta { font-size: 0.6rem; gap: 0.5rem; }
+        body.size-avery-5163 .bin-label-items { font-size: 0.58rem; line-height: 1.25; }
+        body.size-avery-5163 .bin-label-items .item-line { padding: 0.02rem 0; }
+        body.size-avery-5163 .bin-label-footer { font-size: 0.52rem; }
+        body.size-avery-5163 .color-dot { width: 9px; height: 9px; }
+
+        /* -- Avery 5164 / Large Sheet: 3.33" x 4" (6 per sheet) -- */
+        body.size-avery-5164 .labels-container { max-width: 4in; }
+        body.size-avery-5164 .bin-label {
+            width: 4in; min-height: 3.33in; padding: 0.25in;
+            margin: 0 auto 0.3rem; border-width: 1px;
+        }
+        body.size-avery-5164 .bin-label-title { font-size: 1rem; }
+        body.size-avery-5164 .bin-label-meta { font-size: 0.68rem; }
+        body.size-avery-5164 .bin-label-items { font-size: 0.65rem; }
+        body.size-avery-5164 .bin-label-footer { font-size: 0.58rem; }
+
+        @media print {
+            .no-print { display: none !important; }
+            .labels-container { padding: 0; max-width: 100%; }
+            .bin-label { border-style: solid; border-color: #333; }
+        }
+
+        /* Thermal printer hint: no border needed */
+        body[class*="size-dymo"] .bin-label,
+        body[class*="size-rollo"] .bin-label {
+            border-style: solid; border-color: #ccc;
+        }
+        @media print {
+            body[class*="size-dymo"] .bin-label,
+            body[class*="size-rollo"] .bin-label {
+                border: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <h2>Print Bin Labels</h2>
+        <p class="subtitle">Print labels to attach to the outside of each bin. Choose a preset that matches your label stock or printer.</p>
+
+        <div class="controls-grid">
+            <div class="control-group">
+                <h3>Dymo LabelWriter</h3>
+                <div class="preset-grid">
+                    <button class="preset-btn" onclick="setPreset(this, 'size-dymo-30256')">
+                        <span class="preset-name">30256 Shipping</span>
+                        <span class="preset-dim">2.31" x 4"</span>
+                    </button>
+                    <button class="preset-btn" onclick="setPreset(this, 'size-dymo-30321')">
+                        <span class="preset-name">30321 Lg Address</span>
+                        <span class="preset-dim">1.4" x 3.5"</span>
+                    </button>
+                    <button class="preset-btn" onclick="setPreset(this, 'size-dymo-30252')">
+                        <span class="preset-name">30252 Address</span>
+                        <span class="preset-dim">1.13" x 3.5"</span>
+                    </button>
+                </div>
+            </div>
+            <div class="control-group">
+                <h3>Rollo / Thermal</h3>
+                <div class="preset-grid">
+                    <button class="preset-btn" onclick="setPreset(this, 'size-rollo-4x6')">
+                        <span class="preset-name">4 x 6 Shipping</span>
+                        <span class="preset-dim">4" x 6" (standard)</span>
+                    </button>
+                    <button class="preset-btn" onclick="setPreset(this, 'size-rollo-2x1')">
+                        <span class="preset-name">2 x 1 Small</span>
+                        <span class="preset-dim">2" x 1"</span>
+                    </button>
+                </div>
+            </div>
+            <div class="control-group">
+                <h3>Standard Sheet Labels</h3>
+                <div class="preset-grid">
+                    <button class="preset-btn" onclick="setPreset(this, 'size-avery-5163')">
+                        <span class="preset-name">Avery 5163</span>
+                        <span class="preset-dim">2" x 4" (10/sheet)</span>
+                    </button>
+                    <button class="preset-btn" onclick="setPreset(this, 'size-avery-5164')">
+                        <span class="preset-name">Avery 5164</span>
+                        <span class="preset-dim">3.33" x 4" (6/sheet)</span>
+                    </button>
+                </div>
+            </div>
+            <div class="control-group">
+                <h3>Options</h3>
+                <button class="preset-btn active" onclick="setPreset(this, '')" style="margin-bottom: 0.4rem;">
+                    <span class="preset-name">Full Page</span>
+                    <span class="preset-dim">No size constraint</span>
+                </button>
+                <div class="option-row">
+                    <label><input type="checkbox" checked onchange="toggleItems(this.checked)"> Show item list</label>
+                    <label><input type="checkbox" checked onchange="toggleNotes(this.checked)"> Show notes</label>
+                    <label><input type="checkbox" checked onchange="toggleFooter(this.checked)"> Show footer</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <button onclick="window.print()" class="print-btn">Print Labels</button>
+            <span style="font-size: 0.82rem; color: #888;">{{ bins|length }} label(s) will print</span>
+            <a href="{{ url_for('inventory_view', wedding_id=wedding.id) }}" class="back-link">Back to Inventory</a>
+        </div>
+    </div>
+
+    <div class="labels-container">
+        {% for bin in bins %}
+        <div class="bin-label">
+            <div class="bin-label-header">
+                <div class="bin-label-title">
+                    {% if bin.color_code %}<span class="color-dot" style="background: {{ bin.color_code }};"></span>{% endif %}
+                    {{ bin.label }}
+                </div>
+                <div class="bin-label-badge">
+                    {% if bin.area %}
+                    <span class="area-tag">{{ bin.area|replace('_', ' ')|title }}</span>
+                    {% endif %}
+                    {% if bin.table_number %}
+                    <span class="table-tag">Table {{ bin.table_number }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="bin-label-meta">
+                <span><strong>{{ bin.item_count }}</strong> items ({{ bin.total_quantity }} pcs)</span>
+                {% if bin.assigned_to %}<span>Transport: <strong>{{ bin.assigned_to }}</strong></span>{% endif %}
+                {% if bin.storage_location %}<span>From: {{ bin.storage_location }}</span>{% endif %}
+            </div>
+
+            {% if bin.items %}
+            <div class="bin-label-items items-list">
+                {% for item in bin.items %}
+                <div class="item-line">
+                    <span>
+                        {{ item.name }}
+                        {% if item.condition == 'fragile' %}<span class="fragile-flag">FRAGILE</span>{% endif %}
+                    </span>
+                    <span class="item-qty">x{{ item.quantity }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if bin.notes %}
+            <div class="bin-label-notes notes-section">{{ bin.notes }}</div>
+            {% endif %}
+
+            <div class="bin-label-footer footer-section">
+                <span>{{ wedding.couple_names }}</span>
+                <span>Bin {{ loop.index }} of {{ bins|length }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+    function setPreset(btn, sizeClass) {
+        // Remove all size classes from body
+        document.body.className = document.body.className.replace(/size-[\w-]+/g, '').trim();
+        // Remove active from all preset buttons
+        document.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('active'); });
+        // Apply new
+        if (sizeClass) document.body.classList.add(sizeClass);
+        btn.classList.add('active');
+    }
+    function toggleItems(show) {
+        document.querySelectorAll('.items-list').forEach(function(el) { el.style.display = show ? '' : 'none'; });
+    }
+    function toggleNotes(show) {
+        document.querySelectorAll('.notes-section').forEach(function(el) { el.style.display = show ? '' : 'none'; });
+    }
+    function toggleFooter(show) {
+        document.querySelectorAll('.footer-section').forEach(function(el) { el.style.display = show ? '' : 'none'; });
+    }
+    </script>
+</body>
+</html>

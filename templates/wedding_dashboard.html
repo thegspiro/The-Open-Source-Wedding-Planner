@@ -22,6 +22,7 @@
         <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Setup Wizard</a>
         <a href="{{ url_for('calendar_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Calendar</a>
         <a href="{{ url_for('index') }}" class="btn-secondary btn-small">All Weddings</a>
+        <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
     </div>
 </div>
 
@@ -152,6 +153,15 @@
 <!-- Creative Details -->
 <h2 style="font-family: var(--font-heading); color: var(--color-text); margin: 2rem 0 1rem; font-size: 1.3rem;">Details &amp; Design</h2>
 <div class="dashboard-grid">
+    <div class="dashboard-card">
+        <div class="card-icon">📦</div>
+        <h3>Inventory</h3>
+        <div class="stat-large">{{ wedding.inventory_items|length }}</div>
+        <p class="stat-label">Items Tracked</p>
+        <p class="stat-small">{{ wedding.inventory_bins|length }} bin(s)</p>
+        <a href="{{ url_for('inventory_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">Manage Items</a>
+    </div>
+
     <div class="dashboard-card">
         <div class="card-icon">📸</div>
         <h3>Photography</h3>

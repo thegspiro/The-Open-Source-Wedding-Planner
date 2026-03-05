@@ -8,6 +8,7 @@
     <div class="header-actions">
         <a href="{{ url_for('budget_payment_schedule', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Payment Schedule</a>
         <a href="{{ url_for('export_budget_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
+        <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
     </div>
 </div>
 
@@ -53,7 +54,7 @@
 </div>
 
 <!-- Tab: Expenses -->
-<div class="tab-panel active" id="expenses-tab">
+<div class="tab-panel active" id="expenses-tab" data-print-title="Expenses">
     <div class="split-layout">
         <div class="split-main">
             <div class="budget-breakdown" style="margin-bottom: 1rem;">
@@ -194,7 +195,7 @@
 </div>
 
 <!-- Tab: Category Limits -->
-<div class="tab-panel" id="limits-tab">
+<div class="tab-panel" id="limits-tab" data-print-title="Category Limits">
     <p class="form-help" style="margin-bottom: 1rem;">Set spending caps per category to keep individual areas in check.</p>
 
     {% if limit_warnings %}
@@ -280,7 +281,7 @@
 </div>
 
 <!-- Tab: Templates -->
-<div class="tab-panel" id="templates-tab">
+<div class="tab-panel" id="templates-tab" data-print-title="Budget Templates">
     <p class="form-help" style="margin-bottom: 1.25rem;">Apply a pre-built budget template to auto-create expense categories. This will add items that don't already exist.</p>
     <div class="info-cards-grid">
         <div class="info-card">
@@ -320,7 +321,7 @@
 </div>
 
 <!-- Tab: Budget Settings -->
-<div class="tab-panel" id="settings-tab">
+<div class="tab-panel" id="settings-tab" data-print-title="Budget Settings">
     <div class="info-card" style="max-width: 400px;">
         <div class="info-card-header">
             <h3 style="margin: 0; border: none; padding: 0;">Update Total Budget</h3>
