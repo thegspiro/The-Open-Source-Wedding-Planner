@@ -209,8 +209,7 @@
             <a href="{{ url_for('export_guests_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Guests CSV</a>
             <a href="{{ url_for('export_budget_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Budget CSV</a>
             <a href="{{ url_for('export_tasks_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Tasks CSV</a>
-            <a href="{{ url_for('print_timeline', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Timeline</a>
-            <a href="{{ url_for('print_vendor_contacts', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Vendor Contacts</a>
+            <a href="{{ url_for('print_center', wedding_id=wedding.id) }}" class="btn-secondary btn-small" style="font-weight: 600;">Print Center (19 Documents)</a>
             <a href="{{ url_for('calendar_export_ical', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Calendar (.ics)</a>
         </div>
     </div>

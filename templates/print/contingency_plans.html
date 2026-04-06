@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backup Plans - {{ wedding.couple_names }}</title>
+    <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--body-font); color: #3a3a3a;
+            line-height: 1.6; padding: 20px 40px; background: #fff;
+        }
+
+        .print-btn {
+            display: inline-block; padding: 8px 20px; background: var(--primary);
+            color: #fff; border: none; cursor: pointer; font-size: 14px;
+            margin-bottom: 20px; font-family: var(--body-font); border-radius: 4px;
+        }
+        .print-btn:hover { opacity: 0.85; }
+
+        .print-header {
+            text-align: center; padding: 25px 20px 20px; margin-bottom: 25px;
+            border-bottom: 2px solid var(--secondary);
+        }
+        .print-header::before {
+            content: ''; display: block; width: 50px; height: 2px;
+            background: var(--accent); margin: 0 auto 12px;
+        }
+        .monogram {
+            font-family: var(--heading-font); font-size: 30px; color: var(--primary);
+            letter-spacing: 4px; margin-bottom: 6px;
+        }
+        .print-header h1 {
+            font-family: var(--heading-font); font-size: 24px; font-weight: normal;
+            color: var(--primary); letter-spacing: 2px; margin-bottom: 4px;
+        }
+        .print-header .wedding-date {
+            font-size: 12px; color: #999; letter-spacing: 1px; text-transform: uppercase;
+        }
+
+        .category-title {
+            font-family: var(--heading-font); font-size: 14px; text-transform: uppercase;
+            letter-spacing: 2px; color: var(--primary);
+            border-bottom: 1px solid var(--secondary);
+            padding-bottom: 5px; margin-bottom: 10px; margin-top: 22px;
+        }
+        .category-title:first-of-type { margin-top: 0; }
+
+        .plan-card {
+            border: 1px solid var(--secondary);
+            border-left: 4px solid var(--accent);
+            padding: 14px 18px;
+            margin-bottom: 12px;
+            page-break-inside: avoid;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .plan-title {
+            font-family: var(--heading-font);
+            font-size: 16px;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+
+        .plan-description {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 6px;
+            white-space: pre-line;
+        }
+
+        .plan-contact {
+            font-size: 12px;
+            color: #666;
+            padding-top: 6px;
+            border-top: 1px dotted #e8e2da;
+        }
+
+        .plan-contact strong { color: #555; font-weight: 600; }
+
+        .plan-notes {
+            font-size: 11px;
+            color: #888;
+            font-style: italic;
+            margin-top: 4px;
+        }
+
+        .footer-note {
+            text-align: center; font-size: 10px; color: #ccc; margin-top: 30px;
+            padding-top: 12px; border-top: 1px solid var(--secondary); letter-spacing: 0.5px;
+        }
+
+        .empty-message {
+            text-align: center; color: #999; font-style: italic; padding: 30px 20px;
+        }
+
+        @page { size: letter; margin: 0.6in 0.5in; }
+
+        @media print {
+            .print-btn { display: none !important; }
+            body { padding: 0; font-size: 11px; }
+            .print-header h1 { font-size: 20px; }
+            .plan-card { padding: 10px 14px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">Print</button>
+    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+
+    <div class="print-header">
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Backup &amp; Contingency Plans</h1>
+        <div style="font-family: var(--heading-font); font-size: 14px; color: #777; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+    </div>
+
+    {% if plans %}
+    {% set categories = ['weather', 'vendor_backup', 'venue_backup', 'emergency', 'transportation', 'power_outage', 'other'] %}
+    {% set category_labels = {
+        'weather': 'Weather',
+        'vendor_backup': 'Vendor Backup',
+        'venue_backup': 'Venue Backup',
+        'emergency': 'Emergency',
+        'transportation': 'Transportation',
+        'power_outage': 'Power Outage',
+        'other': 'Other'
+    } %}
+
+    {% for category in categories %}
+    {% set category_plans = plans|selectattr('category', 'equalto', category)|list %}
+    {% if category_plans %}
+    <h2 class="category-title">{{ category_labels.get(category, category|replace('_', ' ')|title) }}</h2>
+    {% for plan in category_plans %}
+    <div class="plan-card">
+        <div class="plan-title">{{ plan.title }}</div>
+        {% if plan.description %}
+        <div class="plan-description">{{ plan.description }}</div>
+        {% endif %}
+        {% if plan.contact_name or plan.contact_phone %}
+        <div class="plan-contact">
+            {% if plan.contact_name %}
+            <strong>Contact:</strong> {{ plan.contact_name }}
+            {% endif %}
+            {% if plan.contact_phone %}
+            &nbsp;&mdash;&nbsp; {{ plan.contact_phone }}
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if plan.notes %}
+        <div class="plan-notes">{{ plan.notes }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endfor %}
+    {% else %}
+    <p class="empty-message">No contingency plans to display.</p>
+    {% endif %}
+
+    <div class="footer-note">
+        {{ wedding.couple_names }}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
+    </div>
+</body>
+</html>

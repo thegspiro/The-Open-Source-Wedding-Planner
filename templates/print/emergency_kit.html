@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Kit Checklist - {{ wedding.couple_names }}</title>
+    <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--body-font); color: #3a3a3a;
+            line-height: 1.6; padding: 20px 40px; background: #fff;
+        }
+
+        .print-btn {
+            display: inline-block; padding: 8px 20px; background: var(--primary);
+            color: #fff; border: none; cursor: pointer; font-size: 14px;
+            margin-bottom: 20px; font-family: var(--body-font); border-radius: 4px;
+        }
+        .print-btn:hover { opacity: 0.85; }
+
+        .print-header {
+            text-align: center; padding: 25px 20px 20px; margin-bottom: 25px;
+            border-bottom: 2px solid var(--secondary);
+        }
+        .print-header::before {
+            content: ''; display: block; width: 50px; height: 2px;
+            background: var(--accent); margin: 0 auto 12px;
+        }
+        .monogram {
+            font-family: var(--heading-font); font-size: 30px; color: var(--primary);
+            letter-spacing: 4px; margin-bottom: 6px;
+        }
+        .print-header h1 {
+            font-family: var(--heading-font); font-size: 24px; font-weight: normal;
+            color: var(--primary); letter-spacing: 2px; margin-bottom: 4px;
+        }
+        .print-header .wedding-date {
+            font-size: 12px; color: #999; letter-spacing: 1px; text-transform: uppercase;
+        }
+
+        .category-title {
+            font-family: var(--heading-font); font-size: 14px; text-transform: uppercase;
+            letter-spacing: 2px; color: var(--primary);
+            border-bottom: 1px solid var(--secondary);
+            padding-bottom: 5px; margin-bottom: 10px; margin-top: 22px;
+        }
+        .category-title:first-of-type { margin-top: 0; }
+
+        .kit-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0;
+            margin-bottom: 15px;
+        }
+
+        .kit-item {
+            width: 50%;
+            padding: 5px 8px;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .kit-checkbox {
+            width: 14px; height: 14px; accent-color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .kit-label { color: #444; }
+
+        .note-box {
+            border: 1px solid var(--secondary);
+            border-radius: 3px;
+            padding: 10px 14px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #777;
+            font-style: italic;
+        }
+
+        .footer-note {
+            text-align: center; font-size: 10px; color: #ccc; margin-top: 30px;
+            padding-top: 12px; border-top: 1px solid var(--secondary); letter-spacing: 0.5px;
+        }
+
+        @page { size: letter; margin: 0.6in 0.5in; }
+
+        @media print {
+            .print-btn { display: none !important; }
+            body { padding: 0; font-size: 11px; }
+            .print-header h1 { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">Print</button>
+    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+
+    <div class="print-header">
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Emergency Kit Checklist</h1>
+        <div style="font-family: var(--heading-font); font-size: 14px; color: #777; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+    </div>
+
+    <h2 class="category-title">Clothing &amp; Fashion Fixes</h2>
+    <div class="kit-grid">
+        {% for item in ['Safety pins (assorted sizes)', 'Sewing kit (needle, white/black thread)', 'Fashion tape (double-sided)', 'Stain remover pen', 'Lint roller', 'Steamer or wrinkle release spray', 'Extra buttons (matching attire)', 'Shoe insoles / heel protectors', 'Clear nail polish (stop stocking runs)', 'Hem tape'] %}
+        <div class="kit-item">
+            <input type="checkbox" class="kit-checkbox">
+            <span class="kit-label">{{ item }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2 class="category-title">Health &amp; Comfort</h2>
+    <div class="kit-grid">
+        {% for item in ['Pain relievers (ibuprofen, acetaminophen)', 'Antacid tablets', 'Allergy medication (antihistamines)', 'Band-aids (assorted sizes)', 'Blister pads / moleskin', 'Eye drops', 'Breath mints / gum', 'Throat lozenges', 'Tissues (travel packs)', 'Hand sanitizer', 'Sunscreen (SPF 30+)', 'Bug spray', 'Tampons / pads', 'Deodorant'] %}
+        <div class="kit-item">
+            <input type="checkbox" class="kit-checkbox">
+            <span class="kit-label">{{ item }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2 class="category-title">Beauty Touch-Ups</h2>
+    <div class="kit-grid">
+        {% for item in ['Bobby pins &amp; hair pins', 'Hair ties &amp; clips', 'Hairspray (travel size)', 'Makeup blotting papers', 'Lipstick / lip gloss (matching shade)', 'Powder compact / setting spray', 'Concealer', 'Cotton swabs &amp; cotton pads', 'Makeup remover wipes', 'Perfume / cologne (travel size)', 'Nail file &amp; nail glue'] %}
+        <div class="kit-item">
+            <input type="checkbox" class="kit-checkbox">
+            <span class="kit-label">{{ item }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2 class="category-title">Tools &amp; Supplies</h2>
+    <div class="kit-grid">
+        {% for item in ['Scissors', 'Super glue', 'Duct tape / gaffer tape', 'White chalk (for scuff marks)', 'Pen and notepad', 'Permanent marker', 'Phone charger / portable battery', 'Umbrella(s)', 'Flashlight', 'Zip ties', 'Trash bags', 'Paper towels'] %}
+        <div class="kit-item">
+            <input type="checkbox" class="kit-checkbox">
+            <span class="kit-label">{{ item }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2 class="category-title">Food &amp; Drink</h2>
+    <div class="kit-grid">
+        {% for item in ['Water bottles', 'Granola bars / snacks', 'Straws (to drink without smudging lipstick)', 'Mints for the couple'] %}
+        <div class="kit-item">
+            <input type="checkbox" class="kit-checkbox">
+            <span class="kit-label">{{ item }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2 class="category-title">Documents &amp; Essentials</h2>
+    <div class="kit-grid">
+        {% for item in ['Marriage license', 'Vendor contact list', 'Day-of timeline copies', 'Rings', 'Vow cards / notes', 'Cash for tips (labeled envelopes)', 'ID / wallet', 'Insurance cards', 'Hotel room key'] %}
+        <div class="kit-item">
+            <input type="checkbox" class="kit-checkbox">
+            <span class="kit-label">{{ item }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="note-box">
+        Pack this kit the day before and assign someone (coordinator, maid of honor, best man) to keep it accessible throughout the day. Place a second mini-kit at the reception venue.
+    </div>
+
+    <div class="footer-note">
+        {{ wedding.couple_names }}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
+    </div>
+</body>
+</html>

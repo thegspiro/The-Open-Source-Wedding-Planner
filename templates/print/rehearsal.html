@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rehearsal Schedule - {{ wedding.couple_names }}</title>
+    <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--body-font); color: #3a3a3a;
+            line-height: 1.6; padding: 20px 40px; background: #fff;
+        }
+
+        .print-btn {
+            display: inline-block; padding: 8px 20px; background: var(--primary);
+            color: #fff; border: none; cursor: pointer; font-size: 14px;
+            margin-bottom: 20px; font-family: var(--body-font); border-radius: 4px;
+        }
+        .print-btn:hover { opacity: 0.85; }
+
+        .print-header {
+            text-align: center; padding: 25px 20px 20px; margin-bottom: 25px;
+            border-bottom: 2px solid var(--secondary);
+        }
+        .print-header::before {
+            content: ''; display: block; width: 50px; height: 2px;
+            background: var(--accent); margin: 0 auto 12px;
+        }
+        .monogram {
+            font-family: var(--heading-font); font-size: 30px; color: var(--primary);
+            letter-spacing: 4px; margin-bottom: 6px;
+        }
+        .print-header h1 {
+            font-family: var(--heading-font); font-size: 24px; font-weight: normal;
+            color: var(--primary); letter-spacing: 2px; margin-bottom: 4px;
+        }
+        .print-header .wedding-date {
+            font-size: 12px; color: #999; letter-spacing: 1px; text-transform: uppercase;
+        }
+
+        .section-title {
+            font-family: var(--heading-font); font-size: 14px; text-transform: uppercase;
+            letter-spacing: 2px; color: var(--primary);
+            border-bottom: 1px solid var(--secondary);
+            padding-bottom: 6px; margin-bottom: 12px; margin-top: 25px;
+        }
+        .section-title:first-of-type { margin-top: 0; }
+
+        .info-card {
+            border: 1px solid var(--secondary);
+            border-left: 4px solid var(--primary);
+            padding: 16px 20px; margin-bottom: 18px;
+            page-break-inside: avoid; border-radius: 0 4px 4px 0;
+        }
+
+        .info-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0;
+        }
+
+        .info-item {
+            width: 50%;
+            padding: 4px 0;
+        }
+
+        .info-item-full { width: 100%; padding: 4px 0; }
+
+        .info-label {
+            font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+            color: var(--accent); font-weight: 600;
+        }
+
+        .info-value { font-size: 13px; color: #444; }
+
+        /* Ceremony order for rehearsal */
+        .order-list {
+            list-style: none;
+            padding: 0;
+            counter-reset: rehearsal;
+        }
+
+        .order-list li {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e8e2da;
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            counter-increment: rehearsal;
+        }
+
+        .order-list li::before {
+            content: counter(rehearsal);
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            text-align: center;
+            border-radius: 50%;
+            background: var(--secondary);
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+
+        .order-item-name { font-weight: 600; color: #333; font-size: 13px; }
+        .order-item-detail { font-size: 11px; color: #888; }
+
+        .footer-note {
+            text-align: center; font-size: 10px; color: #ccc; margin-top: 30px;
+            padding-top: 12px; border-top: 1px solid var(--secondary); letter-spacing: 0.5px;
+        }
+
+        .empty-message {
+            text-align: center; color: #999; font-style: italic; padding: 30px 20px;
+        }
+
+        @page { size: letter; margin: 0.6in 0.5in; }
+
+        @media print {
+            .print-btn { display: none !important; }
+            body { padding: 0; font-size: 11px; }
+            .print-header h1 { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">Print</button>
+    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+
+    <div class="print-header">
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Rehearsal Schedule</h1>
+        <div style="font-family: var(--heading-font); font-size: 14px; color: #777; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+    </div>
+
+    {% set has_content = false %}
+
+    <!-- Rehearsal Dinner Info -->
+    {% if rehearsal_dinner %}
+    {% set has_content = true %}
+    <h2 class="section-title">Rehearsal Dinner</h2>
+    <div class="info-card">
+        <div class="info-grid">
+            {% if rehearsal_dinner.venue_name %}
+            <div class="info-item">
+                <div class="info-label">Venue</div>
+                <div class="info-value">{{ rehearsal_dinner.venue_name }}</div>
+            </div>
+            {% endif %}
+            {% if rehearsal_dinner.date %}
+            <div class="info-item">
+                <div class="info-label">Date</div>
+                <div class="info-value">{{ rehearsal_dinner.date.strftime('%A, %B %d, %Y') }}</div>
+            </div>
+            {% endif %}
+            {% if rehearsal_dinner.venue_address %}
+            <div class="info-item-full">
+                <div class="info-label">Address</div>
+                <div class="info-value">{{ rehearsal_dinner.venue_address }}</div>
+            </div>
+            {% endif %}
+            {% if rehearsal_dinner.start_time %}
+            <div class="info-item">
+                <div class="info-label">Start Time</div>
+                <div class="info-value">{{ rehearsal_dinner.start_time.strftime('%I:%M %p') }}</div>
+            </div>
+            {% endif %}
+            {% if rehearsal_dinner.end_time %}
+            <div class="info-item">
+                <div class="info-label">End Time</div>
+                <div class="info-value">{{ rehearsal_dinner.end_time.strftime('%I:%M %p') }}</div>
+            </div>
+            {% endif %}
+            {% if rehearsal_dinner.venue_contact %}
+            <div class="info-item">
+                <div class="info-label">Contact</div>
+                <div class="info-value">{{ rehearsal_dinner.venue_contact }}</div>
+            </div>
+            {% endif %}
+            {% if rehearsal_dinner.venue_phone %}
+            <div class="info-item">
+                <div class="info-label">Phone</div>
+                <div class="info-value">{{ rehearsal_dinner.venue_phone }}</div>
+            </div>
+            {% endif %}
+            {% if rehearsal_dinner.expected_guest_count %}
+            <div class="info-item">
+                <div class="info-label">Expected Guests</div>
+                <div class="info-value">{{ rehearsal_dinner.expected_guest_count }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% if rehearsal_dinner.menu_notes %}
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dotted #e8e2da;">
+            <div class="info-label">Menu Notes</div>
+            <div class="info-value">{{ rehearsal_dinner.menu_notes }}</div>
+        </div>
+        {% endif %}
+        {% if rehearsal_dinner.notes %}
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dotted #e8e2da;">
+            <div class="info-label">Notes</div>
+            <div class="info-value">{{ rehearsal_dinner.notes }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Ceremony Walkthrough Order -->
+    {% if ceremony_items %}
+    {% set has_content = true %}
+    <h2 class="section-title">Ceremony Walkthrough</h2>
+    <ol class="order-list">
+        {% for item in ceremony_items %}
+        <li>
+            <div>
+                <span class="order-item-name">{{ item.item_name }}</span>
+                {% if item.participants %}
+                <br><span class="order-item-detail">{{ item.participants }}</span>
+                {% endif %}
+                {% if item.description %}
+                <br><span class="order-item-detail">{{ item.description }}</span>
+                {% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ol>
+    {% endif %}
+
+    <!-- Processional Order -->
+    {% if bridal_party %}
+    {% set ordered = bridal_party|selectattr('processional_order')|sort(attribute='processional_order')|list %}
+    {% if ordered %}
+    {% set has_content = true %}
+    <h2 class="section-title">Processional Order</h2>
+    <ol class="order-list">
+        {% for member in ordered %}
+        <li>
+            <div>
+                <span class="order-item-name">{{ member.name }}</span>
+                {% if member.role %}
+                <br><span class="order-item-detail">{{ member.role }}</span>
+                {% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ol>
+    {% endif %}
+    {% endif %}
+
+    {% if not has_content %}
+    <p class="empty-message">No rehearsal information to display.</p>
+    {% endif %}
+
+    <div class="footer-note">
+        {{ wedding.couple_names }}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
+    </div>
+</body>
+</html>

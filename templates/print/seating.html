@@ -224,8 +224,8 @@
         {% endif %}
         <h1>{{ wedding.couple_names }}</h1>
         <div class="subtitle">Please Find Your Seat</div>
-        {% if wedding.date %}
-        <div class="wedding-date">{{ wedding.date.strftime('%A, %B %d, %Y') }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
         {% endif %}
         <div class="header-border"></div>
     </div>
@@ -264,7 +264,7 @@
 
     <div class="footer-note">
         {{ wedding.couple_names }}
-        {% if wedding.date %} &middot; {{ wedding.date.strftime('%B %d, %Y') }}{% endif %}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
     </div>
 </body>
 </html>

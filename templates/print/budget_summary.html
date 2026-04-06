@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Summary - {{ wedding.couple_names }}</title>
+    <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--body-font); color: #3a3a3a;
+            line-height: 1.5; padding: 20px 40px; background: #fff;
+        }
+
+        .print-btn {
+            display: inline-block; padding: 8px 20px; background: var(--primary);
+            color: #fff; border: none; cursor: pointer; font-size: 14px;
+            margin-bottom: 20px; font-family: var(--body-font); border-radius: 4px;
+        }
+        .print-btn:hover { opacity: 0.85; }
+
+        .print-header {
+            text-align: center; padding: 25px 20px 20px; margin-bottom: 25px;
+            border-bottom: 2px solid var(--secondary);
+        }
+        .print-header::before {
+            content: ''; display: block; width: 50px; height: 2px;
+            background: var(--accent); margin: 0 auto 12px;
+        }
+        .monogram {
+            font-family: var(--heading-font); font-size: 30px; color: var(--primary);
+            letter-spacing: 4px; margin-bottom: 6px;
+        }
+        .print-header h1 {
+            font-family: var(--heading-font); font-size: 24px; font-weight: normal;
+            color: var(--primary); letter-spacing: 2px; margin-bottom: 4px;
+        }
+        .print-header .wedding-date {
+            font-size: 12px; color: #999; letter-spacing: 1px; text-transform: uppercase;
+        }
+
+        /* Summary cards */
+        .summary-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .summary-card {
+            flex: 1;
+            border: 1px solid var(--secondary);
+            border-top: 3px solid var(--primary);
+            padding: 14px 16px;
+            text-align: center;
+            border-radius: 0 0 4px 4px;
+        }
+
+        .summary-card .amount {
+            font-family: var(--heading-font);
+            font-size: 24px;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .summary-card .label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #999;
+            margin-top: 2px;
+        }
+
+        .over-budget { color: #c0392b !important; }
+        .under-budget { color: #27ae60 !important; }
+
+        /* Expense table */
+        .expense-table {
+            width: 100%; border-collapse: collapse; margin-bottom: 20px;
+        }
+
+        .expense-table th {
+            background: var(--primary); color: #fff; font-weight: 600;
+            font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 8px 10px; text-align: left; border: none;
+        }
+
+        .expense-table td {
+            border-bottom: 1px solid #e8e2da; padding: 6px 10px;
+            font-size: 12px; vertical-align: top;
+        }
+
+        .expense-table tr:nth-child(even) td {
+            background: rgba(212, 197, 178, 0.08);
+        }
+
+        .expense-table .category-header td {
+            background: rgba(212, 197, 178, 0.2);
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--primary);
+            border-bottom: 1px solid var(--secondary);
+        }
+
+        .amount-cell { text-align: right; font-family: monospace; }
+
+        .status-paid { color: #27ae60; font-weight: 600; font-size: 10px; }
+        .status-partial { color: #f39c12; font-size: 10px; }
+        .status-unpaid { color: #c0392b; font-size: 10px; }
+
+        .totals-row td {
+            border-top: 2px solid var(--primary);
+            font-weight: 600;
+            font-size: 13px;
+            background: rgba(212, 197, 178, 0.15) !important;
+        }
+
+        .footer-note {
+            text-align: center; font-size: 10px; color: #ccc; margin-top: 30px;
+            padding-top: 12px; border-top: 1px solid var(--secondary); letter-spacing: 0.5px;
+        }
+
+        .empty-message {
+            text-align: center; color: #999; font-style: italic; padding: 30px 20px;
+        }
+
+        @page { size: letter; margin: 0.6in 0.5in; }
+
+        @media print {
+            .print-btn { display: none !important; }
+            body { padding: 0; font-size: 11px; }
+            .print-header h1 { font-size: 20px; }
+            .expense-table th, .expense-table td { font-size: 11px; padding: 5px 8px; }
+            .expense-table thead { display: table-header-group; }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">Print</button>
+    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+
+    <div class="print-header">
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Budget Summary</h1>
+        <div style="font-family: var(--heading-font); font-size: 14px; color: #777; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+    </div>
+
+    {% if budget %}
+    {% set total_estimated = expenses|sum(attribute='estimated_cost', default=0) %}
+    {% set total_actual = expenses|sum(attribute='actual_cost', default=0) %}
+    {% set total_paid = expenses|sum(attribute='paid_amount', default=0) %}
+    {% set remaining = total_actual - total_paid if total_actual else total_estimated - total_paid %}
+
+    <div class="summary-row">
+        <div class="summary-card">
+            <div class="amount">${{ '{:,.0f}'.format(budget.total_budget) }}</div>
+            <div class="label">Total Budget</div>
+        </div>
+        <div class="summary-card">
+            <div class="amount">${{ '{:,.0f}'.format(total_estimated) }}</div>
+            <div class="label">Estimated</div>
+        </div>
+        <div class="summary-card">
+            <div class="amount">${{ '{:,.0f}'.format(total_actual) }}</div>
+            <div class="label">Actual</div>
+        </div>
+        <div class="summary-card">
+            <div class="amount">${{ '{:,.0f}'.format(total_paid) }}</div>
+            <div class="label">Paid</div>
+        </div>
+        <div class="summary-card">
+            <div class="amount {% if remaining > 0 %}over-budget{% else %}under-budget{% endif %}">
+                ${{ '{:,.0f}'.format(remaining|abs) }}
+            </div>
+            <div class="label">{{ 'Still Owed' if remaining > 0 else 'Over-Paid' }}</div>
+        </div>
+    </div>
+
+    {% if expenses %}
+    <table class="expense-table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th class="amount-cell">Estimated</th>
+                <th class="amount-cell">Actual</th>
+                <th class="amount-cell">Paid</th>
+                <th>Status</th>
+                <th>Due Date</th>
+                <th>Covered By</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set current_category = {'value': ''} %}
+            {% for expense in expenses|sort(attribute='category') %}
+            {% if expense.category != current_category.value %}
+            {% if current_category.update({'value': expense.category}) %}{% endif %}
+            <tr class="category-header">
+                <td colspan="7">{{ expense.category }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td>{{ expense.item_name }}</td>
+                <td class="amount-cell">${{ '%.2f'|format(expense.estimated_cost) if expense.estimated_cost else '—' }}</td>
+                <td class="amount-cell">${{ '%.2f'|format(expense.actual_cost) if expense.actual_cost else '—' }}</td>
+                <td class="amount-cell">${{ '%.2f'|format(expense.paid_amount) if expense.paid_amount else '—' }}</td>
+                <td>
+                    {% if expense.payment_status == 'paid' %}
+                    <span class="status-paid">Paid</span>
+                    {% elif expense.payment_status == 'partial' %}
+                    <span class="status-partial">Partial</span>
+                    {% elif expense.payment_status == 'deposit' %}
+                    <span class="status-partial">Deposit</span>
+                    {% else %}
+                    <span class="status-unpaid">{{ expense.payment_status or 'Unpaid' }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ expense.payment_due_date.strftime('%m/%d/%Y') if expense.payment_due_date else '' }}</td>
+                <td style="font-size: 11px; color: #777;">{{ expense.covered_by or '' }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="totals-row">
+                <td>Totals</td>
+                <td class="amount-cell">${{ '{:,.2f}'.format(total_estimated) }}</td>
+                <td class="amount-cell">${{ '{:,.2f}'.format(total_actual) }}</td>
+                <td class="amount-cell">${{ '{:,.2f}'.format(total_paid) }}</td>
+                <td colspan="3"></td>
+            </tr>
+        </tbody>
+    </table>
+    {% endif %}
+    {% else %}
+    <p class="empty-message">No budget information to display.</p>
+    {% endif %}
+
+    <div class="footer-note">
+        {{ wedding.couple_names }}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
+    </div>
+</body>
+</html>

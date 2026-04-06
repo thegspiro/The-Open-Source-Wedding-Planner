@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Print Center - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 0 auto; padding: 30px 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="font-size: 28px; margin-bottom: 5px;">Print Center</h1>
+        <p style="color: #888; font-size: 14px;">All your wedding documents in one place &mdash; print or download as PDF</p>
+    </div>
+
+    <!-- Day-Of Essentials -->
+    <h2 style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
+        Day-Of Essentials
+    </h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px;">
+        <a href="{{ url_for('print_timeline', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#128197;</div>
+            <div class="pc-title">Day-Of Timeline</div>
+            <div class="pc-desc">Complete schedule of events with times, locations, and who's involved</div>
+        </a>
+        <a href="{{ url_for('print_emergency_contacts', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#128222;</div>
+            <div class="pc-title">Emergency Contacts</div>
+            <div class="pc-desc">Key contacts for the couple, planner, venue, vendors, and participants</div>
+        </a>
+        <a href="{{ url_for('print_emergency_kit', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#127890;</div>
+            <div class="pc-title">Emergency Kit Checklist</div>
+            <div class="pc-desc">Supplies packing list: sewing kit, stain remover, pain relievers, etc.</div>
+        </a>
+        <a href="{{ url_for('print_contingency_plans', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#9730;</div>
+            <div class="pc-title">Backup Plans</div>
+            <div class="pc-desc">Weather backup, vendor alternatives, and emergency protocols</div>
+        </a>
+        <a href="{{ url_for('print_tips_tracker', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#128176;</div>
+            <div class="pc-title">Tips &amp; Payments</div>
+            <div class="pc-desc">Who to tip, amounts, envelope status, and payment tracking</div>
+        </a>
+        <a href="{{ url_for('print_venue_info', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#127960;</div>
+            <div class="pc-title">Venue Information</div>
+            <div class="pc-desc">Addresses, contacts, timing, parking, and capacity for all venues</div>
+        </a>
+    </div>
+
+    <!-- Ceremony & Reception -->
+    <h2 style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
+        Ceremony &amp; Reception
+    </h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px;">
+        <a href="{{ url_for('print_ceremony_program', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#128220;</div>
+            <div class="pc-title">Ceremony Program</div>
+            <div class="pc-desc">Processional order, readings, music, officiant details, and vows</div>
+        </a>
+        <a href="{{ url_for('print_reception_script', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#127908;</div>
+            <div class="pc-title">Reception Run Sheet</div>
+            <div class="pc-desc">MC/DJ script with timeline, toasts, key songs, and announcements</div>
+        </a>
+        <a href="{{ url_for('print_music_cue_sheet', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#127926;</div>
+            <div class="pc-title">Music Cue Sheet</div>
+            <div class="pc-desc">Complete playlist by moment: ceremony, dances, dinner, do-not-play</div>
+        </a>
+        <a href="{{ url_for('print_seating', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#128186;</div>
+            <div class="pc-title">Seating Chart</div>
+            <div class="pc-desc">Table assignments with guest names for display at reception</div>
+        </a>
+        <a href="{{ url_for('print_decor_setup', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#127804;</div>
+            <div class="pc-title">Decor &amp; Setup Plan</div>
+            <div class="pc-desc">Florals, centerpieces, lighting, and setup instructions</div>
+        </a>
+        <a href="{{ url_for('print_rehearsal', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#127917;</div>
+            <div class="pc-title">Rehearsal Schedule</div>
+            <div class="pc-desc">Rehearsal dinner details, ceremony walkthrough, and processional order</div>
+        </a>
+    </div>
+
+    <!-- People & Vendors -->
+    <h2 style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
+        People &amp; Vendors
+    </h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px;">
+        <a href="{{ url_for('print_guest_list', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#128101;</div>
+            <div class="pc-title">Guest List</div>
+            <div class="pc-desc">Full guest list with RSVP status, meal choices, dietary needs, and tables</div>
+        </a>
+        <a href="{{ url_for('print_bridal_party_info', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#128143;</div>
+            <div class="pc-title">Wedding Party</div>
+            <div class="pc-desc">Names, roles, contact info, processional order, and responsibilities</div>
+        </a>
+        <a href="{{ url_for('print_vendor_contacts', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#128188;</div>
+            <div class="pc-title">Vendor Contacts</div>
+            <div class="pc-desc">Complete vendor reference with service times, backup contacts</div>
+        </a>
+        <a href="{{ url_for('print_hair_makeup', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#128132;</div>
+            <div class="pc-title">Hair &amp; Makeup Schedule</div>
+            <div class="pc-desc">Getting-ready timeline with stylist contacts and style notes</div>
+        </a>
+        <a href="{{ url_for('print_shot_list', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#128247;</div>
+            <div class="pc-title">Photography Shot List</div>
+            <div class="pc-desc">Categorized checklist of must-have and nice-to-have photos</div>
+        </a>
+        <a href="{{ url_for('print_transportation', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#128663;</div>
+            <div class="pc-title">Transportation &amp; Hotels</div>
+            <div class="pc-desc">Hotel blocks, shuttles, parking, and booking codes</div>
+        </a>
+    </div>
+
+    <!-- Financial -->
+    <h2 style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
+        Financial
+    </h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px;">
+        <a href="{{ url_for('print_budget_summary', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
+            <div class="pc-icon">&#128200;</div>
+            <div class="pc-title">Budget Summary</div>
+            <div class="pc-desc">Spending by category, estimated vs actual, payment status</div>
+        </a>
+    </div>
+</div>
+
+<style>
+    .print-card {
+        display: block;
+        border: 1px solid #e0ddd8;
+        border-radius: 8px;
+        padding: 16px;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.2s;
+        background: #fff;
+    }
+    .print-card:hover {
+        border-color: #c9a96e;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transform: translateY(-1px);
+    }
+    .pc-icon {
+        font-size: 24px;
+        margin-bottom: 6px;
+    }
+    .pc-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: #333;
+        margin-bottom: 4px;
+    }
+    .pc-desc {
+        font-size: 12px;
+        color: #999;
+        line-height: 1.4;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transportation &amp; Accommodations - {{ wedding.couple_names }}</title>
+    <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--body-font); color: #3a3a3a;
+            line-height: 1.6; padding: 20px 40px; background: #fff;
+        }
+
+        .print-btn {
+            display: inline-block; padding: 8px 20px; background: var(--primary);
+            color: #fff; border: none; cursor: pointer; font-size: 14px;
+            margin-bottom: 20px; font-family: var(--body-font); border-radius: 4px;
+        }
+        .print-btn:hover { opacity: 0.85; }
+
+        .print-header {
+            text-align: center; padding: 25px 20px 20px; margin-bottom: 25px;
+            border-bottom: 2px solid var(--secondary);
+        }
+        .print-header::before {
+            content: ''; display: block; width: 50px; height: 2px;
+            background: var(--accent); margin: 0 auto 12px;
+        }
+        .monogram {
+            font-family: var(--heading-font); font-size: 30px; color: var(--primary);
+            letter-spacing: 4px; margin-bottom: 6px;
+        }
+        .print-header h1 {
+            font-family: var(--heading-font); font-size: 24px; font-weight: normal;
+            color: var(--primary); letter-spacing: 2px; margin-bottom: 4px;
+        }
+        .print-header .wedding-date {
+            font-size: 12px; color: #999; letter-spacing: 1px; text-transform: uppercase;
+        }
+
+        .section-title {
+            font-family: var(--heading-font); font-size: 14px; text-transform: uppercase;
+            letter-spacing: 2px; color: var(--primary);
+            border-bottom: 1px solid var(--secondary);
+            padding-bottom: 6px; margin-bottom: 12px; margin-top: 25px;
+        }
+        .section-title:first-of-type { margin-top: 0; }
+
+        .card-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .info-card {
+            border: 1px solid var(--secondary);
+            border-left: 3px solid var(--accent);
+            padding: 12px 16px;
+            page-break-inside: avoid;
+            width: calc(50% - 6px);
+            border-radius: 0 3px 3px 0;
+        }
+
+        .card-type {
+            font-size: 9px; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--accent); font-weight: 600; margin-bottom: 2px;
+        }
+
+        .card-name {
+            font-family: var(--heading-font); font-size: 15px; color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .card-detail {
+            font-size: 11px; color: #666; margin-bottom: 2px;
+        }
+
+        .card-detail strong { color: #555; font-weight: 600; }
+
+        .highlight-box {
+            background: rgba(212, 197, 178, 0.12);
+            border: 1px solid var(--secondary);
+            border-radius: 3px;
+            padding: 8px 12px;
+            margin-top: 6px;
+        }
+
+        .highlight-label {
+            font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;
+            color: var(--accent); font-weight: 600;
+        }
+
+        .highlight-value { font-size: 13px; color: var(--primary); font-weight: 600; }
+
+        .footer-note {
+            text-align: center; font-size: 10px; color: #ccc; margin-top: 30px;
+            padding-top: 12px; border-top: 1px solid var(--secondary); letter-spacing: 0.5px;
+        }
+
+        .empty-message {
+            text-align: center; color: #999; font-style: italic; padding: 30px 20px;
+        }
+
+        @page { size: letter; margin: 0.6in 0.5in; }
+
+        @media print {
+            .print-btn { display: none !important; }
+            body { padding: 0; font-size: 11px; }
+            .print-header h1 { font-size: 20px; }
+            .info-card { padding: 8px 12px; }
+            .card-grid { gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">Print</button>
+    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+
+    <div class="print-header">
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Transportation &amp; Accommodations</h1>
+        <div style="font-family: var(--heading-font); font-size: 14px; color: #777; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+    </div>
+
+    {% if accommodations %}
+
+    <!-- Hotel Blocks -->
+    {% set hotels = accommodations|selectattr('accommodation_type', 'equalto', 'hotel_block')|list %}
+    {% if hotels %}
+    <h2 class="section-title">Hotel Blocks</h2>
+    <div class="card-grid">
+        {% for hotel in hotels %}
+        <div class="info-card">
+            <div class="card-type">Hotel Block</div>
+            <div class="card-name">{{ hotel.name }}</div>
+            {% if hotel.address %}
+            <div class="card-detail">{{ hotel.address }}</div>
+            {% endif %}
+            {% if hotel.phone %}
+            <div class="card-detail"><strong>Phone:</strong> {{ hotel.phone }}</div>
+            {% endif %}
+            {% if hotel.rate %}
+            <div class="card-detail"><strong>Rate:</strong> {{ hotel.rate }}</div>
+            {% endif %}
+            {% if hotel.rooms_reserved %}
+            <div class="card-detail"><strong>Rooms Reserved:</strong> {{ hotel.rooms_reserved }}</div>
+            {% endif %}
+            {% if hotel.block_code %}
+            <div class="highlight-box">
+                <div class="highlight-label">Booking Code</div>
+                <div class="highlight-value">{{ hotel.block_code }}</div>
+            </div>
+            {% endif %}
+            {% if hotel.deadline %}
+            <div class="card-detail" style="margin-top: 4px;"><strong>Book By:</strong> {{ hotel.deadline.strftime('%B %d, %Y') }}</div>
+            {% endif %}
+            {% if hotel.notes %}
+            <div class="card-detail" style="font-style: italic; color: #888;">{{ hotel.notes }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Recommended Hotels -->
+    {% set recommended = accommodations|selectattr('accommodation_type', 'equalto', 'recommended')|list %}
+    {% if recommended %}
+    <h2 class="section-title">Recommended Accommodations</h2>
+    <div class="card-grid">
+        {% for rec in recommended %}
+        <div class="info-card">
+            <div class="card-type">Recommended</div>
+            <div class="card-name">{{ rec.name }}</div>
+            {% if rec.address %}
+            <div class="card-detail">{{ rec.address }}</div>
+            {% endif %}
+            {% if rec.phone %}
+            <div class="card-detail"><strong>Phone:</strong> {{ rec.phone }}</div>
+            {% endif %}
+            {% if rec.rate %}
+            <div class="card-detail"><strong>Rate:</strong> {{ rec.rate }}</div>
+            {% endif %}
+            {% if rec.notes %}
+            <div class="card-detail" style="font-style: italic; color: #888;">{{ rec.notes }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Transportation -->
+    {% set transport = accommodations|selectattr('accommodation_type', 'equalto', 'transportation')|list %}
+    {% if transport %}
+    <h2 class="section-title">Transportation</h2>
+    <div class="card-grid">
+        {% for t in transport %}
+        <div class="info-card">
+            <div class="card-type">Transportation</div>
+            <div class="card-name">{{ t.name }}</div>
+            {% if t.address %}
+            <div class="card-detail">{{ t.address }}</div>
+            {% endif %}
+            {% if t.phone %}
+            <div class="card-detail"><strong>Phone:</strong> {{ t.phone }}</div>
+            {% endif %}
+            {% if t.rate %}
+            <div class="card-detail"><strong>Cost:</strong> {{ t.rate }}</div>
+            {% endif %}
+            {% if t.notes %}
+            <div class="card-detail" style="font-style: italic; color: #888;">{{ t.notes }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Parking -->
+    {% set parking = accommodations|selectattr('accommodation_type', 'equalto', 'parking')|list %}
+    {% if parking %}
+    <h2 class="section-title">Parking</h2>
+    <div class="card-grid">
+        {% for p in parking %}
+        <div class="info-card">
+            <div class="card-type">Parking</div>
+            <div class="card-name">{{ p.name }}</div>
+            {% if p.address %}
+            <div class="card-detail">{{ p.address }}</div>
+            {% endif %}
+            {% if p.rate %}
+            <div class="card-detail"><strong>Rate:</strong> {{ p.rate }}</div>
+            {% endif %}
+            {% if p.notes %}
+            <div class="card-detail" style="font-style: italic; color: #888;">{{ p.notes }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <p class="empty-message">No transportation or accommodation information to display.</p>
+    {% endif %}
+
+    <div class="footer-note">
+        {{ wedding.couple_names }}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
+    </div>
+</body>
+</html>

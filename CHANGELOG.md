@@ -4,6 +4,42 @@ All notable changes to the Wedding Organizer are documented in this file.
 
 ---
 
+## [2.9.0] - 2026-04-06 — Complete Wedding Day Document Suite & Print Center
+
+### Added
+
+#### Print Center
+- **Print Center page** (`/wedding/<id>/print`) - a single hub linking to all 19 printable documents, organized by category (Day-Of Essentials, Ceremony & Reception, People & Vendors, Financial)
+- **"Print Center" button** on the wedding dashboard replacing individual print links
+
+#### 14 New Print Templates (all with wedding branding, PDF support)
+
+**Day-Of Essentials:**
+- **Ceremony Program** - processional order, readings with full text, ceremony music, officiant details, wedding party by side, ceremony script
+- **Music Cue Sheet** - complete playlist organized by moment (processional, first dance, dinner, dancing, etc.) with do-not-play list and checkboxes
+- **Guest List** - full guest list with RSVP status, meal choices, dietary restrictions, table assignments, and summary counts (landscape)
+- **Tips & Payment Tracker** - vendor tip amounts, envelope status, payment method, with totals row
+- **Hair & Makeup Schedule** - time-ordered appointments with stylist contacts, service badges, and style notes
+
+**Coordinator & Vendor Documents:**
+- **Wedding Party Info Sheet** - names, roles, contact info, processional order, responsibilities, grouped by side
+- **Venue Information Sheet** - ceremony & reception venue details consolidated with addresses, contacts, timing, parking
+- **Decor & Setup Plan** - reception theme, centerpieces, lighting, floral arrangements table, and setup instructions from inventory
+- **MC/DJ Reception Run Sheet** - reception timeline, key music cues, speeches/toast order, catering and bar details
+- **Emergency Kit Checklist** - comprehensive supplies packing list (60+ items across 6 categories: fashion fixes, health, beauty, tools, food, documents)
+
+**Planning & Reference:**
+- **Rehearsal Schedule** - rehearsal dinner venue details, ceremony walkthrough order, processional lineup
+- **Transportation & Accommodations** - hotel blocks with booking codes, recommended hotels, shuttles, parking, organized by type
+- **Contingency/Backup Plans** - all backup plans organized by category (weather, vendor, venue, emergency, etc.)
+- **Budget Summary** - budget overview cards (total/estimated/actual/paid/remaining), expenses by category with payment status
+
+### Changed
+- Dashboard "Export & Print" section now links to Print Center instead of individual print pages
+- Fixed `wedding.date` references to `wedding.wedding_date` across all print templates
+
+---
+
 ## [2.8.0] - 2026-04-06 — Beautiful Personalized Print Templates
 
 ### Changed

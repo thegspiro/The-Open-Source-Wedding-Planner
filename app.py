@@ -4495,6 +4495,158 @@ def print_seating(wedding_id):
     return _render_or_pdf('print/seating.html', f'seating_{wedding_id}.pdf',
                           wedding=wedding, tables=tables)
 
+@app.route('/wedding/<int:wedding_id>/print')
+@login_required
+def print_center(wedding_id):
+    """Print Center - all printable documents in one place."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('print/print_center.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/print/ceremony-program')
+@login_required
+def print_ceremony_program(wedding_id):
+    """Printable ceremony program with readings and script."""
+    wedding = get_wedding_or_403(wedding_id)
+    ceremony = wedding.ceremony
+    readings = sorted(ceremony.readings, key=lambda x: (x.order or 0)) if ceremony and ceremony.readings else []
+    timeline_items = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony and ceremony.timeline_items else []
+    bridal_party = sorted(wedding.bridal_party, key=lambda x: (x.processional_order or 999))
+    return _render_or_pdf('print/ceremony_program.html', f'ceremony_program_{wedding_id}.pdf',
+                          wedding=wedding, ceremony=ceremony, readings=readings,
+                          timeline_items=timeline_items, bridal_party=bridal_party)
+
+@app.route('/wedding/<int:wedding_id>/print/music-cue-sheet')
+@login_required
+def print_music_cue_sheet(wedding_id):
+    """Printable music cue sheet for DJ/band."""
+    wedding = get_wedding_or_403(wedding_id)
+    ceremony = wedding.ceremony
+    songs = sorted(wedding.songs, key=lambda x: (x.moment or '', x.order or 0))
+    return _render_or_pdf('print/music_cue_sheet.html', f'music_cue_sheet_{wedding_id}.pdf',
+                          wedding=wedding, ceremony=ceremony, songs=songs)
+
+@app.route('/wedding/<int:wedding_id>/print/guest-list')
+@login_required
+def print_guest_list(wedding_id):
+    """Printable guest list with meal choices and dietary restrictions."""
+    wedding = get_wedding_or_403(wedding_id)
+    guests = sorted(wedding.guests, key=lambda x: x.name)
+    return _render_or_pdf('print/guest_list.html', f'guest_list_{wedding_id}.pdf',
+                          wedding=wedding, guests=guests)
+
+@app.route('/wedding/<int:wedding_id>/print/tips')
+@login_required
+def print_tips_tracker(wedding_id):
+    """Printable tips and payment tracker."""
+    wedding = get_wedding_or_403(wedding_id)
+    tips = sorted(wedding.tips, key=lambda x: (x.service_category or '', x.recipient))
+    return _render_or_pdf('print/tips_tracker.html', f'tips_{wedding_id}.pdf',
+                          wedding=wedding, tips=tips)
+
+@app.route('/wedding/<int:wedding_id>/print/hair-makeup')
+@login_required
+def print_hair_makeup(wedding_id):
+    """Printable hair and makeup schedule."""
+    wedding = get_wedding_or_403(wedding_id)
+    appointments = sorted(wedding.hair_makeup, key=lambda x: (x.appointment_time or datetime.min.time()))
+    return _render_or_pdf('print/hair_makeup.html', f'hair_makeup_{wedding_id}.pdf',
+                          wedding=wedding, appointments=appointments)
+
+@app.route('/wedding/<int:wedding_id>/print/bridal-party')
+@login_required
+def print_bridal_party_info(wedding_id):
+    """Printable wedding party info sheet."""
+    wedding = get_wedding_or_403(wedding_id)
+    bridal_party = sorted(wedding.bridal_party, key=lambda x: (x.side or '', x.processional_order or 999))
+    return _render_or_pdf('print/bridal_party.html', f'bridal_party_{wedding_id}.pdf',
+                          wedding=wedding, bridal_party=bridal_party)
+
+@app.route('/wedding/<int:wedding_id>/print/venue-info')
+@login_required
+def print_venue_info(wedding_id):
+    """Printable venue information sheet."""
+    wedding = get_wedding_or_403(wedding_id)
+    ceremony = wedding.ceremony
+    reception = wedding.reception
+    accommodations = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    return _render_or_pdf('print/venue_info.html', f'venue_info_{wedding_id}.pdf',
+                          wedding=wedding, ceremony=ceremony, reception=reception,
+                          vendors=wedding.vendors, accommodations=accommodations)
+
+@app.route('/wedding/<int:wedding_id>/print/decor-setup')
+@login_required
+def print_decor_setup(wedding_id):
+    """Printable decor and setup plan."""
+    wedding = get_wedding_or_403(wedding_id)
+    reception = wedding.reception
+    floral_items = sorted(wedding.floral_items, key=lambda x: (x.item_type or ''))
+    inventory_items = wedding.inventory_items
+    return _render_or_pdf('print/decor_setup.html', f'decor_setup_{wedding_id}.pdf',
+                          wedding=wedding, reception=reception,
+                          floral_items=floral_items, inventory_items=inventory_items)
+
+@app.route('/wedding/<int:wedding_id>/print/reception-script')
+@login_required
+def print_reception_script(wedding_id):
+    """Printable MC/DJ reception run sheet."""
+    wedding = get_wedding_or_403(wedding_id)
+    reception = wedding.reception
+    reception_items = sorted(reception.timeline_items, key=lambda x: (x.order or 0)) if reception and reception.timeline_items else []
+    songs = sorted(wedding.songs, key=lambda x: (x.moment or '', x.order or 0))
+    speeches = sorted(wedding.speeches, key=lambda x: (x.order or 0))
+    return _render_or_pdf('print/reception_script.html', f'reception_script_{wedding_id}.pdf',
+                          wedding=wedding, reception=reception,
+                          reception_items=reception_items, songs=songs, speeches=speeches)
+
+@app.route('/wedding/<int:wedding_id>/print/emergency-kit')
+@login_required
+def print_emergency_kit(wedding_id):
+    """Printable emergency kit supplies checklist."""
+    wedding = get_wedding_or_403(wedding_id)
+    return _render_or_pdf('print/emergency_kit.html', f'emergency_kit_{wedding_id}.pdf',
+                          wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/print/rehearsal')
+@login_required
+def print_rehearsal(wedding_id):
+    """Printable rehearsal schedule."""
+    wedding = get_wedding_or_403(wedding_id)
+    rehearsal_dinner = wedding.rehearsal_dinner
+    ceremony = wedding.ceremony
+    ceremony_items = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony and ceremony.timeline_items else []
+    bridal_party = sorted(wedding.bridal_party, key=lambda x: (x.processional_order or 999))
+    return _render_or_pdf('print/rehearsal.html', f'rehearsal_{wedding_id}.pdf',
+                          wedding=wedding, rehearsal_dinner=rehearsal_dinner,
+                          ceremony_items=ceremony_items, bridal_party=bridal_party)
+
+@app.route('/wedding/<int:wedding_id>/print/transportation')
+@login_required
+def print_transportation(wedding_id):
+    """Printable transportation and accommodations sheet."""
+    wedding = get_wedding_or_403(wedding_id)
+    accommodations = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    return _render_or_pdf('print/transportation.html', f'transportation_{wedding_id}.pdf',
+                          wedding=wedding, accommodations=accommodations)
+
+@app.route('/wedding/<int:wedding_id>/print/contingency-plans')
+@login_required
+def print_contingency_plans(wedding_id):
+    """Printable backup and contingency plans."""
+    wedding = get_wedding_or_403(wedding_id)
+    plans = sorted(wedding.contingency_plans, key=lambda x: (x.category or ''))
+    return _render_or_pdf('print/contingency_plans.html', f'contingency_plans_{wedding_id}.pdf',
+                          wedding=wedding, plans=plans)
+
+@app.route('/wedding/<int:wedding_id>/print/budget')
+@login_required
+def print_budget_summary(wedding_id):
+    """Printable budget summary."""
+    wedding = get_wedding_or_403(wedding_id)
+    budget = wedding.budget
+    expenses = sorted(budget.expenses, key=lambda x: (x.category or '', x.item_name)) if budget else []
+    return _render_or_pdf('print/budget_summary.html', f'budget_{wedding_id}.pdf',
+                          wedding=wedding, budget=budget, expenses=expenses)
+
 @app.route('/wedding/<int:wedding_id>/export/mailing-labels')
 @login_required
 def export_mailing_labels(wedding_id):

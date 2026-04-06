@@ -215,8 +215,8 @@
         {% endif %}
         <h1>Day-Of Timeline</h1>
         <div style="font-family: var(--heading-font); font-size: 15px; color: #666; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
-        {% if wedding.date %}
-        <div class="wedding-date">{{ wedding.date.strftime('%A, %B %d, %Y') }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
         {% endif %}
     </div>
 
@@ -271,7 +271,7 @@
 
     <div class="footer-note">
         {{ wedding.couple_names }}
-        {% if wedding.date %} &middot; {{ wedding.date.strftime('%B %d, %Y') }}{% endif %}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
     </div>
 </body>
 </html>
