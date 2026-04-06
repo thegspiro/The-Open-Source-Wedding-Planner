@@ -4060,18 +4060,23 @@ def compute_table_floor_data(tables, scale=1.4):
                 tw = ref.get('length', 96) * scale
                 th = ref.get('width', 30) * scale
         else:
-            base = 50 + cap * 6
+            # Fallback: estimate from capacity using real-world table sizes
+            # Round: 2→36", 4→48", 6→48", 8→60", 10→72", 12→84"
+            # Rectangular: width ~30", length scales with capacity
             if shape in ('round', 'oval'):
-                tw = base * scale
+                diameter = 24 + cap * 5  # inches, matches industry standards
+                tw = diameter * scale
                 th = tw if shape == 'round' else tw * 0.67
             elif shape in ('rectangular', 'serpentine'):
-                tw = (base + 30) * scale
-                th = base * 0.45 * scale
+                tw = (48 + max(0, cap - 4) * 12) * scale  # length grows with seats
+                th = 30 * scale  # standard banquet width
             elif shape == 'square':
-                tw = base * scale
+                side = 24 + cap * 6  # inches
+                tw = side * scale
                 th = tw
             else:
-                tw = base * scale
+                diameter = 24 + cap * 5
+                tw = diameter * scale
                 th = tw
 
         tw = round(tw)
