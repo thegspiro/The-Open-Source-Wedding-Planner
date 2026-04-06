@@ -16,7 +16,9 @@ This guide covers every way to install and run Wedding Organizer.
 
 ## Quick Start (Docker)
 
-The fastest way to get running. Requires [Docker](https://docs.docker.com/get-docker/) and Docker Compose.
+The fastest way to get running. Requires [Docker](https://docs.docker.com/get-docker/) and Docker Compose v2.17+ (included with Docker Desktop, or install the [Compose plugin](https://docs.docker.com/compose/install/linux/)).
+
+> **Check your version:** `docker compose version` - you need v2.17.0 or later for the optional `.env` file support. If you're on an older version, see [Older Docker Compose versions](#older-docker-compose-versions) below.
 
 ```bash
 # Clone the repository
@@ -307,4 +309,52 @@ docker-compose logs wedding-organizer
 
 # Verify .env file exists and is valid
 cat .env
+```
+
+**Older Docker Compose versions:**
+
+If you're on Docker Compose < v2.17, the `required: false` syntax in `docker-compose.yml` won't work. Either:
+- Upgrade Docker Compose: `sudo apt install docker-compose-plugin` (Linux) or update Docker Desktop
+- Or create an empty `.env` file: `touch .env`
+- Or remove the `env_file` block from `docker-compose.yml` and set variables directly in the `environment` section
+
+---
+
+## Building Multi-Architecture Images
+
+The default `docker-compose up --build` builds for your current platform. To build images that run on multiple architectures (e.g., ARM for Raspberry Pi, AMD64 for PCs):
+
+### Using Docker Buildx
+
+```bash
+# Create a buildx builder (first time only)
+docker buildx create --name multiarch --use
+
+# Build and push a multi-arch image
+docker buildx build \
+  --platform linux/amd64,linux/arm64,linux/arm/v7 \
+  -t yourdockerhubuser/wedding-organizer:latest \
+  --push .
+```
+
+### Supported Architectures
+
+| Architecture | Platforms |
+|-------------|-----------|
+| `linux/amd64` | Standard PCs, most VPS, Intel/AMD servers |
+| `linux/arm64` | Raspberry Pi 4/5 (64-bit OS), Apple Silicon, ARM servers |
+| `linux/arm/v7` | Raspberry Pi 3, older ARM boards (32-bit) |
+
+The `python:3.11-slim` base image supports all three architectures natively.
+
+### Using a Pre-Built Image
+
+If you've pushed a multi-arch image to a registry, other users can pull it directly instead of building from source:
+
+```yaml
+# In docker-compose.yml, replace "build: ." with:
+services:
+  wedding-organizer:
+    image: yourdockerhubuser/wedding-organizer:latest
+    # ... rest of config
 ```

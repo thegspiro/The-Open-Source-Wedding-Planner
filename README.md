@@ -94,14 +94,19 @@ Browse 15+ traditional ceremony and reception elements:
 
 ### Email Setup (Optional)
 
-Enable automated task reminders:
+Enable automated task reminders and guest emails by adding SMTP settings to your `.env` file:
 
-1. Edit `docker-compose.yml`
-2. Uncomment email environment variables
-3. Add your SMTP credentials
-4. Restart container
+```bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+FROM_EMAIL=your-email@gmail.com
+```
 
-See QUICKSTART.md for detailed email setup instructions.
+Then restart: `docker-compose restart`
+
+Supports Gmail, Outlook, SendGrid, Amazon SES, and any SMTP provider. See [QUICKSTART.md](QUICKSTART.md#-enable-email-reminders-optional---5-minutes) for detailed setup instructions per provider.
 
 ---
 
@@ -146,6 +151,9 @@ docker-compose up -d --build
 - **[docs/DEPLOYMENT-GUIDES.md](docs/DEPLOYMENT-GUIDES.md)** - Platform-specific guides (Unraid, Proxmox, Kubernetes, Synology, Raspberry Pi, VPS)
 - **[docs/REVERSE-PROXY.md](docs/REVERSE-PROXY.md)** - SSL/HTTPS setup (Nginx, Traefik, Caddy, Cloudflare)
 - **[.env.example](.env.example)** - Environment configuration reference
+
+### Contributing
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development setup, code style, and PR guidelines
 
 ### Usage & Reference
 - **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide

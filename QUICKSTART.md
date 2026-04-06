@@ -63,30 +63,60 @@ Open: **http://localhost:5000**
 
 ## 📧 Enable Email Reminders (Optional - 5 minutes)
 
-### Gmail Setup:
+Add SMTP settings to your `.env` file to enable automatic task reminders (sent 3 days before due dates) and guest emails.
 
-1. **Get App Password:**
-   - https://myaccount.google.com/apppasswords
-   - Enable 2FA if needed
-   - Create app password
-   - Copy 16-character code
+### Gmail
 
-2. **Configure:**
-   Edit `docker-compose.yml` and uncomment:
-   ```yaml
-   - SMTP_HOST=smtp.gmail.com
-   - SMTP_PORT=587
-   - SMTP_USER=your-email@gmail.com
-   - SMTP_PASSWORD=your-16-char-app-password
-   - FROM_EMAIL=your-email@gmail.com
+1. Enable 2FA at https://myaccount.google.com/security
+2. Create an app password at https://myaccount.google.com/apppasswords
+3. Add to `.env`:
+   ```
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASSWORD=your-16-char-app-password
+   FROM_EMAIL=your-email@gmail.com
    ```
 
-3. **Restart:**
-   ```bash
-   docker-compose restart
-   ```
+### Outlook / Office 365
 
-Automatic reminders sent 3 days before task due dates!
+```
+SMTP_HOST=smtp.office365.com
+SMTP_PORT=587
+SMTP_USER=your-email@outlook.com
+SMTP_PASSWORD=your-password
+FROM_EMAIL=your-email@outlook.com
+```
+
+### SendGrid
+
+```
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASSWORD=your-sendgrid-api-key
+FROM_EMAIL=your-verified-sender@example.com
+```
+
+### Amazon SES
+
+```
+SMTP_HOST=email-smtp.us-east-1.amazonaws.com
+SMTP_PORT=587
+SMTP_USER=your-ses-smtp-username
+SMTP_PASSWORD=your-ses-smtp-password
+FROM_EMAIL=your-verified-sender@example.com
+```
+
+> **Note:** Replace the region (`us-east-1`) with your SES region.
+
+### After Configuring Email
+
+```bash
+docker-compose restart
+```
+
+Check the logs to verify: `docker-compose logs -f`
 
 ---
 
@@ -139,17 +169,18 @@ docker-compose up -d --build
 
 - Database: `instance/wedding_organizer.db`
 - Persists across container restarts
-- Backup by copying the database file
+- Backup with `./scripts/backup.sh` (see [INSTALL.md](INSTALL.md#database-backups))
 
 ---
 
 ## 🆘 Need Help?
 
-- **README.md** - Feature overview
-- **CHANGELOG.md** - Version history and what's new
-- **TROUBLESHOOTING.md** - Common issues and fixes
-- **docs/WIKI.md** - Comprehensive feature documentation
-- **docs/TRAINING.md** - Step-by-step training guide
-- **ONBOARDING_GUIDE.md** - Setup wizard documentation
+- **[INSTALL.md](INSTALL.md)** - Detailed installation and deployment guide
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and fixes
+- **[docs/DEPLOYMENT-GUIDES.md](docs/DEPLOYMENT-GUIDES.md)** - Platform guides (Unraid, Proxmox, K8s, etc.)
+- **[docs/REVERSE-PROXY.md](docs/REVERSE-PROXY.md)** - SSL/HTTPS setup
+- **[docs/WIKI.md](docs/WIKI.md)** - Comprehensive feature documentation
+- **[docs/TRAINING.md](docs/TRAINING.md)** - Step-by-step training guide
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and what's new
 
 **Start planning your perfect wedding!** 💍
