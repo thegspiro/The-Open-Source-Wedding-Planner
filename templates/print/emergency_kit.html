@@ -117,76 +117,53 @@
         {% endif %}
     </div>
 
-    <h2 class="category-title">Clothing &amp; Fashion Fixes</h2>
-    <div class="kit-grid">
-        {% for item in ['Safety pins (assorted sizes)', 'Sewing kit (needle, white/black thread)', 'Fashion tape (double-sided)', 'Stain remover pen', 'Lint roller', 'Steamer or wrinkle release spray', 'Extra buttons (matching attire)', 'Shoe insoles / heel protectors', 'Clear nail polish (stop stocking runs)', 'Hem tape'] %}
-        <div class="kit-item">
-            <input type="checkbox" class="kit-checkbox">
-            <span class="kit-label">{{ item }}</span>
-        </div>
-        {% endfor %}
-    </div>
+    {% set category_labels = {
+        'fashion': 'Clothing & Fashion Fixes',
+        'health': 'Health & Comfort',
+        'beauty': 'Beauty Touch-Ups',
+        'tools': 'Tools & Supplies',
+        'food': 'Food & Drink',
+        'documents': 'Documents & Essentials'
+    } %}
+    {% set category_order = ['fashion', 'health', 'beauty', 'tools', 'food', 'documents'] %}
 
-    <h2 class="category-title">Health &amp; Comfort</h2>
-    <div class="kit-grid">
-        {% for item in ['Pain relievers (ibuprofen, acetaminophen)', 'Antacid tablets', 'Allergy medication (antihistamines)', 'Band-aids (assorted sizes)', 'Blister pads / moleskin', 'Eye drops', 'Breath mints / gum', 'Throat lozenges', 'Tissues (travel packs)', 'Hand sanitizer', 'Sunscreen (SPF 30+)', 'Bug spray', 'Tampons / pads', 'Deodorant'] %}
-        <div class="kit-item">
-            <input type="checkbox" class="kit-checkbox">
-            <span class="kit-label">{{ item }}</span>
-        </div>
+    {% if kit_items %}
+        {% set items_by_cat = {} %}
+        {% for item in kit_items %}
+            {% set cat = item.category or 'other' %}
+            {% if items_by_cat.update({cat: items_by_cat.get(cat, []) + [item]}) %}{% endif %}
         {% endfor %}
-    </div>
 
-    <h2 class="category-title">Beauty Touch-Ups</h2>
-    <div class="kit-grid">
-        {% for item in ['Bobby pins &amp; hair pins', 'Hair ties &amp; clips', 'Hairspray (travel size)', 'Makeup blotting papers', 'Lipstick / lip gloss (matching shade)', 'Powder compact / setting spray', 'Concealer', 'Cotton swabs &amp; cotton pads', 'Makeup remover wipes', 'Perfume / cologne (travel size)', 'Nail file &amp; nail glue'] %}
-        <div class="kit-item">
-            <input type="checkbox" class="kit-checkbox">
-            <span class="kit-label">{{ item }}</span>
-        </div>
+        {% for cat in category_order %}
+            {% if cat in items_by_cat %}
+            <h2 class="category-title">{{ category_labels.get(cat, cat|title) }}</h2>
+            <div class="kit-grid">
+                {% for item in items_by_cat[cat] %}
+                <div class="kit-item">
+                    <input type="checkbox" class="kit-checkbox" {% if item.packed %}checked{% endif %}>
+                    <span class="kit-label">{{ item.item_name }}{% if item.notes %} <span style="color: #999; font-size: 11px;">({{ item.notes }})</span>{% endif %}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
         {% endfor %}
-    </div>
 
-    <h2 class="category-title">Tools &amp; Supplies</h2>
-    <div class="kit-grid">
-        {% for item in ['Scissors', 'Super glue', 'Duct tape / gaffer tape', 'White chalk (for scuff marks)', 'Pen and notepad', 'Permanent marker', 'Phone charger / portable battery', 'Umbrella(s)', 'Flashlight', 'Zip ties', 'Trash bags', 'Paper towels'] %}
-        <div class="kit-item">
-            <input type="checkbox" class="kit-checkbox">
-            <span class="kit-label">{{ item }}</span>
-        </div>
+        {# Show any items with categories not in the standard list #}
+        {% for cat, items in items_by_cat.items() %}
+            {% if cat not in category_order %}
+            <h2 class="category-title">{{ category_labels.get(cat, cat|replace('_', ' ')|title) }}</h2>
+            <div class="kit-grid">
+                {% for item in items %}
+                <div class="kit-item">
+                    <input type="checkbox" class="kit-checkbox" {% if item.packed %}checked{% endif %}>
+                    <span class="kit-label">{{ item.item_name }}{% if item.notes %} <span style="color: #999; font-size: 11px;">({{ item.notes }})</span>{% endif %}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
         {% endfor %}
-    </div>
-
-    <h2 class="category-title">Food &amp; Drink</h2>
-    <div class="kit-grid">
-        {% for item in ['Water bottles', 'Granola bars / snacks', 'Straws (to drink without smudging lipstick)', 'Mints for the couple'] %}
-        <div class="kit-item">
-            <input type="checkbox" class="kit-checkbox">
-            <span class="kit-label">{{ item }}</span>
-        </div>
-        {% endfor %}
-    </div>
-
-    <h2 class="category-title">Documents &amp; Essentials</h2>
-    <div class="kit-grid">
-        {% for item in ['Marriage license', 'Vendor contact list', 'Day-of timeline copies', 'Rings', 'Vow cards / notes', 'Cash for tips (labeled envelopes)', 'ID / wallet', 'Insurance cards', 'Hotel room key'] %}
-        <div class="kit-item">
-            <input type="checkbox" class="kit-checkbox">
-            <span class="kit-label">{{ item }}</span>
-        </div>
-        {% endfor %}
-    </div>
-
-    {% if custom_kit_items %}
-    <h2 class="category-title">Your Custom Items</h2>
-    <div class="kit-grid">
-        {% for item in custom_kit_items %}
-        <div class="kit-item">
-            <input type="checkbox" class="kit-checkbox" {% if item.packed %}checked{% endif %}>
-            <span class="kit-label">{{ item.item_name }}{% if item.notes %} <span style="color: #999; font-size: 11px;">({{ item.notes }})</span>{% endif %}</span>
-        </div>
-        {% endfor %}
-    </div>
+    {% else %}
+        <p class="empty-message">No emergency kit items yet. Items will be pre-populated when you create a new wedding.</p>
     {% endif %}
 
     <div class="note-box">

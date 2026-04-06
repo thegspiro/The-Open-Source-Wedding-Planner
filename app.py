@@ -12,7 +12,7 @@ from models import (
     ContingencyPlan, TipItem, Gift,
     VendorNote, VendorQuote, SpeechToast, WeddingFavor,
     ActivityLog, Comment,
-    InventoryItem, InventoryBin,
+    InventoryItem, InventoryBin, EmergencyKitItem,
     BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES,
     TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES,
     INVENTORY_CATEGORIES, INVENTORY_AREAS
@@ -292,6 +292,126 @@ def get_wedding_or_403(wedding_id):
 
 
 # ============================================
+# DEFAULT EMERGENCY KIT ITEMS
+# ============================================
+
+DEFAULT_EMERGENCY_KIT_ITEMS = {
+    'fashion': [
+        'Safety pins (assorted sizes)',
+        'Sewing kit (needle, white & black thread)',
+        'Fashion tape (double-sided)',
+        'Stain remover pen',
+        'Static guard spray',
+        'Lint roller',
+        'Wrinkle release spray',
+        'Extra buttons (matching attire)',
+        'Shoe insoles / heel protectors',
+        'Clear nail polish (stop stocking runs)',
+        'Hem tape',
+        'Shoe polish / white shoe touch-up',
+    ],
+    'health': [
+        'Pain relievers (ibuprofen, acetaminophen)',
+        'Antacid tablets',
+        'Anti-nausea medication',
+        'Allergy medication (antihistamines)',
+        'Band-aids (assorted sizes)',
+        'Blister pads / moleskin',
+        'Eye drops',
+        'Breath mints / gum',
+        'Throat lozenges',
+        'Tissues (travel packs)',
+        'Hand sanitizer',
+        'Sunscreen (SPF 30+)',
+        'Bug spray',
+        'Tampons / pads',
+        'Deodorant',
+        'Tweezers',
+        'Nail clippers',
+        'Contact lens solution / spare contacts',
+        'Hydrocortisone cream',
+        'Electrolyte packets',
+    ],
+    'beauty': [
+        'Bobby pins & hair pins',
+        'Hair ties & clips',
+        'Hairspray (travel size)',
+        'Dry shampoo',
+        'Makeup blotting papers',
+        'Lipstick / lip gloss (matching shade)',
+        'Powder compact / setting spray',
+        'Concealer',
+        'Cotton swabs & cotton pads',
+        'Makeup remover wipes',
+        'Perfume / cologne (travel size)',
+        'Nail file & nail glue',
+        'Eyelash glue',
+        'Compact mirror',
+        'Disposable razor',
+    ],
+    'tools': [
+        'Scissors',
+        'Super glue',
+        'Duct tape / gaffer tape',
+        'White chalk (for scuff marks)',
+        'Pen and notepad',
+        'Permanent marker',
+        'Phone charger / portable battery',
+        'Extension cord / power strip',
+        'Umbrella(s)',
+        'Flashlight',
+        'Zip ties',
+        'Rubber bands',
+        'Command strips / hooks',
+        'Floral wire & floral tape',
+        'Trash bags',
+        'Paper towels',
+        'Baby wipes',
+        'Lighter or matches',
+        'Batteries (AA / AAA)',
+    ],
+    'food': [
+        'Water bottles',
+        'Granola bars / protein bars',
+        'Straws (to drink without smudging lipstick)',
+        'Mints for the couple',
+        'Ginger chews (for nausea)',
+        'Electrolyte drinks',
+    ],
+    'documents': [
+        'Marriage license',
+        'Vendor contact list',
+        'Day-of timeline copies',
+        'Rings',
+        'Vow cards / notes',
+        'Cash for tips (labeled envelopes)',
+        'ID / wallet',
+        'Insurance cards',
+        'Hotel room key',
+        'Emergency contact list',
+        'Copies of vendor contracts',
+        'Seating chart copy',
+        'Spare car keys',
+        'Checkbook (final vendor payments)',
+    ],
+}
+
+
+def seed_default_emergency_kit(wedding_id):
+    """Create default emergency kit items for a wedding."""
+    for category, items in DEFAULT_EMERGENCY_KIT_ITEMS.items():
+        for item_name in items:
+            kit_item = EmergencyKitItem(
+                wedding_id=wedding_id,
+                item_name=item_name,
+                category=category,
+                packed=False
+            )
+            db.session.add(kit_item)
+    db.session.commit()
+
+
+# ============================================
 # AUTH ROUTES
 # ============================================
 
@@ -446,6 +566,9 @@ def new_wedding():
         access = WeddingAccess(user_id=user.id, wedding_id=wedding.id, role='owner')
         db.session.add(access)
         db.session.commit()
+
+        # Pre-populate emergency kit with common items
+        seed_default_emergency_kit(wedding.id)
 
         flash(f'Wedding created! Let\'s set up some details.', 'success')
         return redirect(url_for('onboarding_step1', wedding_id=wedding.id))
@@ -4688,9 +4811,12 @@ def print_reception_script(wedding_id):
 def print_emergency_kit(wedding_id):
     """Printable emergency kit supplies checklist."""
     wedding = get_wedding_or_403(wedding_id)
-    custom_kit_items = sorted(wedding.emergency_kit_items, key=lambda x: (x.category or '', x.item_name)) if wedding.emergency_kit_items else []
+    # Auto-seed default items for weddings created before this feature
+    if not wedding.emergency_kit_items:
+        seed_default_emergency_kit(wedding.id)
+    kit_items = sorted(wedding.emergency_kit_items, key=lambda x: (x.category or '', x.item_name))
     return _render_or_pdf('print/emergency_kit.html', f'emergency_kit_{wedding_id}.pdf',
-                          wedding=wedding, custom_kit_items=custom_kit_items)
+                          wedding=wedding, kit_items=kit_items)
 
 @app.route('/wedding/<int:wedding_id>/print/rehearsal')
 @login_required
