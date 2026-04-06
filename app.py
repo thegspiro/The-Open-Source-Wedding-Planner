@@ -4042,16 +4042,12 @@ def seating_chart(wedding_id):
     total_attending = len(all_attending)
     total_assigned = total_attending - len(unassigned)
 
-    # Check for constraint violations
+    # Check for constraint violations (using dict lookup instead of nested loop)
+    guest_table_map = {g.id: g.table_id for g in all_attending}
     violations = []
     for pref in preferences:
-        guest_table = None
-        other_table = None
-        for g in all_attending:
-            if g.id == pref.guest_id:
-                guest_table = g.table_id
-            if g.id == pref.other_guest_id:
-                other_table = g.table_id
+        guest_table = guest_table_map.get(pref.guest_id)
+        other_table = guest_table_map.get(pref.other_guest_id)
         if guest_table and other_table:
             if pref.preference_type == 'together' and guest_table != other_table:
                 violations.append(f'{pref.guest.name} and {pref.other_guest.name} should sit together but are at different tables')
@@ -4227,9 +4223,19 @@ def seating_assign(wedding_id):
     guest_id = request.form.get('guest_id', type=int)
     table_id = request.form.get('table_id', type=int)
     guest = Guest.query.get_or_404(guest_id)
+    if table_id and guest.rsvp_status != 'accepted':
+        flash(f'{guest.name} has not accepted their RSVP (status: {guest.rsvp_status or "pending"}). Cannot assign to a table.', 'warning')
+        return redirect(url_for('seating_chart', wedding_id=wedding_id))
     guest.table_id = table_id if table_id else None
     db.session.commit()
-    flash(f'{guest.name} assigned!', 'success')
+    msg = f'{guest.name} assigned!'
+    category = 'success'
+    if table_id:
+        table = SeatingTable.query.get(table_id)
+        if table and len(table.assigned_guests) > table.capacity:
+            msg += f' Warning: table is now over capacity ({len(table.assigned_guests)}/{table.capacity}).'
+            category = 'warning'
+    flash(msg, category)
     return redirect(url_for('seating_chart', wedding_id=wedding_id))
 
 
@@ -4248,12 +4254,21 @@ def seating_unassign(wedding_id, guest_id):
 def seating_bulk_assign(wedding_id):
     table_id = request.form.get('table_id', type=int)
     guest_ids = request.form.getlist('guest_ids')
+    assigned = 0
+    skipped = 0
     for gid in guest_ids:
         guest = Guest.query.get(int(gid))
         if guest:
+            if guest.rsvp_status != 'accepted':
+                skipped += 1
+                continue
             guest.table_id = table_id
+            assigned += 1
     db.session.commit()
-    flash(f'{len(guest_ids)} guests assigned!', 'success')
+    msg = f'{assigned} guests assigned!'
+    if skipped:
+        msg += f' ({skipped} skipped — RSVP not accepted.)'
+    flash(msg, 'success' if skipped == 0 else 'warning')
     return redirect(url_for('seating_chart', wedding_id=wedding_id))
 
 
@@ -4308,7 +4323,18 @@ def seating_preference_add(wedding_id):
         flash('Cannot create a preference for the same guest.', 'warning')
         return redirect(url_for('seating_preferences', wedding_id=wedding_id))
 
-    # Check for duplicate
+    # Check for contradictory reverse preference (A→B "together" vs B→A "apart")
+    reverse = SeatingPreference.query.filter_by(
+        wedding_id=wedding_id, guest_id=other_guest_id, other_guest_id=guest_id
+    ).first()
+    if reverse and reverse.preference_type != pref_type:
+        guest = Guest.query.get(guest_id)
+        other = Guest.query.get(other_guest_id)
+        flash(f'Conflict: {other.name} & {guest.name} already have a "{reverse.preference_type}" preference. '
+              f'Remove it first before adding a "{pref_type}" preference.', 'warning')
+        return redirect(url_for('seating_preferences', wedding_id=wedding_id))
+
+    # Check for duplicate (same direction)
     existing = SeatingPreference.query.filter_by(
         wedding_id=wedding_id, guest_id=guest_id, other_guest_id=other_guest_id
     ).first()
@@ -4386,10 +4412,13 @@ def seating_auto_assign(wedding_id):
         flash('No guests to assign.', 'info')
         return redirect(url_for('seating_chart', wedding_id=wedding_id))
 
-    # Load preferences
+    # Load preferences (sorted by priority so higher-priority constraints are processed first)
     prefs = SeatingPreference.query.filter_by(wedding_id=wedding_id).all()
-    together_pairs = [(p.guest_id, p.other_guest_id) for p in prefs if p.preference_type == 'together']
-    apart_pairs = [(p.guest_id, p.other_guest_id) for p in prefs if p.preference_type == 'apart']
+    together_pairs = sorted(
+        [(p.guest_id, p.other_guest_id, p.priority) for p in prefs if p.preference_type == 'together'],
+        key=lambda x: -x[2]  # highest priority first
+    )
+    apart_pairs = [(p.guest_id, p.other_guest_id, p.priority) for p in prefs if p.preference_type == 'apart']
 
     # Build guest groups using Union-Find for "together" constraints
     guest_ids = {g.id for g in guests_to_assign}
@@ -4406,25 +4435,28 @@ def seating_auto_assign(wedding_id):
         if ra != rb:
             parent[ra] = rb
 
-    # Merge from "together" preferences
-    for a, b in together_pairs:
+    # Merge from "together" preferences (already sorted by priority, highest first)
+    for a, b, priority in together_pairs:
         if a in guest_ids and b in guest_ids:
             union(a, b)
 
-    # Also merge by household_group
+    # Also merge by household_group (case-insensitive, whitespace-normalized)
     household_map = {}
     for g in guests_to_assign:
         if g.household_group:
-            if g.household_group in household_map:
-                union(g.id, household_map[g.household_group])
+            key = g.household_group.strip().lower()
+            if key in household_map:
+                union(g.id, household_map[key])
             else:
-                household_map[g.household_group] = g.id
+                household_map[key] = g.id
 
-    # Also group plus-ones with their hosts
-    name_to_id = {g.name: g.id for g in guests_to_assign}
+    # Also group plus-ones with their hosts (case-insensitive, whitespace-normalized)
+    name_to_id = {g.name.strip().lower(): g.id for g in guests_to_assign if g.name}
     for g in guests_to_assign:
-        if g.is_plus_one and g.plus_one_of and g.plus_one_of in name_to_id:
-            union(g.id, name_to_id[g.plus_one_of])
+        if g.is_plus_one and g.plus_one_of:
+            host_key = g.plus_one_of.strip().lower()
+            if host_key in name_to_id:
+                union(g.id, name_to_id[host_key])
 
     # Build actual groups
     from collections import defaultdict
@@ -4432,11 +4464,12 @@ def seating_auto_assign(wedding_id):
     for g in guests_to_assign:
         groups[find(g.id)].append(g)
 
-    # Build apart-set (which group roots must not share a table)
-    apart_roots = set()
-    for a, b in apart_pairs:
+    # Build apart-set (which group roots must not share a table) with priority
+    apart_roots = {}  # (root_a, root_b) -> priority
+    for a, b, priority in apart_pairs:
         if a in guest_ids and b in guest_ids:
-            apart_roots.add((find(a), find(b)))
+            key = (find(a), find(b))
+            apart_roots[key] = max(apart_roots.get(key, 0), priority)
 
     # --- Social Group Affinity ---
     # Build a map: group_root -> set of social tags
@@ -4506,9 +4539,10 @@ def seating_auto_assign(wedding_id):
         """Check if placing this group at this table violates constraints."""
         if table_counts.get(table.id, 0) + group_size > table.capacity:
             return False
-        # Check apart constraints
+        # Check apart constraints (respect priority — only block if priority >= 3)
         for assigned_root in table_assignments[table.id]:
-            if (group_root, assigned_root) in apart_roots or (assigned_root, group_root) in apart_roots:
+            priority = apart_roots.get((group_root, assigned_root), 0) or apart_roots.get((assigned_root, group_root), 0)
+            if priority >= 3:
                 return False
         return True
 
