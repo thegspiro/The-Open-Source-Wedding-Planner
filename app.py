@@ -1472,6 +1472,7 @@ def guest_add(wedding_id):
             guest_type=request.form.get('guest_type'),
             side=request.form.get('side'),
             dietary_restrictions=request.form.get('dietary_restrictions'),
+            accessibility_needs=request.form.get('accessibility_needs'),
             household_group=request.form.get('household_group'),
             social_groups=request.form.get('social_groups'),
             guest_token=generate_token()
@@ -1495,6 +1496,7 @@ def guest_edit(wedding_id, guest_id):
         guest.guest_type = request.form.get('guest_type')
         guest.side = request.form.get('side')
         guest.dietary_restrictions = request.form.get('dietary_restrictions')
+        guest.accessibility_needs = request.form.get('accessibility_needs')
         guest.rsvp_status = request.form.get('rsvp_status')
         guest.meal_choice = request.form.get('meal_choice')
         guest.invitation_sent = request.form.get('invitation_sent') == 'on'
@@ -4063,18 +4065,59 @@ def seating_chart(wedding_id):
         for g in pending_assigned:
             violations.append(f'{g.name} is assigned to a table but RSVP status is "{g.rsvp_status or "pending"}"')
 
+    # Detect "lonely" guests — assigned to a table but share no household, social group, or side with tablemates
+    lonely_guests = []
+    for table in tables:
+        assigned = table.assigned_guests
+        if len(assigned) <= 1:
+            continue
+        for guest in assigned:
+            guest_tags = set()
+            if guest.household_group:
+                guest_tags.add(('household', guest.household_group.strip().lower()))
+            if guest.social_groups:
+                for tag in guest.social_groups.split(','):
+                    tag = tag.strip()
+                    if tag:
+                        guest_tags.add(('social', tag.lower()))
+            if guest.side:
+                guest_tags.add(('side', guest.side.strip().lower()))
+
+            has_connection = False
+            for other in assigned:
+                if other.id == guest.id:
+                    continue
+                other_tags = set()
+                if other.household_group:
+                    other_tags.add(('household', other.household_group.strip().lower()))
+                if other.social_groups:
+                    for tag in other.social_groups.split(','):
+                        tag = tag.strip()
+                        if tag:
+                            other_tags.add(('social', tag.lower()))
+                if other.side:
+                    other_tags.add(('side', other.side.strip().lower()))
+                if guest_tags & other_tags:
+                    has_connection = True
+                    break
+
+            if not has_connection and guest_tags:
+                table_name = table.table_name or f'Table {table.table_number}'
+                lonely_guests.append(f'{guest.name} at {table_name} — doesn\'t share a group, household, or side with any tablemate')
+
     stats = {
         'total_capacity': total_capacity,
         'total_attending': total_attending,
         'total_assigned': total_assigned,
         'total_unassigned': len(unassigned),
         'pending_rsvp_assigned': len(pending_assigned),
+        'lonely_guest_count': len(lonely_guests),
         'capacity_surplus': total_capacity - total_attending,
     }
 
     return render_template('seating/chart.html', wedding=wedding, tables=tables,
                          unassigned_guests=unassigned, preferences=preferences,
-                         violations=violations, stats=stats,
+                         violations=violations, lonely_guests=lonely_guests, stats=stats,
                          table_size_ref=TABLE_SIZE_REFERENCE, table_roles=TABLE_ROLES)
 
 
@@ -4526,16 +4569,26 @@ def seating_auto_assign(wedding_id):
     # Sort groups by traits for smart placement
     guest_lookup = {g.id: g for g in guests_to_assign}
 
+    # Track which groups have accessibility needs
+    groups_with_accessibility = set()
+    for root, members in groups.items():
+        if any(g.accessibility_needs for g in members):
+            groups_with_accessibility.add(root)
+
     def group_sort_key(grp):
-        """Priority: kids first (for kids table), then family, then friends."""
+        """Priority: accessibility first, kids next, then family, then friends."""
+        root = find(grp[0].id)
+        has_accessibility = root in groups_with_accessibility
         types = [g.guest_type for g in grp]
+        if has_accessibility:
+            return (0, 0, -len(grp))
         if any(t == 'child' or t == 'kid' for t in types):
-            return (0, -len(grp))
+            return (0, 1, -len(grp))
         if any(t == 'family' for t in types):
-            return (1, -len(grp))
+            return (1, 0, -len(grp))
         if any(t == 'vip' for t in types):
-            return (2, -len(grp))
-        return (3, -len(grp))
+            return (2, 0, -len(grp))
+        return (3, 0, -len(grp))
 
     sorted_groups = sorted(groups.values(), key=group_sort_key)
 
@@ -4557,11 +4610,18 @@ def seating_auto_assign(wedding_id):
                 return False
         return True
 
+    # Sort tables by table_number for accessibility preference (lower = closer to entrance)
+    tables_by_number = sorted(tables, key=lambda t: t.table_number)
+
     def table_affinity(group_root, table):
         """Score how well this group fits at this table based on who's already there."""
         score = 0
         for existing_root in table_assignments[table.id]:
             score += affinity_score(group_root, existing_root)
+        # Boost score for lower-numbered tables when group has accessibility needs
+        if group_root in groups_with_accessibility:
+            idx = tables_by_number.index(table) if table in tables_by_number else len(tables)
+            score += max(0, len(tables) - idx)  # higher score for lower table numbers
         return score
 
     def place_group(grp, table):

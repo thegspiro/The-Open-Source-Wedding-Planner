@@ -1655,6 +1655,38 @@ footer p { margin: 0; }
     color: var(--color-danger);
 }
 
+/* Spare Seats / Over Capacity Tags */
+.spare-seats-tag {
+    font-size: 0.62rem;
+    background: var(--color-success-bg);
+    color: var(--color-success);
+    padding: 1px 5px;
+    border-radius: var(--radius-xl);
+    margin-left: 4px;
+    font-weight: 600;
+}
+.over-capacity-tag {
+    font-size: 0.62rem;
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+    padding: 1px 5px;
+    border-radius: var(--radius-xl);
+    margin-left: 4px;
+    font-weight: 600;
+}
+
+/* Accessibility Tags */
+.accessibility-tag {
+    font-size: 0.62rem;
+    background: #e3f2fd;
+    color: #1565c0;
+    padding: 1px 5px;
+    border-radius: var(--radius-xl);
+    margin-left: 3px;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
 /* Social Group Tags */
 .social-tag {
     font-size: 0.62rem;

@@ -56,6 +56,17 @@
 </div>
 {% endif %}
 
+{# Lonely Guest Warnings #}
+{% if lonely_guests %}
+<div class="budget-warnings" style="margin-bottom: 1.5rem; border-color: #c9d1d9; background: #f6f8fa;">
+    <h3>Guests Who May Not Know Anyone at Their Table ({{ lonely_guests|length }})</h3>
+    <p class="form-help" style="margin-top: 0;">These guests don't share a social group, household, or side with anyone at their table. Consider moving them near someone they know.</p>
+    {% for warning in lonely_guests %}
+    <div class="budget-warning" style="color: #57606a;">{{ warning }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
 {# Add Tables Section #}
 <div class="module-section">
     <h2>Add Tables</h2>
@@ -219,6 +230,8 @@
                 </h3>
                 <span class="table-capacity {% if table.assigned_guests|length > table.capacity %}warning{% endif %}">
                     {{ table.assigned_guests|length }}/{{ table.capacity }}
+                    {% set spare = table.capacity - table.assigned_guests|length %}
+                    {% if spare > 0 %}<span class="spare-seats-tag">{{ spare }} spare</span>{% elif spare < 0 %}<span class="over-capacity-tag">{{ -spare }} over</span>{% endif %}
                     {% if table.table_shape %} &middot; {{ table.table_shape|title }}{% endif %}
                 </span>
             </div>
@@ -230,6 +243,7 @@
                     <span class="guest-info">
                         {{ guest.name }}
                         {% if guest.rsvp_status != 'accepted' %}<span class="rsvp-tag rsvp-{{ guest.rsvp_status or 'pending' }}">{{ guest.rsvp_status or 'pending' }}</span>{% endif %}
+                        {% if guest.accessibility_needs %}<span class="accessibility-tag" title="{{ guest.accessibility_needs }}">&#9855; {{ guest.accessibility_needs }}</span>{% endif %}
                         {% if guest.social_groups %}{% for tag in guest.social_groups.split(',') %}<span class="social-tag">{{ tag.strip() }}</span>{% endfor %}{% endif %}
                         {% if guest.dietary_restrictions %}<span class="dietary-tag">{{ guest.dietary_restrictions }}</span>{% endif %}
                         {% if guest.meal_choice %}<span class="meal-tag">{{ guest.meal_choice }}</span>{% endif %}
@@ -308,6 +322,7 @@
                 <th>Household</th>
                 <th>Groups</th>
                 <th>Dietary</th>
+                <th>Accessibility</th>
                 {% if tables %}<th>Assign</th>{% endif %}
             </tr>
         </thead>
@@ -321,6 +336,7 @@
                 <td>{{ guest.household_group or '-' }}</td>
                 <td>{% if guest.social_groups %}{% for tag in guest.social_groups.split(',') %}<span class="social-tag">{{ tag.strip() }}</span> {% endfor %}{% else %}-{% endif %}</td>
                 <td>{{ guest.dietary_restrictions or '-' }}</td>
+                <td>{% if guest.accessibility_needs %}<span class="accessibility-tag">&#9855; {{ guest.accessibility_needs }}</span>{% else %}-{% endif %}</td>
                 {% if tables %}
                 <td>
                     <form method="POST" action="{{ url_for('seating_assign', wedding_id=wedding.id) }}" class="form-inline">

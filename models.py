@@ -502,6 +502,9 @@ class Guest(db.Model):
     rsvp_notes = db.Column(db.Text)  # guest notes from RSVP form
     guest_token = db.Column(db.String(64), unique=True)  # token for cookie-based guest identification
     
+    # Accessibility
+    accessibility_needs = db.Column(db.Text)  # e.g., "wheelchair", "hearing", "mobility", "near exit"
+
     # Plus One
     is_plus_one = db.Column(db.Boolean, default=False)
     plus_one_of = db.Column(db.String(200))
