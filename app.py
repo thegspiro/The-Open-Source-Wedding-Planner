@@ -36,6 +36,8 @@ import math
 from functools import wraps
 from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission, validate_time_string, validate_name_pronunciation, validate_text_field
 
+__version__ = '2.10.0'
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///wedding_organizer.db'
@@ -528,6 +530,10 @@ def user_settings():
 # ============================================
 # MAIN ROUTES
 # ============================================
+
+@app.route('/version')
+def app_version():
+    return {'version': __version__}
 
 @app.route('/')
 @login_required
