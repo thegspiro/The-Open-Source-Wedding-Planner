@@ -18,10 +18,10 @@ def app():
         WTF_CSRF_ENABLED=False,
         SERVER_NAME="localhost",
     )
-    # Disable CSRF validation during tests
-    @flask_app.before_request
-    def _skip_csrf():
-        pass
+    # Disable CSRF validation during tests by monkey-patching
+    import security
+    security._original_validate_csrf = security.validate_csrf_token
+    security.validate_csrf_token = lambda: True
 
     yield flask_app
 
