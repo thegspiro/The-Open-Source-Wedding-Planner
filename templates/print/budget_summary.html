@@ -135,19 +135,38 @@
 
         @page { size: letter; margin: 0.6in 0.5in; }
 
+        .skip-link {
+            position: absolute; left: -9999px; top: auto;
+            width: 1px; height: 1px; overflow: hidden;
+            font-size: 14px; padding: 10px;
+        }
+        .skip-link:focus {
+            position: static; width: auto; height: auto;
+            overflow: visible; background: var(--primary); color: #fff;
+            display: inline-block; margin-bottom: 10px;
+        }
+
+        .print-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+        .cue-checkbox:focus-visible, .kit-checkbox:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
         @media print {
             .print-btn { display: none !important; }
-            body { padding: 0; font-size: 11px; }
+            body { padding: 0; font-size: 12px; }
             .print-header h1 { font-size: 20px; }
             .expense-table th, .expense-table td { font-size: 11px; padding: 5px 8px; }
             .expense-table thead { display: table-header-group; }
+            * { color-adjust: exact; -webkit-print-color-adjust: exact; }
         }
     </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
     <button class="print-btn" onclick="window.print()">Print</button>
-    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+    <a class="print-btn" href="?format=pdf" role="button" style="text-decoration:none; margin-left:8px;">Download PDF</a>
 
+    <main id="main-content">
     <div class="print-header">
         {% if wedding.branding and wedding.branding.monogram_text %}
         <div class="monogram">{{ wedding.branding.monogram_text }}</div>
@@ -192,15 +211,16 @@
 
     {% if expenses %}
     <table class="expense-table">
+        <caption class="sr-only">Budget expenses by category</caption>
         <thead>
             <tr>
-                <th>Item</th>
-                <th class="amount-cell">Estimated</th>
-                <th class="amount-cell">Actual</th>
-                <th class="amount-cell">Paid</th>
-                <th>Status</th>
-                <th>Due Date</th>
-                <th>Covered By</th>
+                <th scope="col">Item</th>
+                <th scope="col" class="amount-cell">Estimated</th>
+                <th scope="col" class="amount-cell">Actual</th>
+                <th scope="col" class="amount-cell">Paid</th>
+                <th scope="col">Status</th>
+                <th scope="col">Due Date</th>
+                <th scope="col">Covered By</th>
             </tr>
         </thead>
         <tbody>
@@ -219,13 +239,13 @@
                 <td class="amount-cell">${{ '%.2f'|format(expense.paid_amount) if expense.paid_amount else '—' }}</td>
                 <td>
                     {% if expense.payment_status == 'paid' %}
-                    <span class="status-paid">Paid</span>
+                    <span class="status-paid">&#10003; Paid</span>
                     {% elif expense.payment_status == 'partial' %}
-                    <span class="status-partial">Partial</span>
+                    <span class="status-partial">&#9680; Partial</span>
                     {% elif expense.payment_status == 'deposit' %}
-                    <span class="status-partial">Deposit</span>
+                    <span class="status-partial">&#9680; Deposit</span>
                     {% else %}
-                    <span class="status-unpaid">{{ expense.payment_status or 'Unpaid' }}</span>
+                    <span class="status-unpaid">&#10007; {{ expense.payment_status or 'Unpaid' }}</span>
                     {% endif %}
                 </td>
                 <td>{{ expense.payment_due_date.strftime('%m/%d/%Y') if expense.payment_due_date else '' }}</td>
@@ -250,5 +270,6 @@
         {{ wedding.couple_names }}
         {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
     </div>
+    </main>
 </body>
 </html>

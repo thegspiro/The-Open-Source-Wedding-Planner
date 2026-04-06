@@ -119,20 +119,39 @@
 
         @page { size: letter landscape; margin: 0.5in; }
 
+        .skip-link {
+            position: absolute; left: -9999px; top: auto;
+            width: 1px; height: 1px; overflow: hidden;
+            font-size: 14px; padding: 10px;
+        }
+        .skip-link:focus {
+            position: static; width: auto; height: auto;
+            overflow: visible; background: var(--primary); color: #fff;
+            display: inline-block; margin-bottom: 10px;
+        }
+
+        .print-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+        .cue-checkbox:focus-visible, .kit-checkbox:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
         @media print {
             .print-btn { display: none !important; }
-            body { padding: 0; font-size: 10px; }
-            .guest-table th { font-size: 8px; padding: 5px 5px; }
-            .guest-table td { font-size: 9px; padding: 4px 5px; }
+            body { padding: 0; font-size: 12px; }
+            .guest-table th { font-size: 10px; padding: 5px 5px; }
+            .guest-table td { font-size: 10px; padding: 4px 5px; }
             .guest-table thead { display: table-header-group; }
             .print-header h1 { font-size: 18px; }
+            * { color-adjust: exact; -webkit-print-color-adjust: exact; }
         }
     </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
     <button class="print-btn" onclick="window.print()">Print</button>
-    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+    <a class="print-btn" href="?format=pdf" role="button" style="text-decoration:none; margin-left:8px;">Download PDF</a>
 
+    <main id="main-content">
     <div class="print-header">
         {% if wedding.branding and wedding.branding.monogram_text %}
         <div class="monogram">{{ wedding.branding.monogram_text }}</div>
@@ -173,18 +192,19 @@
     </div>
 
     <table class="guest-table">
+        <caption class="sr-only">Guest list with RSVP status and meal choices</caption>
         <thead>
             <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>RSVP</th>
-                <th>Meal Choice</th>
-                <th>Dietary Restrictions</th>
-                <th>Table</th>
-                <th>Type</th>
-                <th>Side</th>
-                <th>Phone</th>
-                <th>Email</th>
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col">RSVP</th>
+                <th scope="col">Meal Choice</th>
+                <th scope="col">Dietary Restrictions</th>
+                <th scope="col">Table</th>
+                <th scope="col">Type</th>
+                <th scope="col">Side</th>
+                <th scope="col">Phone</th>
+                <th scope="col">Email</th>
             </tr>
         </thead>
         <tbody>
@@ -194,11 +214,11 @@
                 <td style="font-weight: 600;">{{ guest.name }}{% if guest.is_plus_one %} <span style="font-size:9px; color:#999;">(+1)</span>{% endif %}</td>
                 <td>
                     {% if guest.rsvp_status == 'accepted' %}
-                    <span class="rsvp-accepted">Accepted</span>
+                    <span class="rsvp-accepted">&check; Accepted</span>
                     {% elif guest.rsvp_status == 'declined' %}
-                    <span class="rsvp-declined">Declined</span>
+                    <span class="rsvp-declined">&cross; Declined</span>
                     {% else %}
-                    <span class="rsvp-pending">{{ guest.rsvp_status or 'Pending' }}</span>
+                    <span class="rsvp-pending">? {{ guest.rsvp_status or 'Pending' }}</span>
                     {% endif %}
                 </td>
                 <td>{{ guest.meal_choice or '' }}</td>
@@ -224,5 +244,6 @@
         {{ wedding.couple_names }}
         {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
     </div>
+    </main>
 </body>
 </html>

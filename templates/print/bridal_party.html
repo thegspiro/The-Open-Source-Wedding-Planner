@@ -129,19 +129,38 @@
 
         @page { size: letter; margin: 0.6in 0.5in; }
 
+        .skip-link {
+            position: absolute; left: -9999px; top: auto;
+            width: 1px; height: 1px; overflow: hidden;
+            font-size: 14px; padding: 10px;
+        }
+        .skip-link:focus {
+            position: static; width: auto; height: auto;
+            overflow: visible; background: var(--primary); color: #fff;
+            display: inline-block; margin-bottom: 10px;
+        }
+
+        .print-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+        .cue-checkbox:focus-visible, .kit-checkbox:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
         @media print {
             .print-btn { display: none !important; }
-            body { padding: 0; font-size: 11px; }
+            body { padding: 0; font-size: 12px; }
             .print-header h1 { font-size: 20px; }
             .member-card { padding: 8px 12px; }
             .party-grid { gap: 8px; }
+            * { color-adjust: exact; -webkit-print-color-adjust: exact; }
         }
     </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
     <button class="print-btn" onclick="window.print()">Print</button>
-    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+    <a class="print-btn" href="?format=pdf" role="button" style="text-decoration:none; margin-left:8px;">Download PDF</a>
 
+    <main id="main-content">
     <div class="print-header">
         {% if wedding.branding and wedding.branding.monogram_text %}
         <div class="monogram">{{ wedding.branding.monogram_text }}</div>
@@ -189,5 +208,6 @@
         {{ wedding.couple_names }}
         {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
     </div>
+    </main>
 </body>
 </html>
