@@ -17,6 +17,7 @@ from models import (
     TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES,
     INVENTORY_CATEGORIES, INVENTORY_AREAS
 )
+from flask_migrate import Migrate
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -26,7 +27,8 @@ import os
 import csv
 import io
 import secrets
-from email_service import send_reminder_email, send_guest_email
+from email_service import send_reminder_email, send_guest_email, send_pdf_email
+import re
 import threading
 import time as time_module
 import json
@@ -48,6 +50,7 @@ if app.config['SECRET_KEY'] in ('dev-secret-key-change-in-production', 'your-sec
     )
 
 db.init_app(app)
+migrate = Migrate(app, db)
 
 # Initialize security: CSRF protection, security headers, session hardening
 init_security(app)
@@ -75,9 +78,11 @@ def health_check():
 
 
 # Initialize database and seed traditional elements
+# Note: db.create_all() is kept for initial setup / development convenience.
+# For production schema changes, use Flask-Migrate: flask db migrate / flask db upgrade
 with app.app_context():
     db.create_all()
-    
+
     # Seed traditional elements if none exist
     if TraditionalElement.query.count() == 0:
         traditional_elements = [
@@ -4625,6 +4630,168 @@ def print_center(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     return render_template('print/print_center.html', wedding=wedding)
 
+
+def _generate_pdf_bytes(template_name, **context):
+    """Render a template and return PDF bytes via WeasyPrint."""
+    from weasyprint import HTML, CSS
+    html = render_template(template_name, **context)
+    return HTML(string=html).write_pdf(
+        stylesheets=[CSS(string='@media print { .print-btn, .share-btn, .share-form-inline { display: none !important; } }')],
+        presentational_hints=True
+    )
+
+
+# Mapping of document types to their template, filename pattern, and data-gathering logic.
+PRINT_DOCUMENTS = {
+    'timeline':            {'title': 'Day-Of Timeline',       'template': 'print/timeline.html',            'filename': 'timeline'},
+    'vendor_contacts':     {'title': 'Vendor Contacts',       'template': 'print/vendor_contacts.html',     'filename': 'vendor_contacts'},
+    'shot_list':           {'title': 'Photography Shot List', 'template': 'print/shot_list.html',           'filename': 'shot_list'},
+    'emergency_contacts':  {'title': 'Emergency Contacts',    'template': 'print/emergency_contacts.html',  'filename': 'emergency_contacts'},
+    'seating':             {'title': 'Seating Chart',         'template': 'print/seating.html',             'filename': 'seating'},
+    'ceremony_program':    {'title': 'Ceremony Program',      'template': 'print/ceremony_program.html',    'filename': 'ceremony_program'},
+    'music_cue_sheet':     {'title': 'Music Cue Sheet',       'template': 'print/music_cue_sheet.html',     'filename': 'music_cue_sheet'},
+    'guest_list':          {'title': 'Guest List',            'template': 'print/guest_list.html',           'filename': 'guest_list'},
+    'tips_tracker':        {'title': 'Tips & Payments',       'template': 'print/tips_tracker.html',         'filename': 'tips'},
+    'hair_makeup':         {'title': 'Hair & Makeup Schedule','template': 'print/hair_makeup.html',          'filename': 'hair_makeup'},
+    'bridal_party':        {'title': 'Wedding Party',         'template': 'print/bridal_party.html',         'filename': 'bridal_party'},
+    'venue_info':          {'title': 'Venue Information',     'template': 'print/venue_info.html',           'filename': 'venue_info'},
+    'decor_setup':         {'title': 'Decor & Setup Plan',    'template': 'print/decor_setup.html',          'filename': 'decor_setup'},
+    'reception_script':    {'title': 'Reception Run Sheet',   'template': 'print/reception_script.html',     'filename': 'reception_script'},
+    'emergency_kit':       {'title': 'Emergency Kit Checklist','template': 'print/emergency_kit.html',       'filename': 'emergency_kit'},
+    'rehearsal':           {'title': 'Rehearsal Schedule',    'template': 'print/rehearsal.html',             'filename': 'rehearsal'},
+    'transportation':      {'title': 'Transportation & Hotels','template': 'print/transportation.html',      'filename': 'transportation'},
+    'contingency_plans':   {'title': 'Backup Plans',          'template': 'print/contingency_plans.html',    'filename': 'contingency_plans'},
+    'budget_summary':      {'title': 'Budget Summary',        'template': 'print/budget_summary.html',       'filename': 'budget'},
+}
+
+
+def _get_print_context(document_type, wedding):
+    """Build the template context dict for a given document type."""
+    ctx = {'wedding': wedding}
+    if document_type == 'timeline':
+        ctx['items'] = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
+    elif document_type == 'vendor_contacts':
+        ctx['vendors'] = wedding.vendors
+    elif document_type == 'shot_list':
+        ctx['shots'] = sorted(wedding.photo_shots, key=lambda x: (x.category or '', x.priority or ''))
+    elif document_type == 'emergency_contacts':
+        ctx['vendors'] = wedding.vendors
+        ctx['participants'] = wedding.participants
+    elif document_type == 'seating':
+        ctx['tables'] = wedding.reception.seating_tables if wedding.reception else []
+    elif document_type == 'ceremony_program':
+        ceremony = wedding.ceremony
+        ctx['ceremony'] = ceremony
+        ctx['readings'] = sorted(ceremony.readings, key=lambda x: (x.order or 0)) if ceremony and ceremony.readings else []
+        ctx['timeline_items'] = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony and ceremony.timeline_items else []
+        ctx['bridal_party'] = sorted(wedding.bridal_party, key=lambda x: (x.processional_order or 999))
+    elif document_type == 'music_cue_sheet':
+        ctx['ceremony'] = wedding.ceremony
+        ctx['songs'] = sorted(wedding.songs, key=lambda x: (x.moment or '', x.order or 0))
+    elif document_type == 'guest_list':
+        ctx['guests'] = sorted(wedding.guests, key=lambda x: x.name)
+    elif document_type == 'tips_tracker':
+        ctx['tips'] = sorted(wedding.tips, key=lambda x: (x.service_category or '', x.recipient))
+    elif document_type == 'hair_makeup':
+        ctx['appointments'] = sorted(wedding.hair_makeup, key=lambda x: (x.appointment_time or datetime.min.time()))
+    elif document_type == 'bridal_party':
+        ctx['bridal_party'] = sorted(wedding.bridal_party, key=lambda x: (x.side or '', x.processional_order or 999))
+    elif document_type == 'venue_info':
+        ctx['ceremony'] = wedding.ceremony
+        ctx['reception'] = wedding.reception
+        ctx['vendors'] = wedding.vendors
+        ctx['accommodations'] = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    elif document_type == 'decor_setup':
+        ctx['reception'] = wedding.reception
+        ctx['floral_items'] = sorted(wedding.floral_items, key=lambda x: (x.item_type or ''))
+        ctx['inventory_items'] = wedding.inventory_items
+    elif document_type == 'reception_script':
+        reception = wedding.reception
+        ctx['reception'] = reception
+        ctx['reception_items'] = sorted(reception.timeline_items, key=lambda x: (x.order or 0)) if reception and reception.timeline_items else []
+        ctx['songs'] = sorted(wedding.songs, key=lambda x: (x.moment or '', x.order or 0))
+        ctx['speeches'] = sorted(wedding.speeches, key=lambda x: (x.order or 0))
+    elif document_type == 'emergency_kit':
+        if not wedding.emergency_kit_items:
+            seed_default_emergency_kit(wedding.id)
+        ctx['kit_items'] = sorted(wedding.emergency_kit_items, key=lambda x: (x.category or '', x.item_name))
+    elif document_type == 'rehearsal':
+        ctx['rehearsal_dinner'] = wedding.rehearsal_dinner
+        ceremony = wedding.ceremony
+        ctx['ceremony_items'] = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony and ceremony.timeline_items else []
+        ctx['bridal_party'] = sorted(wedding.bridal_party, key=lambda x: (x.processional_order or 999))
+    elif document_type == 'transportation':
+        ctx['accommodations'] = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    elif document_type == 'contingency_plans':
+        ctx['plans'] = sorted(wedding.contingency_plans, key=lambda x: (x.category or ''))
+    elif document_type == 'budget_summary':
+        budget = wedding.budget
+        ctx['budget'] = budget
+        ctx['expenses'] = sorted(budget.expenses, key=lambda x: (x.category or '', x.item_name)) if budget else []
+    return ctx
+
+
+@app.route('/wedding/<int:wedding_id>/print/share', methods=['POST'])
+@login_required
+def print_share(wedding_id):
+    """Email a print document as a PDF attachment."""
+    wedding = get_wedding_or_403(wedding_id)
+
+    document_type = request.form.get('document_type', '').strip()
+    recipient_email = request.form.get('recipient_email', '').strip()
+    recipient_name = request.form.get('recipient_name', '').strip()
+    message = request.form.get('message', '').strip()
+
+    # Validate document type
+    if document_type not in PRINT_DOCUMENTS:
+        flash('Invalid document type.', 'error')
+        return redirect(url_for('print_center', wedding_id=wedding_id))
+
+    # Validate email
+    if not recipient_email or not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', recipient_email):
+        flash('Please enter a valid email address.', 'error')
+        return redirect(url_for('print_center', wedding_id=wedding_id))
+
+    doc_info = PRINT_DOCUMENTS[document_type]
+
+    try:
+        # Build context and generate PDF
+        ctx = _get_print_context(document_type, wedding)
+        pdf_bytes = _generate_pdf_bytes(doc_info['template'], **ctx)
+        pdf_filename = f"{doc_info['filename']}_{wedding_id}.pdf"
+
+        # Build email body
+        greeting = f"Hi {recipient_name},\n\n" if recipient_name else "Hi,\n\n"
+        custom_msg = f"{message}\n\n" if message else ""
+        body_text = (
+            f"{greeting}"
+            f"{custom_msg}"
+            f"{wedding.couple_names} shared a wedding document with you: "
+            f"{doc_info['title']}.\n\n"
+            f"The document is attached as a PDF.\n\n"
+            f"Best regards,\nWedding Organizer"
+        )
+
+        subject = f"{doc_info['title']} - {wedding.couple_names}"
+
+        success = send_pdf_email(
+            to_email=recipient_email,
+            subject=subject,
+            body_text=body_text,
+            pdf_bytes=pdf_bytes,
+            pdf_filename=pdf_filename,
+        )
+
+        if success:
+            flash(f'{doc_info["title"]} sent to {recipient_email}.', 'success')
+        else:
+            flash('Email could not be sent. Please check your SMTP configuration.', 'error')
+    except Exception as e:
+        print(f"Error sharing document: {e}")
+        flash('An error occurred while generating or sending the document.', 'error')
+
+    return redirect(url_for('print_center', wedding_id=wedding_id))
+
 def _build_personal_timeline(wedding, participant):
     """Build personalized timeline data for a single participant."""
     from datetime import time as time_type
@@ -6221,6 +6388,117 @@ def inventory_export_csv(wedding_id):
     output.seek(0)
     return Response(output, mimetype='text/csv',
                    headers={'Content-Disposition': 'attachment;filename=inventory.csv'})
+
+
+# ============================================
+# EMERGENCY KIT MANAGEMENT ROUTES
+# ============================================
+
+EMERGENCY_KIT_CATEGORIES = ['fashion', 'health', 'beauty', 'tools', 'food', 'documents']
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit')
+@login_required
+def emergency_kit_view(wedding_id):
+    """View and manage emergency kit items."""
+    wedding = get_wedding_or_403(wedding_id)
+    if not wedding.emergency_kit_items:
+        seed_default_emergency_kit(wedding.id)
+    items_by_category = {}
+    for cat in EMERGENCY_KIT_CATEGORIES:
+        items_by_category[cat] = sorted(
+            [i for i in wedding.emergency_kit_items if i.category == cat],
+            key=lambda x: x.item_name
+        )
+    total = len(wedding.emergency_kit_items)
+    packed = sum(1 for i in wedding.emergency_kit_items if i.packed)
+    return render_template('emergency_kit_manage.html', wedding=wedding,
+                           items_by_category=items_by_category,
+                           categories=EMERGENCY_KIT_CATEGORIES,
+                           total=total, packed=packed)
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/add', methods=['POST'])
+@login_required
+def emergency_kit_add(wedding_id):
+    """Add a new emergency kit item."""
+    wedding = get_wedding_or_403(wedding_id)
+    item_name = request.form.get('item_name', '').strip()
+    category = request.form.get('category', 'tools')
+    notes = request.form.get('notes', '').strip()
+    if not item_name:
+        flash('Item name is required.', 'error')
+        return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+    if category not in EMERGENCY_KIT_CATEGORIES:
+        category = 'tools'
+    item = EmergencyKitItem(
+        wedding_id=wedding_id,
+        item_name=item_name,
+        category=category,
+        packed=False,
+        notes=notes or None
+    )
+    db.session.add(item)
+    db.session.commit()
+    flash('Item added to emergency kit!', 'success')
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/<int:item_id>/edit', methods=['POST'])
+@login_required
+def emergency_kit_edit(wedding_id, item_id):
+    """Edit an emergency kit item."""
+    wedding = get_wedding_or_403(wedding_id)
+    item = EmergencyKitItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    item_name = request.form.get('item_name', '').strip()
+    if not item_name:
+        flash('Item name is required.', 'error')
+        return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+    item.item_name = item_name
+    category = request.form.get('category', item.category)
+    if category in EMERGENCY_KIT_CATEGORIES:
+        item.category = category
+    item.notes = request.form.get('notes', '').strip() or None
+    db.session.commit()
+    flash('Item updated!', 'success')
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/<int:item_id>/delete', methods=['POST'])
+@login_required
+def emergency_kit_delete(wedding_id, item_id):
+    """Delete an emergency kit item."""
+    wedding = get_wedding_or_403(wedding_id)
+    item = EmergencyKitItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Item removed from emergency kit.', 'success')
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/<int:item_id>/toggle', methods=['POST'])
+@login_required
+def emergency_kit_toggle(wedding_id, item_id):
+    """Toggle packed status of an emergency kit item."""
+    wedding = get_wedding_or_403(wedding_id)
+    item = EmergencyKitItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    item.packed = not item.packed
+    db.session.commit()
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'packed': item.packed, 'id': item.id})
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/reset', methods=['POST'])
+@login_required
+def emergency_kit_reset(wedding_id):
+    """Reset emergency kit to default items."""
+    wedding = get_wedding_or_403(wedding_id)
+    EmergencyKitItem.query.filter_by(wedding_id=wedding.id).delete()
+    db.session.commit()
+    seed_default_emergency_kit(wedding.id)
+    flash('Emergency kit reset to defaults.', 'success')
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
 
 
 # Start reminder thread:
