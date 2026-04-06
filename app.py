@@ -285,7 +285,7 @@ def get_wedding_or_403(wedding_id):
 
     Aborts with 403 if the user does not have access.
     """
-    wedding = get_wedding_or_403(wedding_id)
+    wedding = Wedding.query.get_or_404(wedding_id)
     user = g.get('user')
     if not user:
         abort(401)
