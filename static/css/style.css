@@ -1456,7 +1456,7 @@ footer p { margin: 0; }
    ============================================ */
 .seating-floor {
     position: relative;
-    min-height: 500px;
+    min-height: 600px;
     background: linear-gradient(135deg, #faf7f2, #f5efe8);
     border: 2px dashed var(--color-border);
     border-radius: var(--radius-lg);
@@ -1468,34 +1468,42 @@ footer p { margin: 0; }
     position: absolute;
     cursor: grab;
     text-align: center;
-    padding: 0.25rem;
     user-select: none;
-    transition: box-shadow var(--transition);
 }
 .seating-table-card:hover { z-index: 10; }
-.seating-table-card.over-capacity .table-icon {
-    border-color: var(--color-danger);
-    box-shadow: 0 0 8px rgba(196,92,92,0.3);
+.table-svg { display: block; margin: 0 auto; }
+
+/* SVG table surface */
+.table-surface {
+    fill: var(--color-bg-card);
+    stroke: var(--color-primary);
+    stroke-width: 2.5;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.1));
 }
-.table-icon {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    background: var(--color-bg-card);
-    border: 3px solid var(--color-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto;
-    box-shadow: var(--shadow-md);
-    transition: transform var(--transition);
+.table-surface.table-role-head { stroke: #7b5a8e; fill: #f3edf5; }
+.table-surface.table-role-sweetheart { stroke: var(--color-primary); fill: var(--color-primary-bg); }
+.table-surface.table-role-vip { stroke: var(--color-accent); fill: var(--color-accent-light); }
+.table-surface.table-role-kids { stroke: var(--color-success); fill: var(--color-success-bg); }
+.table-surface.table-role-kings { stroke: #8d6e63; fill: #efebe9; }
+.seating-table-card.over-capacity .table-surface {
+    stroke: var(--color-danger);
+    filter: drop-shadow(0 0 6px rgba(196,92,92,0.3));
 }
-.table-icon:hover { transform: scale(1.08); }
-.table-shape-rectangular { border-radius: var(--radius-md); width: 100px; height: 55px; }
-.table-shape-square { border-radius: var(--radius-sm); width: 65px; height: 65px; }
-.table-shape-oval { border-radius: 50%; width: 90px; height: 60px; }
-.table-shape-serpentine { border-radius: 35px; width: 110px; height: 50px; }
-.table-num { font-weight: 700; font-size: 1.05rem; color: var(--color-text); }
+
+/* SVG table number text */
+.table-num-text {
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 700;
+    fill: var(--color-text);
+}
+
+/* Chair dots */
+.chair-dot { stroke-width: 1.5; }
+.chair-filled { fill: var(--color-primary); stroke: var(--color-primary-dark); }
+.chair-empty { fill: #fff; stroke: var(--color-border); }
+.seating-table-card.over-capacity .chair-filled { fill: var(--color-danger); stroke: #a33; }
+
 .table-label {
     font-size: 0.68rem;
     color: var(--color-text-light);
@@ -1503,15 +1511,39 @@ footer p { margin: 0; }
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 110px;
+    text-align: center;
 }
-.table-role-head { border-color: #7b5a8e; background: #f3edf5; }
-.table-role-sweetheart { border-color: var(--color-primary); background: var(--color-primary-bg); }
-.table-role-vip { border-color: var(--color-accent); background: var(--color-accent-light); }
-.table-role-kids { border-color: var(--color-success); background: var(--color-success-bg); }
-.table-role-kings { border-color: #8d6e63; background: #efebe9; }
-.table-capacity { font-size: 0.72rem; color: var(--color-text-light); }
+.table-capacity { font-size: 0.72rem; color: var(--color-text-light); text-align: center; }
 .table-capacity.warning { color: var(--color-danger); font-weight: 600; }
+
+/* Floor plan legend */
+.floor-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--color-text-light);
+}
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+.legend-dot-filled { background: var(--color-primary); border: 1.5px solid var(--color-primary-dark); }
+.legend-dot-empty { background: #fff; border: 1.5px solid var(--color-border); }
+.legend-swatch {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: var(--radius-xl);
+    border: 2.5px solid;
+    font-size: 0.68rem;
+    font-weight: 600;
+    background: var(--color-bg-card);
+}
 
 /* Seating panels */
 .seating-add-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }

@@ -190,20 +190,63 @@
 {# Visual Floor Plan #}
 <div class="module-section">
     <h2>Floor Plan <small class="form-help">(drag tables to reposition)</small></h2>
+
+    {# Legend #}
+    {% if tables %}
+    <div class="floor-legend">
+        <span class="legend-item"><span class="legend-dot legend-dot-filled"></span> Assigned</span>
+        <span class="legend-item"><span class="legend-dot legend-dot-empty"></span> Open seat</span>
+        <span class="legend-swatch" style="border-color: var(--color-primary);">Guest</span>
+        <span class="legend-swatch" style="border-color: #7b5a8e;">Head</span>
+        <span class="legend-swatch" style="border-color: var(--color-accent);">VIP</span>
+        <span class="legend-swatch" style="border-color: var(--color-success);">Kids</span>
+        <span class="legend-swatch" style="border-color: #8d6e63;">King's</span>
+    </div>
+    {% endif %}
+
     {% if tables %}
     <div class="seating-floor" id="floor-plan">
         {% for table in tables %}
-        <div class="seating-table-card {% if table.assigned_guests|length > table.capacity %}over-capacity{% endif %}"
+        {% set fd = table_floor_data[table.id] %}
+        {% set assigned_count = table.assigned_guests|length %}
+        {% set cap = table.capacity %}
+        {% set shape = table.table_shape or 'round' %}
+
+        <div class="seating-table-card {% if assigned_count > cap %}over-capacity{% endif %}"
              data-table-id="{{ table.id }}"
-             style="left: {{ table.x_position or 0 }}px; top: {{ table.y_position or 0 }}px;">
-            <div class="table-icon table-shape-{{ table.table_shape or 'round' }} table-role-{{ table.table_role or 'guest' }}">
-                <span class="table-num">{{ table.table_number }}</span>
-            </div>
+             style="left: {{ table.x_position or 0 }}px; top: {{ table.y_position or 0 }}px; width: {{ fd.svg_w }}px;">
+            <svg width="{{ fd.svg_w }}" height="{{ fd.svg_h }}" viewBox="0 0 {{ fd.svg_w }} {{ fd.svg_h }}" class="table-svg">
+                {# Table shape #}
+                {% if shape == 'round' %}
+                <circle cx="{{ fd.cx }}" cy="{{ fd.cy }}" r="{{ fd.tw / 2 }}"
+                        class="table-surface table-role-{{ table.table_role or 'guest' }}" />
+                {% elif shape == 'oval' %}
+                <ellipse cx="{{ fd.cx }}" cy="{{ fd.cy }}" rx="{{ fd.tw / 2 }}" ry="{{ fd.th / 2 }}"
+                         class="table-surface table-role-{{ table.table_role or 'guest' }}" />
+                {% elif shape in ('rectangular', 'serpentine') %}
+                <rect x="22" y="22" width="{{ fd.tw }}" height="{{ fd.th }}"
+                      rx="{% if shape == 'serpentine' %}{{ fd.th / 2 }}{% else %}6{% endif %}"
+                      class="table-surface table-role-{{ table.table_role or 'guest' }}" />
+                {% elif shape == 'square' %}
+                <rect x="22" y="22" width="{{ fd.tw }}" height="{{ fd.th }}" rx="4"
+                      class="table-surface table-role-{{ table.table_role or 'guest' }}" />
+                {% endif %}
+
+                {# Table number label #}
+                <text x="{{ fd.cx }}" y="{{ fd.cy + 1 }}" text-anchor="middle" dominant-baseline="middle"
+                      class="table-num-text">{{ table.table_number }}</text>
+
+                {# Chair dots — positions computed in backend #}
+                {% for chair in fd.chairs %}
+                <circle cx="{{ chair.x }}" cy="{{ chair.y }}" r="6"
+                        class="chair-dot {% if chair.filled %}chair-filled{% else %}chair-empty{% endif %}" />
+                {% endfor %}
+            </svg>
             <div class="table-label">
                 {% if table.table_name %}{{ table.table_name }}{% else %}Table {{ table.table_number }}{% endif %}
             </div>
-            <div class="table-capacity {% if table.assigned_guests|length > table.capacity %}warning{% endif %}">
-                {{ table.assigned_guests|length }}/{{ table.capacity }}
+            <div class="table-capacity {% if assigned_count > cap %}warning{% endif %}">
+                {{ assigned_count }}/{{ cap }}
             </div>
         </div>
         {% endfor %}
@@ -395,8 +438,8 @@
         var floorRect = floor.getBoundingClientRect();
         var x = e.clientX - floorRect.left - offsetX;
         var y = e.clientY - floorRect.top - offsetY;
-        x = Math.max(0, Math.min(x, floor.offsetWidth - 100));
-        y = Math.max(0, Math.min(y, floor.offsetHeight - 80));
+        x = Math.max(0, Math.min(x, floor.offsetWidth - dragging.offsetWidth));
+        y = Math.max(0, Math.min(y, floor.offsetHeight - dragging.offsetHeight));
         dragging.style.left = x + 'px';
         dragging.style.top = y + 'px';
     });
