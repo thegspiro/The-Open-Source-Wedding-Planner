@@ -1,0 +1,22 @@
+    <button type="button" class="print-btn" style="margin-left:8px;" onclick="document.getElementById('share-form-inline').style.display = document.getElementById('share-form-inline').style.display === 'none' ? 'block' : 'none'">Share</button>
+    <div id="share-form-inline" class="share-form-inline" style="display:none; margin-top:12px; padding:16px; border:1px solid #e0ddd8; border-radius:8px; background:#fafaf8; max-width:400px;">
+        <form method="POST" action="{{ url_for('print_share', wedding_id=wedding.id) }}">
+            <input type="hidden" name="document_type" value="{{ share_document_type }}">
+            <div style="margin-bottom:8px;">
+                <label style="font-size:12px; font-weight:600; color:#555;">Email *</label>
+                <input type="email" name="recipient_email" required placeholder="recipient@example.com"
+                       style="width:100%; padding:6px 8px; border:1px solid #ddd; border-radius:4px; font-size:13px; margin-top:2px;">
+            </div>
+            <div style="margin-bottom:8px;">
+                <label style="font-size:12px; font-weight:600; color:#555;">Name (optional)</label>
+                <input type="text" name="recipient_name" placeholder="Recipient name"
+                       style="width:100%; padding:6px 8px; border:1px solid #ddd; border-radius:4px; font-size:13px; margin-top:2px;">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label style="font-size:12px; font-weight:600; color:#555;">Message (optional)</label>
+                <textarea name="message" rows="2" placeholder="Add a note..."
+                          style="width:100%; padding:6px 8px; border:1px solid #ddd; border-radius:4px; font-size:13px; margin-top:2px; resize:vertical;"></textarea>
+            </div>
+            <button type="submit" style="padding:6px 16px; background:#c9a96e; color:#fff; border:none; border-radius:4px; font-size:13px; font-weight:600; cursor:pointer;">Send PDF</button>
+        </form>
+    </div>

@@ -12,6 +12,12 @@
             <button type="submit" class="btn-secondary btn-small" onclick="return confirm('Generate post-wedding tasks?')">Post-Wedding Tasks</button>
         </form>
         <a href="{{ url_for('export_tasks_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
+        <a href="{{ url_for('download_sample_csv', template_name='tasks') }}" class="btn-secondary btn-small">Download Template</a>
+        <form method="POST" action="{{ url_for('import_tasks_csv', wedding_id=wedding.id) }}" enctype="multipart/form-data" style="display:inline;">
+            <label class="btn-secondary btn-small" style="cursor:pointer;">Import CSV
+                <input type="file" name="file" accept=".csv" onchange="this.form.submit()" style="display:none;">
+            </label>
+        </form>
         <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
     </div>
 </div>

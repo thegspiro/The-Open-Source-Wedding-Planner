@@ -1,0 +1,7 @@
+Name,Email,Phone,Address,RSVP Status,Meal Choice,Dietary Restrictions,Side,Guest Type,Social Groups,Household Group,Plus One
+John Smith,john@example.com,555-0101,"123 Main St, Anytown, ST 12345",accepted,chicken,,Partner 1's Side,family,"Family, Church Group",The Smiths,
+Jane Smith,jane@example.com,555-0102,"123 Main St, Anytown, ST 12345",accepted,fish,gluten-free,Partner 1's Side,family,"Family, Church Group",The Smiths,
+Bob Johnson,bob@example.com,555-0201,"456 Oak Ave, Somewhere, ST 67890",pending,,,Partner 2's Side,friend,"College Friends",The Johnsons,
+Alice Johnson,alice@example.com,555-0202,,pending,,,Partner 2's Side,friend,"College Friends",The Johnsons,Bob Johnson
+Mike Wilson,mike@example.com,555-0301,,declined,,vegetarian,Partner 1's Side,colleague,"Work Colleagues",,
+Sarah Davis,sarah@example.com,555-0401,,pending,beef,,Partner 2's Side,friend,"High School Friends, Book Club",,

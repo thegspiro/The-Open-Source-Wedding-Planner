@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vendor Contacts - {{ wedding.couple_names }}</title>
     <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,43 +20,68 @@
         }
 
         body {
-            font-family: Georgia, 'Times New Roman', serif;
-            color: #333;
+            font-family: var(--body-font);
+            color: #3a3a3a;
             line-height: 1.5;
-            padding: 20px 40px;
-        }
-
-        .print-header {
-            text-align: center;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
-        }
-
-        .print-header h1 {
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-
-        .print-header .wedding-date {
-            font-size: 14px;
-            color: #666;
+            padding: 20px 30px;
+            background: #fff;
         }
 
         .print-btn {
             display: inline-block;
             padding: 8px 20px;
-            background: #333;
+            background: var(--primary);
             color: #fff;
             border: none;
             cursor: pointer;
             font-size: 14px;
             margin-bottom: 20px;
-            font-family: Arial, sans-serif;
+            font-family: var(--body-font);
+            border-radius: 4px;
         }
 
         .print-btn:hover {
-            background: #555;
+            opacity: 0.85;
+        }
+
+        .print-header {
+            text-align: center;
+            padding: 15px 20px 18px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--secondary);
+        }
+
+        .print-header::before {
+            content: '';
+            display: block;
+            width: 50px;
+            height: 2px;
+            background: var(--accent);
+            margin: 0 auto 10px;
+        }
+
+        .monogram {
+            font-family: var(--heading-font);
+            font-size: 28px;
+            color: var(--primary);
+            letter-spacing: 4px;
+            margin-bottom: 5px;
+        }
+
+        .print-header h1 {
+            font-family: var(--heading-font);
+            font-size: 20px;
+            font-weight: normal;
+            color: var(--primary);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .print-header .wedding-date {
+            font-size: 11px;
+            color: #999;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         .vendor-table {
@@ -57,92 +90,162 @@
             margin-bottom: 20px;
         }
 
-        .vendor-table th,
+        .vendor-table th {
+            background: var(--primary);
+            color: #fff;
+            font-weight: 600;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 6px;
+            text-align: left;
+            border: none;
+        }
+
         .vendor-table td {
-            border: 1px solid #ccc;
-            padding: 6px 8px;
+            border-bottom: 1px solid #e8e2da;
+            padding: 7px 6px;
             text-align: left;
             vertical-align: top;
-            font-size: 11px;
-        }
-
-        .vendor-table th {
-            background: #f0f0f0;
-            font-weight: bold;
             font-size: 10px;
-            text-transform: uppercase;
         }
 
-        .vendor-table tr:nth-child(even) {
-            background: #fafafa;
+        .vendor-table tr:nth-child(even) td {
+            background: rgba(212, 197, 178, 0.08);
+        }
+
+        .vendor-table td:first-child {
+            font-weight: 600;
+            color: var(--primary);
+            text-transform: capitalize;
+        }
+
+        .vendor-table td:nth-child(2) {
+            font-weight: 600;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            padding: 40px 20px;
         }
 
         .footer-note {
             text-align: center;
             font-size: 10px;
-            color: #999;
-            margin-top: 30px;
+            color: #ccc;
+            margin-top: 25px;
             padding-top: 10px;
-            border-top: 1px solid #ddd;
+            border-top: 1px solid var(--secondary);
+            letter-spacing: 0.5px;
         }
+
+        @page {
+            size: letter landscape;
+            margin: 0.5in;
+        }
+
+        .skip-link {
+            position: absolute; left: -9999px; top: auto;
+            width: 1px; height: 1px; overflow: hidden;
+            font-size: 14px; padding: 10px;
+        }
+        .skip-link:focus {
+            position: static; width: auto; height: auto;
+            overflow: visible; background: var(--primary); color: #fff;
+            display: inline-block; margin-bottom: 10px;
+        }
+
+        .print-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+        .cue-checkbox:focus-visible, .kit-checkbox:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
         @media print {
             .print-btn {
-                display: none;
+                display: none !important;
+            }
+
+            .share-form-inline {
+                display: none !important;
             }
 
             body {
                 padding: 0;
-                font-size: 10px;
+                font-size: 12px;
             }
 
-            .vendor-table th,
+            .vendor-table th {
+                font-size: 10px;
+                padding: 6px 5px;
+            }
+
             .vendor-table td {
                 font-size: 10px;
-                padding: 4px 6px;
+                padding: 5px 5px;
+            }
+
+            .vendor-table thead {
+                display: table-header-group;
             }
 
             .print-header h1 {
-                font-size: 20px;
+                font-size: 18px;
             }
+
+            * { color-adjust: exact; -webkit-print-color-adjust: exact; }
         }
     </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
     <button class="print-btn" onclick="window.print()">Print</button>
+    <a class="print-btn" href="?format=pdf" role="button" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+    {% set share_document_type = 'vendor_contacts' %}{% include 'print/_share_button.html' %}
 
+    <main id="main-content">
     <div class="print-header">
-        <h1>Vendor Contacts - {{ wedding.couple_names }}</h1>
-        {% if wedding.date %}
-        <div class="wedding-date">{{ wedding.date.strftime('%A, %B %d, %Y') }}</div>
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Vendor Contacts</h1>
+        <div style="font-family: var(--heading-font); font-size: 13px; color: #777; margin-bottom: 3px;">{{ wedding.couple_names }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
         {% endif %}
     </div>
 
     {% if vendors %}
     <table class="vendor-table">
+        <caption class="sr-only">Vendor contact information</caption>
         <thead>
             <tr>
-                <th>Category</th>
-                <th>Business Name</th>
-                <th>Contact Name</th>
-                <th>Phone</th>
-                <th>Email</th>
-                <th>Service Date</th>
-                <th>Service Time</th>
-                <th>Backup Contact</th>
-                <th>Backup Phone</th>
+                <th scope="col">Category</th>
+                <th scope="col">Business Name</th>
+                <th scope="col">Contact</th>
+                <th scope="col">Phone</th>
+                <th scope="col">Email</th>
+                <th scope="col">Service Date</th>
+                <th scope="col">Arrival</th>
+                <th scope="col">Service Time</th>
+                <th scope="col">Overtime Rate</th>
+                <th scope="col">Backup Contact</th>
+                <th scope="col">Backup Phone</th>
             </tr>
         </thead>
         <tbody>
             {% for vendor in vendors %}
             <tr>
-                <td>{{ vendor.category or '' }}</td>
+                <td>{{ vendor.category|replace('_', ' ')|title if vendor.category else '' }}</td>
                 <td>{{ vendor.business_name or '' }}</td>
                 <td>{{ vendor.contact_name or '' }}</td>
                 <td>{{ vendor.phone or '' }}</td>
                 <td>{{ vendor.email or '' }}</td>
                 <td>{{ vendor.service_date.strftime('%m/%d/%Y') if vendor.service_date else '' }}</td>
+                <td>{{ vendor.arrival_time.strftime('%I:%M %p') if vendor.arrival_time else '' }}</td>
                 <td>{{ vendor.service_time.strftime('%I:%M %p') if vendor.service_time else '' }}</td>
+                <td style="font-size: 9px;">{{ vendor.overtime_rate or '' }}</td>
                 <td>{{ vendor.backup_contact or '' }}</td>
                 <td>{{ vendor.backup_phone or '' }}</td>
             </tr>
@@ -150,11 +253,13 @@
         </tbody>
     </table>
     {% else %}
-    <p>No vendors to display.</p>
+    <p class="empty-message">No vendors to display.</p>
     {% endif %}
 
     <div class="footer-note">
-        Printed from Wedding Organizer &mdash; {{ wedding.couple_names }}
+        {{ wedding.couple_names }}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
     </div>
+    </main>
 </body>
 </html>

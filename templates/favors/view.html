@@ -5,7 +5,10 @@
 {% block content %}
 <div class="page-header">
     <h1>Wedding Favors</h1>
-    <a href="{{ url_for('favors_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Favor</a>
+    <div class="header-actions">
+        <a href="{{ url_for('favors_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Favor</a>
+        <a href="{{ url_for('export_favors_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
+    </div>
 </div>
 
 <div class="stats-row">

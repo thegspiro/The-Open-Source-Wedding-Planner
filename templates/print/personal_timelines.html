@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Personal Timelines - {{ wedding.couple_names }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 0 auto; padding: 30px 20px;">
+    <div style="margin-bottom: 8px;">
+        <a href="{{ url_for('print_center', wedding_id=wedding.id) }}" style="font-size: 13px; color: #888; text-decoration: none;">&larr; Back to Print Center</a>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="font-size: 28px; margin-bottom: 5px;">Personal Timelines</h1>
+        <p style="color: #888; font-size: 14px;">Generate a personalized day-of timeline for each member of the wedding party</p>
+    </div>
+
+    {% if participants %}
+
+    <!-- Print All button -->
+    <div class="pt-actions" style="margin-bottom: 25px;">
+        <a href="{{ url_for('print_all_personal_timelines', wedding_id=wedding.id) }}" class="btn-primary" style="display: inline-block; padding: 10px 24px; background: #8B7355; color: #fff; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 600;">Print All Timelines</a>
+        <a href="{{ url_for('print_all_personal_timelines', wedding_id=wedding.id) }}?format=pdf" class="btn-primary" style="display: inline-block; padding: 10px 24px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 600; margin-left: 8px;">Download All as PDF</a>
+    </div>
+
+    <!-- Group by role_category -->
+    {% set categories = [('couple', 'The Couple'), ('family', 'Family'), ('wedding_party', 'Wedding Party'), ('vendor', 'Vendors'), ('handler', 'Day-Of Team')] %}
+
+    {% for cat_key, cat_label in categories %}
+    {% set cat_participants = participants|selectattr('role_category', 'equalto', cat_key)|list %}
+    {% if cat_participants %}
+    <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #e8e2da; padding-bottom: 6px; margin-bottom: 12px; margin-top: 20px; color: #8B7355;">
+        {{ cat_label }}
+    </h2>
+    <div class="pt-grid">
+        {% for p in cat_participants|sort(attribute='name') %}
+        <a href="{{ url_for('print_personal_timeline', wedding_id=wedding.id, participant_id=p.id) }}" class="pt-card">
+            <div class="pt-name">{{ p.name }}</div>
+            <div class="pt-role">{{ p.role|replace('_', ' ')|title if p.role else '' }}</div>
+            <div class="pt-meta">
+                {{ p.timeline_items|length }} event{{ 's' if p.timeline_items|length != 1 else '' }}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    <!-- Uncategorized -->
+    {% set uncategorized = participants|rejectattr('role_category', 'equalto', 'couple')|rejectattr('role_category', 'equalto', 'family')|rejectattr('role_category', 'equalto', 'wedding_party')|rejectattr('role_category', 'equalto', 'vendor')|rejectattr('role_category', 'equalto', 'handler')|list %}
+    {% if uncategorized %}
+    <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #e8e2da; padding-bottom: 6px; margin-bottom: 12px; margin-top: 20px; color: #8B7355;">
+        Other
+    </h2>
+    <div class="pt-grid">
+        {% for p in uncategorized|sort(attribute='name') %}
+        <a href="{{ url_for('print_personal_timeline', wedding_id=wedding.id, participant_id=p.id) }}" class="pt-card">
+            <div class="pt-name">{{ p.name }}</div>
+            <div class="pt-role">{{ p.role|replace('_', ' ')|title if p.role else '' }}</div>
+            <div class="pt-meta">
+                {{ p.timeline_items|length }} event{{ 's' if p.timeline_items|length != 1 else '' }}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="text-align: center; padding: 40px 20px; color: #999;">
+        <p style="font-size: 16px; margin-bottom: 8px;">No wedding participants have been added yet.</p>
+        <p style="font-size: 13px;">Add participants in the Day-Of Timeline section to generate personalized timelines.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .pt-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    .pt-card {
+        display: block;
+        width: calc(33.333% - 7px);
+        border: 1px solid #e0ddd8;
+        border-radius: 6px;
+        padding: 14px 16px;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.2s;
+        background: #fff;
+        min-height: 44px;
+        box-sizing: border-box;
+    }
+    .pt-card:hover {
+        border-color: #c9a96e;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .pt-name {
+        font-weight: 600;
+        font-size: 15px;
+        color: #333;
+        margin-bottom: 2px;
+    }
+    .pt-role {
+        font-size: 11px;
+        color: #c9a96e;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    .pt-meta {
+        font-size: 11px;
+        color: #bbb;
+    }
+    .pt-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+    }
+    .pt-actions a {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    @media (max-width: 768px) {
+        .pt-card {
+            width: calc(50% - 5px);
+        }
+    }
+
+    @media (max-width: 480px) {
+        .pt-card {
+            width: 100%;
+            padding: 12px 14px;
+        }
+        .pt-grid {
+            gap: 8px;
+        }
+        .pt-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .pt-actions a {
+            text-align: center;
+            justify-content: center;
+            margin-left: 0 !important;
+        }
+    }
+</style>
+{% endblock %}

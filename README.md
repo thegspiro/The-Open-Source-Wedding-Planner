@@ -38,11 +38,19 @@ A comprehensive Docker-based wedding planning application built with Python Flas
 ### Installation
 
 ```bash
-cd wedding-organizer
+git clone https://github.com/thegspiro/the-open-source-wedding-planner.git
+cd the-open-source-wedding-planner
+
+# Configure environment
+cp .env.example .env
+# Edit .env and set a secure SECRET_KEY
+
 docker-compose up -d
 ```
 
 Access at: **http://localhost:5000**
+
+> For detailed installation options (local development, VPS, reverse proxy, etc.), see **[INSTALL.md](INSTALL.md)**.
 
 ### First Use
 1. Click "Add New Wedding"
@@ -86,14 +94,19 @@ Browse 15+ traditional ceremony and reception elements:
 
 ### Email Setup (Optional)
 
-Enable automated task reminders:
+Enable automated task reminders and guest emails by adding SMTP settings to your `.env` file:
 
-1. Edit `docker-compose.yml`
-2. Uncomment email environment variables
-3. Add your SMTP credentials
-4. Restart container
+```bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+FROM_EMAIL=your-email@gmail.com
+```
 
-See QUICKSTART.md for detailed email setup instructions.
+Then restart: `docker-compose restart`
+
+Supports Gmail, Outlook, SendGrid, Amazon SES, and any SMTP provider. See [QUICKSTART.md](QUICKSTART.md#-enable-email-reminders-optional---5-minutes) for detailed setup instructions per provider.
 
 ---
 
@@ -133,19 +146,37 @@ docker-compose up -d --build
 
 ## 📖 Documentation
 
-- **README.md** - This file
-- **QUICKSTART.md** - Quick start guide
-- **CHANGELOG.md** - Version history and release notes
-- **TROUBLESHOOTING.md** - Common issues and edge case fixes
-- **docs/WIKI.md** - Comprehensive feature documentation
-- **docs/TRAINING.md** - Step-by-step user training guide
-- **ONBOARDING_GUIDE.md** - Onboarding system documentation
+### Setup & Deployment
+- **[INSTALL.md](INSTALL.md)** - Complete installation guide (Docker, local dev, production)
+- **[docs/DEPLOYMENT-GUIDES.md](docs/DEPLOYMENT-GUIDES.md)** - Platform-specific guides (Unraid, Proxmox, Kubernetes, Synology, Raspberry Pi, VPS)
+- **[docs/REVERSE-PROXY.md](docs/REVERSE-PROXY.md)** - SSL/HTTPS setup (Nginx, Traefik, Caddy, Cloudflare)
+- **[.env.example](.env.example)** - Environment configuration reference
+
+### Contributing
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development setup, code style, and PR guidelines
+
+### Usage & Reference
+- **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide
+- **[ONBOARDING_GUIDE.md](ONBOARDING_GUIDE.md)** - Onboarding system documentation
+- **[docs/WIKI.md](docs/WIKI.md)** - Comprehensive feature documentation
+- **[docs/TRAINING.md](docs/TRAINING.md)** - Step-by-step user training guide
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and edge case fixes
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and release notes
 
 ---
 
-## 💾 Data Persistence
+## 💾 Data Persistence & Backups
 
 Database stored in `instance/wedding_organizer.db` and mounted as Docker volume for persistence across restarts.
+
+A backup script is included:
+```bash
+chmod +x scripts/backup.sh
+./scripts/backup.sh              # Create a backup
+./scripts/backup.sh --restore latest  # Restore latest backup
+```
+
+See [INSTALL.md](INSTALL.md#database-backups) for automated backup setup.
 
 ---
 

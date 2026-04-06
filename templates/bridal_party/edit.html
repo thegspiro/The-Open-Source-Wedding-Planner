@@ -46,6 +46,12 @@
             </div>
 
             <div class="form-group">
+                <label for="name_pronunciation">Name Pronunciation</label>
+                <input type="text" id="name_pronunciation" name="name_pronunciation" value="{{ member.name_pronunciation or '' }}" placeholder="e.g., AH-lee-sha" maxlength="200">
+                <p class="form-help">Phonetic guide for DJ/MC announcements</p>
+            </div>
+
+            <div class="form-group">
                 <label for="processional_order">Processional Order</label>
                 <input type="number" id="processional_order" name="processional_order" min="1" value="{{ member.processional_order or '' }}" placeholder="1, 2, 3...">
             </div>

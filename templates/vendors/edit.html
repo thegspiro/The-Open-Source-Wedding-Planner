@@ -126,6 +126,11 @@
             </div>
         </div>
         <div class="form-group">
+            <label>Arrival Time</label>
+            <input type="time" name="arrival_time" value="{{ vendor.arrival_time.strftime('%H:%M') if vendor.arrival_time else '' }}">
+            <p class="form-help">When vendor arrives on-site (may differ from service time)</p>
+        </div>
+        <div class="form-group">
             <label>Service Location</label>
             <input type="text" name="service_location" value="{{ vendor.service_location or '' }}" placeholder="Where the service will be provided">
         </div>
@@ -138,6 +143,11 @@
         <div class="form-group">
             <label>Vendor Meals Needed</label>
             <input type="number" name="meals_needed" value="{{ vendor.meals_needed or '' }}" min="0" placeholder="Number of vendor meals required">
+        </div>
+        <div class="form-group">
+            <label>Overtime Rate</label>
+            <input type="text" name="overtime_rate" value="{{ vendor.overtime_rate or '' }}" placeholder="e.g., $150/hour after 11pm" maxlength="100">
+            <p class="form-help">Hourly rate if event runs over contracted time</p>
         </div>
 
         <h2>Rating & Review</h2>

@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies for WeasyPrint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libharfbuzz-dev \
+            libgdk-pixbuf-2.0-dev \
+            libffi-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-cov
+
+      - name: Syntax check
+        run: |
+          python -m py_compile app.py
+          python -m py_compile models.py
+          python -m py_compile security.py
+          python -m py_compile email_service.py
+
+      - name: Run tests with coverage
+        run: |
+          python -m pytest tests/ -v --cov --cov-report=term-missing

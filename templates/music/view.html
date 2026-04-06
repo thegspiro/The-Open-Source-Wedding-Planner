@@ -8,6 +8,7 @@
     <div class="header-actions">
         <a href="{{ url_for('music_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Song</a>
         <a href="{{ url_for('music_stats', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Music Stats</a>
+        <a href="{{ url_for('export_music_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
     </div>
 </div>
 

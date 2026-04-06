@@ -12,31 +12,47 @@ from models import (
     ContingencyPlan, TipItem, Gift,
     VendorNote, VendorQuote, SpeechToast, WeddingFavor,
     ActivityLog, Comment,
-    InventoryItem, InventoryBin,
+    InventoryItem, InventoryBin, EmergencyKitItem,
     BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES,
     TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES,
     INVENTORY_CATEGORIES, INVENTORY_AREAS
 )
+from flask_migrate import Migrate
+from dotenv import load_dotenv
+load_dotenv()
+
 import random
 from datetime import datetime, timedelta, date
 import os
 import csv
 import io
 import secrets
-from email_service import send_reminder_email, send_guest_email
+from email_service import send_reminder_email, send_guest_email, send_pdf_email
+import re
 import threading
 import time as time_module
 import json
 import math
 from functools import wraps
-from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission
+from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission, validate_time_string, validate_name_pronunciation, validate_text_field
+
+__version__ = '2.10.0'
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///wedding_organizer.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+if app.config['SECRET_KEY'] in ('dev-secret-key-change-in-production', 'your-secret-key-change-in-production', 'change-me-to-a-random-secret-key'):
+    import logging
+    logging.warning(
+        '*** WARNING: Using default SECRET_KEY. This is insecure for production! ***\n'
+        '    Generate a key:  python3 -c "import secrets; print(secrets.token_hex(32))"\n'
+        '    Then set it:     Copy .env.example to .env and update SECRET_KEY'
+    )
+
 db.init_app(app)
+migrate = Migrate(app, db)
 
 # Initialize security: CSRF protection, security headers, session hardening
 init_security(app)
@@ -53,10 +69,22 @@ def too_many_requests(e):
     flash(str(e.description) if hasattr(e, 'description') else 'Too many requests.', 'error')
     return redirect(request.referrer or url_for('index'))
 
+# Health check endpoint for monitoring and container orchestration
+@app.route('/health')
+def health_check():
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        return jsonify({'status': 'healthy', 'database': 'connected'}), 200
+    except Exception as e:
+        return jsonify({'status': 'unhealthy', 'database': str(e)}), 503
+
+
 # Initialize database and seed traditional elements
+# Note: db.create_all() is kept for initial setup / development convenience.
+# For production schema changes, use Flask-Migrate: flask db migrate / flask db upgrade
 with app.app_context():
     db.create_all()
-    
+
     # Seed traditional elements if none exist
     if TraditionalElement.query.count() == 0:
         traditional_elements = [
@@ -259,7 +287,7 @@ def get_wedding_or_403(wedding_id):
 
     Aborts with 403 if the user does not have access.
     """
-    wedding = get_wedding_or_403(wedding_id)
+    wedding = Wedding.query.get_or_404(wedding_id)
     user = g.get('user')
     if not user:
         abort(401)
@@ -268,6 +296,126 @@ def get_wedding_or_403(wedding_id):
         abort(403, description='You do not have access to this wedding.')
     g.wedding_role = access.role
     return wedding
+
+
+# ============================================
+# DEFAULT EMERGENCY KIT ITEMS
+# ============================================
+
+DEFAULT_EMERGENCY_KIT_ITEMS = {
+    'fashion': [
+        'Safety pins (assorted sizes)',
+        'Sewing kit (needle, white & black thread)',
+        'Fashion tape (double-sided)',
+        'Stain remover pen',
+        'Static guard spray',
+        'Lint roller',
+        'Wrinkle release spray',
+        'Extra buttons (matching attire)',
+        'Shoe insoles / heel protectors',
+        'Clear nail polish (stop stocking runs)',
+        'Hem tape',
+        'Shoe polish / white shoe touch-up',
+    ],
+    'health': [
+        'Pain relievers (ibuprofen, acetaminophen)',
+        'Antacid tablets',
+        'Anti-nausea medication',
+        'Allergy medication (antihistamines)',
+        'Band-aids (assorted sizes)',
+        'Blister pads / moleskin',
+        'Eye drops',
+        'Breath mints / gum',
+        'Throat lozenges',
+        'Tissues (travel packs)',
+        'Hand sanitizer',
+        'Sunscreen (SPF 30+)',
+        'Bug spray',
+        'Tampons / pads',
+        'Deodorant',
+        'Tweezers',
+        'Nail clippers',
+        'Contact lens solution / spare contacts',
+        'Hydrocortisone cream',
+        'Electrolyte packets',
+    ],
+    'beauty': [
+        'Bobby pins & hair pins',
+        'Hair ties & clips',
+        'Hairspray (travel size)',
+        'Dry shampoo',
+        'Makeup blotting papers',
+        'Lipstick / lip gloss (matching shade)',
+        'Powder compact / setting spray',
+        'Concealer',
+        'Cotton swabs & cotton pads',
+        'Makeup remover wipes',
+        'Perfume / cologne (travel size)',
+        'Nail file & nail glue',
+        'Eyelash glue',
+        'Compact mirror',
+        'Disposable razor',
+    ],
+    'tools': [
+        'Scissors',
+        'Super glue',
+        'Duct tape / gaffer tape',
+        'White chalk (for scuff marks)',
+        'Pen and notepad',
+        'Permanent marker',
+        'Phone charger / portable battery',
+        'Extension cord / power strip',
+        'Umbrella(s)',
+        'Flashlight',
+        'Zip ties',
+        'Rubber bands',
+        'Command strips / hooks',
+        'Floral wire & floral tape',
+        'Trash bags',
+        'Paper towels',
+        'Baby wipes',
+        'Lighter or matches',
+        'Batteries (AA / AAA)',
+    ],
+    'food': [
+        'Water bottles',
+        'Granola bars / protein bars',
+        'Straws (to drink without smudging lipstick)',
+        'Mints for the couple',
+        'Ginger chews (for nausea)',
+        'Electrolyte drinks',
+    ],
+    'documents': [
+        'Marriage license',
+        'Vendor contact list',
+        'Day-of timeline copies',
+        'Rings',
+        'Vow cards / notes',
+        'Cash for tips (labeled envelopes)',
+        'ID / wallet',
+        'Insurance cards',
+        'Hotel room key',
+        'Emergency contact list',
+        'Copies of vendor contracts',
+        'Seating chart copy',
+        'Spare car keys',
+        'Checkbook (final vendor payments)',
+    ],
+}
+
+
+def seed_default_emergency_kit(wedding_id):
+    """Create default emergency kit items for a wedding."""
+    for category, items in DEFAULT_EMERGENCY_KIT_ITEMS.items():
+        for item_name in items:
+            kit_item = EmergencyKitItem(
+                wedding_id=wedding_id,
+                item_name=item_name,
+                category=category,
+                packed=False
+            )
+            db.session.add(kit_item)
+    db.session.commit()
 
 
 # ============================================
@@ -383,6 +531,10 @@ def user_settings():
 # MAIN ROUTES
 # ============================================
 
+@app.route('/version')
+def app_version():
+    return {'version': __version__}
+
 @app.route('/')
 @login_required
 def index():
@@ -425,6 +577,9 @@ def new_wedding():
         access = WeddingAccess(user_id=user.id, wedding_id=wedding.id, role='owner')
         db.session.add(access)
         db.session.commit()
+
+        # Pre-populate emergency kit with common items
+        seed_default_emergency_kit(wedding.id)
 
         flash(f'Wedding created! Let\'s set up some details.', 'success')
         return redirect(url_for('onboarding_step1', wedding_id=wedding.id))
@@ -1088,6 +1243,34 @@ def person_edit(wedding_id, person_id):
         person.side_label = request.form.get('side_label')
         person.email = request.form.get('email')
         person.phone = request.form.get('phone')
+
+        # Validate and save name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('people/edit.html', wedding=wedding, person=person)
+        person.name_pronunciation = pron_value or None
+
+        # Validate and save getting ready fields
+        getting_ready_time_str = request.form.get('getting_ready_time')
+        if getting_ready_time_str:
+            parsed_time = validate_time_string(getting_ready_time_str)
+            if parsed_time is None:
+                flash('Invalid getting ready time format. Use HH:MM.', 'danger')
+                return render_template('people/edit.html', wedding=wedding, person=person)
+            person.getting_ready_time = parsed_time
+        else:
+            person.getting_ready_time = None
+
+        addr_valid, addr_value, addr_err = validate_text_field(
+            request.form.get('getting_ready_address'), max_length=1000, field_name='Getting ready address')
+        if not addr_valid:
+            flash(addr_err, 'danger')
+            return render_template('people/edit.html', wedding=wedding, person=person)
+        person.getting_ready_address = addr_value or None
+
+        person.getting_ready_location = sanitize_string(request.form.get('getting_ready_location', ''), max_length=200) or None
+
         db.session.commit()
         flash('Person updated!', 'success')
         return redirect(url_for('people_view', wedding_id=wedding_id))
@@ -1134,6 +1317,18 @@ def ceremony_edit(wedding_id):
         ceremony.has_unity_ceremony = request.form.get('has_unity_ceremony') == 'on'
         ceremony.unity_ceremony_type = request.form.get('unity_ceremony_type')
         ceremony.has_special_readings = request.form.get('has_special_readings') == 'on'
+
+        # Validate and save venue load-in time
+        load_in_str = request.form.get('venue_load_in_time')
+        if load_in_str:
+            parsed_time = validate_time_string(load_in_str)
+            if parsed_time is None:
+                flash('Invalid venue load-in time format. Use HH:MM.', 'danger')
+                return render_template('ceremony/edit.html', wedding=wedding, ceremony=ceremony)
+            ceremony.venue_load_in_time = parsed_time
+        else:
+            ceremony.venue_load_in_time = None
+
         db.session.commit()
         flash('Ceremony details updated!', 'success')
         return redirect(url_for('ceremony_view', wedding_id=wedding_id))
@@ -1204,6 +1399,43 @@ def reception_edit(wedding_id):
         reception.kids_sitter_name = request.form.get('kids_sitter_name')
         reception.kids_sitter_phone = request.form.get('kids_sitter_phone')
         reception.expected_guest_count = request.form.get('expected_guest_count', type=int)
+
+        # Validate and save venue load-in time
+        load_in_str = request.form.get('venue_load_in_time')
+        if load_in_str:
+            parsed_time = validate_time_string(load_in_str)
+            if parsed_time is None:
+                flash('Invalid venue load-in time format. Use HH:MM.', 'danger')
+                return render_template('reception/edit.html', wedding=wedding, reception=reception)
+            reception.venue_load_in_time = parsed_time
+        else:
+            reception.venue_load_in_time = None
+
+        # Validate and save after-party fields
+        ap_time_str = request.form.get('after_party_start_time')
+        if ap_time_str:
+            parsed_time = validate_time_string(ap_time_str)
+            if parsed_time is None:
+                flash('Invalid after-party start time format. Use HH:MM.', 'danger')
+                return render_template('reception/edit.html', wedding=wedding, reception=reception)
+            reception.after_party_start_time = parsed_time
+        else:
+            reception.after_party_start_time = None
+
+        venue_valid, venue_value, venue_err = validate_text_field(
+            request.form.get('after_party_venue'), max_length=200, field_name='After-party venue')
+        if not venue_valid:
+            flash(venue_err, 'danger')
+            return render_template('reception/edit.html', wedding=wedding, reception=reception)
+        reception.after_party_venue = venue_value or None
+
+        addr_valid, addr_value, addr_err = validate_text_field(
+            request.form.get('after_party_address'), max_length=1000, field_name='After-party address')
+        if not addr_valid:
+            flash(addr_err, 'danger')
+            return render_template('reception/edit.html', wedding=wedding, reception=reception)
+        reception.after_party_address = addr_value or None
+
         db.session.commit()
         flash('Reception details updated!', 'success')
         return redirect(url_for('reception_view', wedding_id=wedding_id))
@@ -1327,6 +1559,12 @@ def bridal_party_view(wedding_id):
 def bridal_party_add(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
+        # Validate name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('bridal_party/add.html', wedding=wedding)
+
         member = BridalPartyMember(
             wedding_id=wedding_id,
             name=request.form.get('name'),
@@ -1334,7 +1572,8 @@ def bridal_party_add(wedding_id):
             side=request.form.get('side'),
             email=request.form.get('email'),
             phone=request.form.get('phone'),
-            processional_order=request.form.get('processional_order', type=int)
+            processional_order=request.form.get('processional_order', type=int),
+            name_pronunciation=pron_value or None
         )
         db.session.add(member)
         db.session.commit()
@@ -1365,6 +1604,14 @@ def bridal_party_edit(wedding_id, member_id):
         member.has_plus_one = request.form.get('has_plus_one') == 'on'
         member.plus_one_name = request.form.get('plus_one_name')
         member.responsibilities = request.form.get('responsibilities')
+
+        # Validate name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('bridal_party/edit.html', wedding=wedding, member=member)
+        member.name_pronunciation = pron_value or None
+
         db.session.commit()
         flash('Wedding party member updated!', 'success')
         return redirect(url_for('bridal_party_view', wedding_id=wedding_id))
@@ -1640,13 +1887,40 @@ def vendor_edit(wedding_id, vendor_id):
         vendor.cancellation_policy = request.form.get('cancellation_policy')
         vendor.contract_notes = request.form.get('contract_notes')
         vendor.backup_contact = request.form.get('backup_contact')
-        vendor.backup_phone = request.form.get('backup_phone')
+
+        # Validate backup phone
+        backup_phone_val = request.form.get('backup_phone', '').strip()
+        if backup_phone_val and not validate_phone(backup_phone_val):
+            flash('Invalid backup phone number format.', 'danger')
+            return render_template('vendors/edit.html', wedding=wedding, vendor=vendor)
+        vendor.backup_phone = backup_phone_val or None
+
         if request.form.get('final_payment_date'):
             vendor.final_payment_date = datetime.strptime(request.form.get('final_payment_date'), '%Y-%m-%d').date()
         if request.form.get('service_date'):
             vendor.service_date = datetime.strptime(request.form.get('service_date'), '%Y-%m-%d').date()
         if request.form.get('service_time'):
             vendor.service_time = datetime.strptime(request.form.get('service_time'), '%H:%M').time()
+
+        # Validate and save arrival time
+        arrival_str = request.form.get('arrival_time')
+        if arrival_str:
+            parsed_time = validate_time_string(arrival_str)
+            if parsed_time is None:
+                flash('Invalid arrival time format. Use HH:MM.', 'danger')
+                return render_template('vendors/edit.html', wedding=wedding, vendor=vendor)
+            vendor.arrival_time = parsed_time
+        else:
+            vendor.arrival_time = None
+
+        # Validate overtime rate
+        ot_valid, ot_value, ot_err = validate_text_field(
+            request.form.get('overtime_rate'), max_length=100, field_name='Overtime rate')
+        if not ot_valid:
+            flash(ot_err, 'danger')
+            return render_template('vendors/edit.html', wedding=wedding, vendor=vendor)
+        vendor.overtime_rate = ot_value or None
+
         vendor.service_location = request.form.get('service_location')
         vendor.setup_instructions = request.form.get('setup_instructions')
         vendor.meals_needed = request.form.get('meals_needed', type=int)
@@ -2205,6 +2479,13 @@ def itinerary_participants(wedding_id):
 def itinerary_add_participant(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
+        # Validate name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('itinerary/add_participant.html', wedding=wedding,
+                                   people=wedding.people, bridal_party=wedding.bridal_party)
+
         participant = WeddingParticipant(
             wedding_id=wedding_id,
             name=request.form.get('name'),
@@ -2212,7 +2493,8 @@ def itinerary_add_participant(wedding_id):
             role_category=request.form.get('role_category'),
             phone=request.form.get('phone'),
             email=request.form.get('email'),
-            notes=request.form.get('notes')
+            notes=request.form.get('notes'),
+            name_pronunciation=pron_value or None
         )
         # Link to existing Person if selected
         person_id = request.form.get('person_id', type=int)
@@ -2245,6 +2527,16 @@ def itinerary_edit_participant(wedding_id, participant_id):
         participant.person_id = person_id if person_id else None
         bp_id = request.form.get('bridal_party_id', type=int)
         participant.bridal_party_id = bp_id if bp_id else None
+
+        # Validate name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('itinerary/edit_participant.html', wedding=wedding,
+                                   participant=participant, people=wedding.people,
+                                   bridal_party=wedding.bridal_party)
+        participant.name_pronunciation = pron_value or None
+
         db.session.commit()
         flash('Participant updated!', 'success')
         return redirect(url_for('itinerary_participants', wedding_id=wedding_id))
@@ -4416,20 +4708,37 @@ def export_vendors_csv(wedding_id):
     response.headers['Content-Disposition'] = f'attachment; filename=vendors_{wedding_id}.csv'
     return response
 
+def _render_or_pdf(template, filename, **context):
+    """Render a template as HTML, or as a PDF download if ?format=pdf is in the query string."""
+    html = render_template(template, **context)
+    if request.args.get('format') == 'pdf':
+        from weasyprint import HTML, CSS
+        pdf = HTML(string=html).write_pdf(
+            stylesheets=[CSS(string='@media print { .print-btn, .share-form-inline { display: none !important; } }')],
+            presentational_hints=True
+        )
+        response = make_response(pdf)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        return response
+    return html
+
 @app.route('/wedding/<int:wedding_id>/print/timeline')
 @login_required
 def print_timeline(wedding_id):
     """Printable day-of timeline."""
     wedding = get_wedding_or_403(wedding_id)
     items = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
-    return render_template('print/timeline.html', wedding=wedding, items=items)
+    return _render_or_pdf('print/timeline.html', f'timeline_{wedding_id}.pdf',
+                          wedding=wedding, items=items)
 
 @app.route('/wedding/<int:wedding_id>/print/vendor-contacts')
 @login_required
 def print_vendor_contacts(wedding_id):
     """Printable vendor contact sheet."""
     wedding = get_wedding_or_403(wedding_id)
-    return render_template('print/vendor_contacts.html', wedding=wedding, vendors=wedding.vendors)
+    return _render_or_pdf('print/vendor_contacts.html', f'vendor_contacts_{wedding_id}.pdf',
+                          wedding=wedding, vendors=wedding.vendors)
 
 @app.route('/wedding/<int:wedding_id>/print/shot-list')
 @login_required
@@ -4437,15 +4746,16 @@ def print_shot_list(wedding_id):
     """Printable photography shot list."""
     wedding = get_wedding_or_403(wedding_id)
     shots = sorted(wedding.photo_shots, key=lambda x: (x.category or '', x.priority or ''))
-    return render_template('print/shot_list.html', wedding=wedding, shots=shots)
+    return _render_or_pdf('print/shot_list.html', f'shot_list_{wedding_id}.pdf',
+                          wedding=wedding, shots=shots)
 
 @app.route('/wedding/<int:wedding_id>/print/emergency-contacts')
 @login_required
 def print_emergency_contacts(wedding_id):
     """Printable emergency contact card."""
     wedding = get_wedding_or_403(wedding_id)
-    return render_template('print/emergency_contacts.html', wedding=wedding,
-                         vendors=wedding.vendors, participants=wedding.participants)
+    return _render_or_pdf('print/emergency_contacts.html', f'emergency_contacts_{wedding_id}.pdf',
+                          wedding=wedding, vendors=wedding.vendors, participants=wedding.participants)
 
 @app.route('/wedding/<int:wedding_id>/print/seating')
 @login_required
@@ -4453,7 +4763,411 @@ def print_seating(wedding_id):
     """Printable seating chart."""
     wedding = get_wedding_or_403(wedding_id)
     tables = wedding.reception.seating_tables if wedding.reception else []
-    return render_template('print/seating.html', wedding=wedding, tables=tables)
+    return _render_or_pdf('print/seating.html', f'seating_{wedding_id}.pdf',
+                          wedding=wedding, tables=tables)
+
+@app.route('/wedding/<int:wedding_id>/print')
+@login_required
+def print_center(wedding_id):
+    """Print Center - all printable documents in one place."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('print/print_center.html', wedding=wedding)
+
+
+def _generate_pdf_bytes(template_name, **context):
+    """Render a template and return PDF bytes via WeasyPrint."""
+    from weasyprint import HTML, CSS
+    html = render_template(template_name, **context)
+    return HTML(string=html).write_pdf(
+        stylesheets=[CSS(string='@media print { .print-btn, .share-btn, .share-form-inline { display: none !important; } }')],
+        presentational_hints=True
+    )
+
+
+# Mapping of document types to their template, filename pattern, and data-gathering logic.
+PRINT_DOCUMENTS = {
+    'timeline':            {'title': 'Day-Of Timeline',       'template': 'print/timeline.html',            'filename': 'timeline'},
+    'vendor_contacts':     {'title': 'Vendor Contacts',       'template': 'print/vendor_contacts.html',     'filename': 'vendor_contacts'},
+    'shot_list':           {'title': 'Photography Shot List', 'template': 'print/shot_list.html',           'filename': 'shot_list'},
+    'emergency_contacts':  {'title': 'Emergency Contacts',    'template': 'print/emergency_contacts.html',  'filename': 'emergency_contacts'},
+    'seating':             {'title': 'Seating Chart',         'template': 'print/seating.html',             'filename': 'seating'},
+    'ceremony_program':    {'title': 'Ceremony Program',      'template': 'print/ceremony_program.html',    'filename': 'ceremony_program'},
+    'music_cue_sheet':     {'title': 'Music Cue Sheet',       'template': 'print/music_cue_sheet.html',     'filename': 'music_cue_sheet'},
+    'guest_list':          {'title': 'Guest List',            'template': 'print/guest_list.html',           'filename': 'guest_list'},
+    'tips_tracker':        {'title': 'Tips & Payments',       'template': 'print/tips_tracker.html',         'filename': 'tips'},
+    'hair_makeup':         {'title': 'Hair & Makeup Schedule','template': 'print/hair_makeup.html',          'filename': 'hair_makeup'},
+    'bridal_party':        {'title': 'Wedding Party',         'template': 'print/bridal_party.html',         'filename': 'bridal_party'},
+    'venue_info':          {'title': 'Venue Information',     'template': 'print/venue_info.html',           'filename': 'venue_info'},
+    'decor_setup':         {'title': 'Decor & Setup Plan',    'template': 'print/decor_setup.html',          'filename': 'decor_setup'},
+    'reception_script':    {'title': 'Reception Run Sheet',   'template': 'print/reception_script.html',     'filename': 'reception_script'},
+    'emergency_kit':       {'title': 'Emergency Kit Checklist','template': 'print/emergency_kit.html',       'filename': 'emergency_kit'},
+    'rehearsal':           {'title': 'Rehearsal Schedule',    'template': 'print/rehearsal.html',             'filename': 'rehearsal'},
+    'transportation':      {'title': 'Transportation & Hotels','template': 'print/transportation.html',      'filename': 'transportation'},
+    'contingency_plans':   {'title': 'Backup Plans',          'template': 'print/contingency_plans.html',    'filename': 'contingency_plans'},
+    'budget_summary':      {'title': 'Budget Summary',        'template': 'print/budget_summary.html',       'filename': 'budget'},
+}
+
+
+def _get_print_context(document_type, wedding):
+    """Build the template context dict for a given document type."""
+    ctx = {'wedding': wedding}
+    if document_type == 'timeline':
+        ctx['items'] = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
+    elif document_type == 'vendor_contacts':
+        ctx['vendors'] = wedding.vendors
+    elif document_type == 'shot_list':
+        ctx['shots'] = sorted(wedding.photo_shots, key=lambda x: (x.category or '', x.priority or ''))
+    elif document_type == 'emergency_contacts':
+        ctx['vendors'] = wedding.vendors
+        ctx['participants'] = wedding.participants
+    elif document_type == 'seating':
+        ctx['tables'] = wedding.reception.seating_tables if wedding.reception else []
+    elif document_type == 'ceremony_program':
+        ceremony = wedding.ceremony
+        ctx['ceremony'] = ceremony
+        ctx['readings'] = sorted(ceremony.readings, key=lambda x: (x.order or 0)) if ceremony and ceremony.readings else []
+        ctx['timeline_items'] = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony and ceremony.timeline_items else []
+        ctx['bridal_party'] = sorted(wedding.bridal_party, key=lambda x: (x.processional_order or 999))
+    elif document_type == 'music_cue_sheet':
+        ctx['ceremony'] = wedding.ceremony
+        ctx['songs'] = sorted(wedding.songs, key=lambda x: (x.moment or '', x.order or 0))
+    elif document_type == 'guest_list':
+        ctx['guests'] = sorted(wedding.guests, key=lambda x: x.name)
+    elif document_type == 'tips_tracker':
+        ctx['tips'] = sorted(wedding.tips, key=lambda x: (x.service_category or '', x.recipient))
+    elif document_type == 'hair_makeup':
+        ctx['appointments'] = sorted(wedding.hair_makeup, key=lambda x: (x.appointment_time or datetime.min.time()))
+    elif document_type == 'bridal_party':
+        ctx['bridal_party'] = sorted(wedding.bridal_party, key=lambda x: (x.side or '', x.processional_order or 999))
+    elif document_type == 'venue_info':
+        ctx['ceremony'] = wedding.ceremony
+        ctx['reception'] = wedding.reception
+        ctx['vendors'] = wedding.vendors
+        ctx['accommodations'] = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    elif document_type == 'decor_setup':
+        ctx['reception'] = wedding.reception
+        ctx['floral_items'] = sorted(wedding.floral_items, key=lambda x: (x.item_type or ''))
+        ctx['inventory_items'] = wedding.inventory_items
+    elif document_type == 'reception_script':
+        reception = wedding.reception
+        ctx['reception'] = reception
+        ctx['reception_items'] = sorted(reception.timeline_items, key=lambda x: (x.order or 0)) if reception and reception.timeline_items else []
+        ctx['songs'] = sorted(wedding.songs, key=lambda x: (x.moment or '', x.order or 0))
+        ctx['speeches'] = sorted(wedding.speeches, key=lambda x: (x.order or 0))
+    elif document_type == 'emergency_kit':
+        if not wedding.emergency_kit_items:
+            seed_default_emergency_kit(wedding.id)
+        ctx['kit_items'] = sorted(wedding.emergency_kit_items, key=lambda x: (x.category or '', x.item_name))
+    elif document_type == 'rehearsal':
+        ctx['rehearsal_dinner'] = wedding.rehearsal_dinner
+        ceremony = wedding.ceremony
+        ctx['ceremony_items'] = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony and ceremony.timeline_items else []
+        ctx['bridal_party'] = sorted(wedding.bridal_party, key=lambda x: (x.processional_order or 999))
+    elif document_type == 'transportation':
+        ctx['accommodations'] = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    elif document_type == 'contingency_plans':
+        ctx['plans'] = sorted(wedding.contingency_plans, key=lambda x: (x.category or ''))
+    elif document_type == 'budget_summary':
+        budget = wedding.budget
+        ctx['budget'] = budget
+        ctx['expenses'] = sorted(budget.expenses, key=lambda x: (x.category or '', x.item_name)) if budget else []
+    return ctx
+
+
+@app.route('/wedding/<int:wedding_id>/print/share', methods=['POST'])
+@login_required
+def print_share(wedding_id):
+    """Email a print document as a PDF attachment."""
+    wedding = get_wedding_or_403(wedding_id)
+
+    document_type = request.form.get('document_type', '').strip()
+    recipient_email = request.form.get('recipient_email', '').strip()
+    recipient_name = request.form.get('recipient_name', '').strip()
+    message = request.form.get('message', '').strip()
+
+    # Validate document type
+    if document_type not in PRINT_DOCUMENTS:
+        flash('Invalid document type.', 'error')
+        return redirect(url_for('print_center', wedding_id=wedding_id))
+
+    # Validate email
+    if not recipient_email or not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', recipient_email):
+        flash('Please enter a valid email address.', 'error')
+        return redirect(url_for('print_center', wedding_id=wedding_id))
+
+    doc_info = PRINT_DOCUMENTS[document_type]
+
+    try:
+        # Build context and generate PDF
+        ctx = _get_print_context(document_type, wedding)
+        pdf_bytes = _generate_pdf_bytes(doc_info['template'], **ctx)
+        pdf_filename = f"{doc_info['filename']}_{wedding_id}.pdf"
+
+        # Build email body
+        greeting = f"Hi {recipient_name},\n\n" if recipient_name else "Hi,\n\n"
+        custom_msg = f"{message}\n\n" if message else ""
+        body_text = (
+            f"{greeting}"
+            f"{custom_msg}"
+            f"{wedding.couple_names} shared a wedding document with you: "
+            f"{doc_info['title']}.\n\n"
+            f"The document is attached as a PDF.\n\n"
+            f"Best regards,\nWedding Organizer"
+        )
+
+        subject = f"{doc_info['title']} - {wedding.couple_names}"
+
+        success = send_pdf_email(
+            to_email=recipient_email,
+            subject=subject,
+            body_text=body_text,
+            pdf_bytes=pdf_bytes,
+            pdf_filename=pdf_filename,
+        )
+
+        if success:
+            flash(f'{doc_info["title"]} sent to {recipient_email}.', 'success')
+        else:
+            flash('Email could not be sent. Please check your SMTP configuration.', 'error')
+    except Exception as e:
+        print(f"Error sharing document: {e}")
+        flash('An error occurred while generating or sending the document.', 'error')
+
+    return redirect(url_for('print_center', wedding_id=wedding_id))
+
+def _build_personal_timeline(wedding, participant):
+    """Build personalized timeline data for a single participant."""
+    from datetime import time as time_type
+    # Get timeline items assigned to this participant
+    assigned_items = sorted(
+        participant.timeline_items,
+        key=lambda x: (x.time or time_type.min, x.order)
+    )
+    # Also include items where their name appears in the 'who' field
+    name_lower = participant.name.lower()
+    for item in wedding.day_of_items:
+        if item not in assigned_items and item.who and name_lower in item.who.lower():
+            assigned_items.append(item)
+    assigned_items = sorted(assigned_items, key=lambda x: (x.time or time_type.min, x.order))
+
+    # Get hair & makeup appointments matching this person's name
+    hair_makeup = [appt for appt in wedding.hair_makeup
+                   if appt.person_name and appt.person_name.lower() == name_lower]
+    hair_makeup = sorted(hair_makeup, key=lambda x: (x.appointment_time or time_type.min))
+
+    # Get responsibilities from bridal party member if linked
+    responsibilities = []
+    if participant.bridal_party_member and participant.bridal_party_member.responsibilities:
+        responsibilities = [r.strip() for r in participant.bridal_party_member.responsibilities.split('\n') if r.strip()]
+    elif participant.notes:
+        responsibilities = [r.strip() for r in participant.notes.split('\n') if r.strip()]
+
+    # Key contacts: couple + coordinator/planner
+    key_contacts = []
+    for p in wedding.participants:
+        if p.id != participant.id and p.role_category in ('couple', 'handler'):
+            key_contacts.append(p)
+    # Also add planner vendors
+    for v in wedding.vendors:
+        if v.category == 'planner' and v.contact_name:
+            class _Contact:
+                def __init__(self, name, role, phone, email):
+                    self.name = name
+                    self.role = role
+                    self.phone = phone
+                    self.email = email
+            key_contacts.append(_Contact(v.contact_name, 'wedding_planner', v.phone, v.email))
+
+    return {
+        'participant': participant,
+        'timeline_items': assigned_items,
+        'hair_makeup': hair_makeup,
+        'responsibilities': responsibilities,
+        'key_contacts': key_contacts,
+    }
+
+@app.route('/wedding/<int:wedding_id>/print/personal-timelines')
+@login_required
+def print_personal_timelines(wedding_id):
+    """Selection page: choose which participant's timeline to print."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('print/personal_timelines.html',
+                           wedding=wedding, participants=wedding.participants)
+
+@app.route('/wedding/<int:wedding_id>/print/personal-timeline/<int:participant_id>')
+@login_required
+def print_personal_timeline(wedding_id, participant_id):
+    """Printable personal timeline for a specific participant."""
+    wedding = get_wedding_or_403(wedding_id)
+    participant = WeddingParticipant.query.get_or_404(participant_id)
+    if participant.wedding_id != wedding.id:
+        abort(404)
+    data = _build_personal_timeline(wedding, participant)
+    return _render_or_pdf('print/personal_timeline.html',
+                          f'timeline_{participant.name.replace(" ", "_")}_{wedding_id}.pdf',
+                          wedding=wedding, **data)
+
+@app.route('/wedding/<int:wedding_id>/print/all-personal-timelines')
+@login_required
+def print_all_personal_timelines(wedding_id):
+    """Printable combined personal timelines for all participants (one page per person)."""
+    wedding = get_wedding_or_403(wedding_id)
+    participant_data = []
+    for p in sorted(wedding.participants, key=lambda x: (x.role_category or 'zzz', x.name)):
+        data = _build_personal_timeline(wedding, p)
+        participant_data.append(data)
+    return _render_or_pdf('print/all_personal_timelines.html',
+                          f'all_personal_timelines_{wedding_id}.pdf',
+                          wedding=wedding, participant_data=participant_data)
+
+@app.route('/wedding/<int:wedding_id>/print/ceremony-program')
+@login_required
+def print_ceremony_program(wedding_id):
+    """Printable ceremony program with readings and script."""
+    wedding = get_wedding_or_403(wedding_id)
+    ceremony = wedding.ceremony
+    readings = sorted(ceremony.readings, key=lambda x: (x.order or 0)) if ceremony and ceremony.readings else []
+    timeline_items = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony and ceremony.timeline_items else []
+    bridal_party = sorted(wedding.bridal_party, key=lambda x: (x.processional_order or 999))
+    return _render_or_pdf('print/ceremony_program.html', f'ceremony_program_{wedding_id}.pdf',
+                          wedding=wedding, ceremony=ceremony, readings=readings,
+                          timeline_items=timeline_items, bridal_party=bridal_party)
+
+@app.route('/wedding/<int:wedding_id>/print/music-cue-sheet')
+@login_required
+def print_music_cue_sheet(wedding_id):
+    """Printable music cue sheet for DJ/band."""
+    wedding = get_wedding_or_403(wedding_id)
+    ceremony = wedding.ceremony
+    songs = sorted(wedding.songs, key=lambda x: (x.moment or '', x.order or 0))
+    return _render_or_pdf('print/music_cue_sheet.html', f'music_cue_sheet_{wedding_id}.pdf',
+                          wedding=wedding, ceremony=ceremony, songs=songs)
+
+@app.route('/wedding/<int:wedding_id>/print/guest-list')
+@login_required
+def print_guest_list(wedding_id):
+    """Printable guest list with meal choices and dietary restrictions."""
+    wedding = get_wedding_or_403(wedding_id)
+    guests = sorted(wedding.guests, key=lambda x: x.name)
+    return _render_or_pdf('print/guest_list.html', f'guest_list_{wedding_id}.pdf',
+                          wedding=wedding, guests=guests)
+
+@app.route('/wedding/<int:wedding_id>/print/tips')
+@login_required
+def print_tips_tracker(wedding_id):
+    """Printable tips and payment tracker."""
+    wedding = get_wedding_or_403(wedding_id)
+    tips = sorted(wedding.tips, key=lambda x: (x.service_category or '', x.recipient))
+    return _render_or_pdf('print/tips_tracker.html', f'tips_{wedding_id}.pdf',
+                          wedding=wedding, tips=tips)
+
+@app.route('/wedding/<int:wedding_id>/print/hair-makeup')
+@login_required
+def print_hair_makeup(wedding_id):
+    """Printable hair and makeup schedule."""
+    wedding = get_wedding_or_403(wedding_id)
+    appointments = sorted(wedding.hair_makeup, key=lambda x: (x.appointment_time or datetime.min.time()))
+    return _render_or_pdf('print/hair_makeup.html', f'hair_makeup_{wedding_id}.pdf',
+                          wedding=wedding, appointments=appointments)
+
+@app.route('/wedding/<int:wedding_id>/print/bridal-party')
+@login_required
+def print_bridal_party_info(wedding_id):
+    """Printable wedding party info sheet."""
+    wedding = get_wedding_or_403(wedding_id)
+    bridal_party = sorted(wedding.bridal_party, key=lambda x: (x.side or '', x.processional_order or 999))
+    return _render_or_pdf('print/bridal_party.html', f'bridal_party_{wedding_id}.pdf',
+                          wedding=wedding, bridal_party=bridal_party)
+
+@app.route('/wedding/<int:wedding_id>/print/venue-info')
+@login_required
+def print_venue_info(wedding_id):
+    """Printable venue information sheet."""
+    wedding = get_wedding_or_403(wedding_id)
+    ceremony = wedding.ceremony
+    reception = wedding.reception
+    accommodations = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    return _render_or_pdf('print/venue_info.html', f'venue_info_{wedding_id}.pdf',
+                          wedding=wedding, ceremony=ceremony, reception=reception,
+                          vendors=wedding.vendors, accommodations=accommodations)
+
+@app.route('/wedding/<int:wedding_id>/print/decor-setup')
+@login_required
+def print_decor_setup(wedding_id):
+    """Printable decor and setup plan."""
+    wedding = get_wedding_or_403(wedding_id)
+    reception = wedding.reception
+    floral_items = sorted(wedding.floral_items, key=lambda x: (x.item_type or ''))
+    inventory_items = wedding.inventory_items
+    return _render_or_pdf('print/decor_setup.html', f'decor_setup_{wedding_id}.pdf',
+                          wedding=wedding, reception=reception,
+                          floral_items=floral_items, inventory_items=inventory_items)
+
+@app.route('/wedding/<int:wedding_id>/print/reception-script')
+@login_required
+def print_reception_script(wedding_id):
+    """Printable MC/DJ reception run sheet."""
+    wedding = get_wedding_or_403(wedding_id)
+    reception = wedding.reception
+    reception_items = sorted(reception.timeline_items, key=lambda x: (x.order or 0)) if reception and reception.timeline_items else []
+    songs = sorted(wedding.songs, key=lambda x: (x.moment or '', x.order or 0))
+    speeches = sorted(wedding.speeches, key=lambda x: (x.order or 0))
+    return _render_or_pdf('print/reception_script.html', f'reception_script_{wedding_id}.pdf',
+                          wedding=wedding, reception=reception,
+                          reception_items=reception_items, songs=songs, speeches=speeches)
+
+@app.route('/wedding/<int:wedding_id>/print/emergency-kit')
+@login_required
+def print_emergency_kit(wedding_id):
+    """Printable emergency kit supplies checklist."""
+    wedding = get_wedding_or_403(wedding_id)
+    # Auto-seed default items for weddings created before this feature
+    if not wedding.emergency_kit_items:
+        seed_default_emergency_kit(wedding.id)
+    kit_items = sorted(wedding.emergency_kit_items, key=lambda x: (x.category or '', x.item_name))
+    return _render_or_pdf('print/emergency_kit.html', f'emergency_kit_{wedding_id}.pdf',
+                          wedding=wedding, kit_items=kit_items)
+
+@app.route('/wedding/<int:wedding_id>/print/rehearsal')
+@login_required
+def print_rehearsal(wedding_id):
+    """Printable rehearsal schedule."""
+    wedding = get_wedding_or_403(wedding_id)
+    rehearsal_dinner = wedding.rehearsal_dinner
+    ceremony = wedding.ceremony
+    ceremony_items = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony and ceremony.timeline_items else []
+    bridal_party = sorted(wedding.bridal_party, key=lambda x: (x.processional_order or 999))
+    return _render_or_pdf('print/rehearsal.html', f'rehearsal_{wedding_id}.pdf',
+                          wedding=wedding, rehearsal_dinner=rehearsal_dinner,
+                          ceremony_items=ceremony_items, bridal_party=bridal_party)
+
+@app.route('/wedding/<int:wedding_id>/print/transportation')
+@login_required
+def print_transportation(wedding_id):
+    """Printable transportation and accommodations sheet."""
+    wedding = get_wedding_or_403(wedding_id)
+    accommodations = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    return _render_or_pdf('print/transportation.html', f'transportation_{wedding_id}.pdf',
+                          wedding=wedding, accommodations=accommodations)
+
+@app.route('/wedding/<int:wedding_id>/print/contingency-plans')
+@login_required
+def print_contingency_plans(wedding_id):
+    """Printable backup and contingency plans."""
+    wedding = get_wedding_or_403(wedding_id)
+    plans = sorted(wedding.contingency_plans, key=lambda x: (x.category or ''))
+    return _render_or_pdf('print/contingency_plans.html', f'contingency_plans_{wedding_id}.pdf',
+                          wedding=wedding, plans=plans)
+
+@app.route('/wedding/<int:wedding_id>/print/budget')
+@login_required
+def print_budget_summary(wedding_id):
+    """Printable budget summary."""
+    wedding = get_wedding_or_403(wedding_id)
+    budget = wedding.budget
+    expenses = sorted(budget.expenses, key=lambda x: (x.category or '', x.item_name)) if budget else []
+    return _render_or_pdf('print/budget_summary.html', f'budget_{wedding_id}.pdf',
+                          wedding=wedding, budget=budget, expenses=expenses)
 
 @app.route('/wedding/<int:wedding_id>/export/mailing-labels')
 @login_required
@@ -4470,6 +5184,706 @@ def export_mailing_labels(wedding_id):
     response.headers['Content-Type'] = 'text/csv'
     response.headers['Content-Disposition'] = f'attachment; filename=mailing_labels_{wedding_id}.csv'
     return response
+
+# ============================================
+# CSV EXPORTS - ADDITIONAL MODULES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/export/bridal-party')
+@login_required
+def export_bridal_party_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Name', 'Role', 'Side', 'Email', 'Phone', 'Processional Order',
+                     'Responsibilities', 'Gift Idea', 'Gift Cost', 'Gift Purchased'])
+    for m in wedding.bridal_party:
+        writer.writerow([
+            m.name, m.role or '', m.side or '', m.email or '', m.phone or '',
+            m.processional_order or '', m.responsibilities or '', m.gift_idea or '',
+            m.gift_cost or 0, 'Yes' if m.gift_purchased else 'No'
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=bridal_party_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/registry')
+@login_required
+def export_registry_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Item Name', 'Store', 'URL', 'Price', 'Qty Requested', 'Qty Purchased', 'Purchased By'])
+    for r in wedding.registry_items:
+        writer.writerow([
+            r.item_name, r.store or '', r.url or '', r.price or 0,
+            r.quantity_requested or 1, r.quantity_purchased or 0, r.purchased_by or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=registry_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/music')
+@login_required
+def export_music_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Title', 'Artist', 'Moment', 'Duration (min)', 'Spotify URL', 'Notes'])
+    for s in wedding.songs:
+        writer.writerow([
+            s.title, s.artist or '', s.moment or '', s.duration_minutes or '',
+            s.spotify_url or '', s.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=music_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/photos')
+@login_required
+def export_photos_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Category', 'Description', 'People', 'Priority', 'Captured', 'Notes'])
+    for s in wedding.photo_shots:
+        writer.writerow([
+            s.category or '', s.description, s.people or '', s.priority or '',
+            'Yes' if s.captured else 'No', s.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=shot_list_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/attire')
+@login_required
+def export_attire_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Person Name', 'Person Type', 'Garment Type', 'Designer', 'Color',
+                     'Size', 'Store', 'Price', 'Purchased', 'Accessories', 'Notes'])
+    for a in wedding.attire:
+        writer.writerow([
+            a.person_name or '', a.person_type or '', a.garment_type or '',
+            a.designer or '', a.color or '', a.size or '', a.store or '',
+            a.price or 0, 'Yes' if a.purchased else 'No',
+            a.accessories or '', a.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=attire_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/gifts')
+@login_required
+def export_gifts_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Event', 'From', 'Description', 'Estimated Value', 'Date Received',
+                     'Thank You Sent', 'Notes'])
+    for g in wedding.gifts:
+        writer.writerow([
+            g.event, g.from_name, g.description or '', g.estimated_value or 0,
+            str(g.date_received or ''), 'Yes' if g.thank_you_sent else 'No',
+            g.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=gifts_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/flowers')
+@login_required
+def export_flowers_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Item Type', 'Recipient', 'Flowers', 'Colors', 'Quantity', 'Cost', 'Notes'])
+    for f in wedding.floral_items:
+        writer.writerow([
+            f.item_type, f.recipient or '', f.flowers or '', f.colors or '',
+            f.quantity or 1, f.cost or 0, f.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=flowers_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/speeches')
+@login_required
+def export_speeches_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Speaker Name', 'Type', 'Order', 'Duration (min)', 'Reviewed', 'Notes'])
+    for s in wedding.speeches:
+        writer.writerow([
+            s.speaker_name, s.speech_type or '', s.order or 0,
+            s.duration_minutes or '', 'Yes' if s.reviewed else 'No', s.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=speeches_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/favors')
+@login_required
+def export_favors_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Description', 'Quantity', 'Cost Per Item', 'Total Cost',
+                     'Assembled', 'Vendor', 'Notes'])
+    for f in wedding.favors:
+        writer.writerow([
+            f.description, f.quantity or 0, f.cost_per_item or 0, f.total_cost or 0,
+            'Yes' if f.assembled else 'No', f.vendor or '', f.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=favors_{wedding_id}.csv'
+    return response
+
+# ============================================
+# SAMPLE CSV TEMPLATE DOWNLOADS
+# ============================================
+
+@app.route('/templates/<template_name>.csv')
+def download_sample_csv(template_name):
+    """Download a sample CSV template for importing data."""
+    allowed = {'guests', 'vendors', 'tasks', 'budget'}
+    if template_name not in allowed:
+        abort(404)
+    return app.send_static_file(f'templates/{template_name}_template.csv')
+
+# ============================================
+# CSV IMPORTS
+# ============================================
+
+def _parse_csv_upload(request_obj):
+    """Parse an uploaded CSV file and return rows as list of dicts. Returns (rows, error)."""
+    if 'file' not in request_obj.files:
+        return None, 'No file uploaded.'
+    file = request_obj.files['file']
+    if file.filename == '':
+        return None, 'No file selected.'
+    if not file.filename.lower().endswith('.csv'):
+        return None, 'Please upload a CSV file.'
+    try:
+        content = file.read().decode('utf-8-sig')  # utf-8-sig handles BOM from Excel
+        reader = csv.DictReader(io.StringIO(content))
+        rows = list(reader)
+        if not rows:
+            return None, 'CSV file is empty.'
+        return rows, None
+    except UnicodeDecodeError:
+        return None, 'Could not read file. Please ensure it is a UTF-8 encoded CSV.'
+    except csv.Error as e:
+        return None, f'CSV parsing error: {str(e)}'
+
+@app.route('/wedding/<int:wedding_id>/import/guests', methods=['POST'])
+@login_required
+def import_guests_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    rows, error = _parse_csv_upload(request)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('guests_view', wedding_id=wedding_id))
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        name = row.get('Name', row.get('name', '')).strip()
+        if not name:
+            skipped += 1
+            continue
+        guest = Guest(
+            wedding_id=wedding_id,
+            name=sanitize_string(name),
+            email=sanitize_string(row.get('Email', row.get('email', '')).strip()) or None,
+            phone=sanitize_string(row.get('Phone', row.get('phone', '')).strip()) or None,
+            address=sanitize_string(row.get('Address', row.get('address', '')).strip()) or None,
+            rsvp_status=row.get('RSVP Status', row.get('rsvp_status', 'pending')).strip().lower() or 'pending',
+            meal_choice=sanitize_string(row.get('Meal Choice', row.get('meal_choice', '')).strip()) or None,
+            dietary_restrictions=sanitize_string(row.get('Dietary Restrictions', row.get('dietary_restrictions', '')).strip()) or None,
+            side=sanitize_string(row.get('Side', row.get('side', '')).strip()) or None,
+            guest_type=sanitize_string(row.get('Guest Type', row.get('guest_type', '')).strip()) or None,
+            social_groups=sanitize_string(row.get('Social Groups', row.get('social_groups', '')).strip()) or None,
+            household_group=sanitize_string(row.get('Household Group', row.get('household_group', '')).strip()) or None,
+        )
+        # Handle plus one
+        plus_one = row.get('Plus One', row.get('plus_one_of', '')).strip()
+        if plus_one:
+            guest.is_plus_one = True
+            guest.plus_one_of = sanitize_string(plus_one)
+        db.session.add(guest)
+        imported += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {imported} guest(s). {skipped} row(s) skipped (no name).', 'success')
+    return redirect(url_for('guests_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/import/vendors', methods=['POST'])
+@login_required
+def import_vendors_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    rows, error = _parse_csv_upload(request)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('vendors_view', wedding_id=wedding_id))
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        business_name = row.get('Business Name', row.get('business_name', '')).strip()
+        category = row.get('Category', row.get('category', '')).strip()
+        if not business_name or not category:
+            skipped += 1
+            continue
+        vendor = Vendor(
+            wedding_id=wedding_id,
+            category=sanitize_string(category),
+            business_name=sanitize_string(business_name),
+            contact_name=sanitize_string(row.get('Contact', row.get('contact_name', '')).strip()) or None,
+            email=sanitize_string(row.get('Email', row.get('email', '')).strip()) or None,
+            phone=sanitize_string(row.get('Phone', row.get('phone', '')).strip()) or None,
+            website=sanitize_string(row.get('Website', row.get('website', '')).strip()) or None,
+            notes=sanitize_string(row.get('Notes', row.get('notes', '')).strip()) or None,
+        )
+        # Parse numeric fields safely
+        try:
+            vendor.total_cost = float(row.get('Total Cost', row.get('total_cost', 0)) or 0)
+        except (ValueError, TypeError):
+            vendor.total_cost = 0
+        try:
+            vendor.deposit_amount = float(row.get('Deposit', row.get('deposit_amount', 0)) or 0)
+        except (ValueError, TypeError):
+            vendor.deposit_amount = 0
+        db.session.add(vendor)
+        imported += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {imported} vendor(s). {skipped} row(s) skipped.', 'success')
+    return redirect(url_for('vendors_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/import/tasks', methods=['POST'])
+@login_required
+def import_tasks_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    rows, error = _parse_csv_upload(request)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('tasks_view', wedding_id=wedding_id))
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        title = row.get('Title', row.get('title', '')).strip()
+        if not title:
+            skipped += 1
+            continue
+        task = Task(
+            wedding_id=wedding_id,
+            title=sanitize_string(title),
+            description=sanitize_string(row.get('Description', row.get('description', '')).strip()) or None,
+            priority=row.get('Priority', row.get('priority', 'medium')).strip().lower() or 'medium',
+            category=sanitize_string(row.get('Category', row.get('category', '')).strip()) or None,
+            assigned_to=sanitize_string(row.get('Assigned To', row.get('assigned_to', '')).strip()) or None,
+        )
+        # Parse due date
+        due_str = row.get('Due Date', row.get('due_date', '')).strip()
+        if due_str:
+            for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%d/%m/%Y'):
+                try:
+                    task.due_date = datetime.strptime(due_str, fmt)
+                    break
+                except ValueError:
+                    continue
+        if not task.due_date:
+            task.due_date = wedding.wedding_date  # fallback to wedding date
+        # Parse completed
+        completed_str = row.get('Completed', row.get('completed', 'No')).strip().lower()
+        task.completed = completed_str in ('yes', 'true', '1', 'x')
+        db.session.add(task)
+        imported += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {imported} task(s). {skipped} row(s) skipped.', 'success')
+    return redirect(url_for('tasks_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/import/budget', methods=['POST'])
+@login_required
+def import_budget_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    rows, error = _parse_csv_upload(request)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('budget_view', wedding_id=wedding_id))
+
+    # Ensure budget exists
+    if not wedding.budget:
+        budget = Budget(wedding_id=wedding_id, total_budget=0)
+        db.session.add(budget)
+        db.session.flush()
+    else:
+        budget = wedding.budget
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        item_name = row.get('Item', row.get('item_name', row.get('Item Name', ''))).strip()
+        category = row.get('Category', row.get('category', '')).strip()
+        if not item_name or not category:
+            skipped += 1
+            continue
+        expense = BudgetExpense(
+            budget_id=budget.id,
+            category=sanitize_string(category),
+            item_name=sanitize_string(item_name),
+            notes=sanitize_string(row.get('Notes', row.get('notes', '')).strip()) or None,
+            covered_by=sanitize_string(row.get('Covered By', row.get('covered_by', '')).strip()) or None,
+            payment_status=row.get('Payment Status', row.get('payment_status', '')).strip() or None,
+        )
+        for field, keys in [
+            ('estimated_cost', ['Estimated Cost', 'estimated_cost']),
+            ('actual_cost', ['Actual Cost', 'actual_cost']),
+            ('paid_amount', ['Paid Amount', 'paid_amount']),
+        ]:
+            for key in keys:
+                val = row.get(key, '').strip()
+                if val:
+                    try:
+                        setattr(expense, field, float(val))
+                    except (ValueError, TypeError):
+                        pass
+                    break
+        db.session.add(expense)
+        imported += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {imported} expense(s). {skipped} row(s) skipped.', 'success')
+    return redirect(url_for('budget_view', wedding_id=wedding_id))
+
+# ============================================
+# FULL WEDDING JSON EXPORT / IMPORT
+# ============================================
+
+def _serialize_date(val):
+    """Safely serialize date/datetime/time to string."""
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val.isoformat()
+    if isinstance(val, date):
+        return val.isoformat()
+    # time objects
+    if hasattr(val, 'isoformat'):
+        return val.isoformat()
+    return str(val)
+
+def _serialize_model(obj, exclude=None):
+    """Serialize a SQLAlchemy model to a dict, excluding specified fields."""
+    exclude = set(exclude or [])
+    exclude.update({'id', '_sa_instance_state'})
+    result = {}
+    for col in obj.__table__.columns:
+        if col.name in exclude:
+            continue
+        val = getattr(obj, col.name)
+        result[col.name] = _serialize_date(val) if isinstance(val, (datetime, date)) or (hasattr(val, 'isoformat') and callable(val.isoformat)) else val
+    return result
+
+@app.route('/wedding/<int:wedding_id>/export/full')
+@login_required
+def export_wedding_json(wedding_id):
+    """Export the entire wedding plan as a single JSON file."""
+    wedding = get_wedding_or_403(wedding_id)
+    exclude_fk = ['wedding_id']
+
+    data = {
+        'export_version': '1.0',
+        'exported_at': datetime.utcnow().isoformat(),
+        'wedding': _serialize_model(wedding, exclude=['id']),
+        'people': [_serialize_model(p, exclude=exclude_fk) for p in wedding.people],
+        'guests': [_serialize_model(g, exclude=exclude_fk + ['table_id', 'person_id']) for g in wedding.guests],
+        'tasks': [_serialize_model(t, exclude=exclude_fk + ['depends_on_id']) for t in wedding.tasks],
+        'vendors': [],
+        'bridal_party': [_serialize_model(m, exclude=exclude_fk + ['person_id']) for m in wedding.bridal_party],
+        'registry_items': [_serialize_model(r, exclude=exclude_fk) for r in wedding.registry_items],
+        'attire': [_serialize_model(a, exclude=exclude_fk + ['person_id']) for a in wedding.attire],
+        'songs': [_serialize_model(s, exclude=exclude_fk) for s in wedding.songs],
+        'photo_shots': [_serialize_model(s, exclude=exclude_fk) for s in wedding.photo_shots],
+        'floral_items': [_serialize_model(f, exclude=exclude_fk) for f in wedding.floral_items],
+        'invitations': [_serialize_model(i, exclude=exclude_fk) for i in wedding.invitations],
+        'speeches': [_serialize_model(s, exclude=exclude_fk) for s in wedding.speeches],
+        'favors': [_serialize_model(f, exclude=exclude_fk) for f in wedding.favors],
+        'gifts': [_serialize_model(g, exclude=exclude_fk) for g in wedding.gifts],
+        'tips': [_serialize_model(t, exclude=exclude_fk) for t in wedding.tips],
+        'contingency_plans': [_serialize_model(c, exclude=exclude_fk) for c in wedding.contingency_plans],
+        'accommodations': [_serialize_model(a, exclude=exclude_fk) for a in wedding.accommodations],
+        'day_of_items': [_serialize_model(i, exclude=exclude_fk) for i in wedding.day_of_items],
+        'hair_makeup': [_serialize_model(h, exclude=exclude_fk) for h in wedding.hair_makeup],
+        'guest_groups': [_serialize_model(g, exclude=exclude_fk) for g in wedding.guest_groups],
+        'inventory_items': [_serialize_model(i, exclude=exclude_fk + ['bin_id']) for i in wedding.inventory_items],
+        'inventory_bins': [_serialize_model(b, exclude=exclude_fk) for b in wedding.inventory_bins],
+    }
+
+    # Vendors with nested communication log and quotes
+    for v in wedding.vendors:
+        vendor_data = _serialize_model(v, exclude=exclude_fk)
+        vendor_data['communication_log'] = [_serialize_model(n, exclude=['vendor_id']) for n in v.communication_log]
+        data['vendors'].append(vendor_data)
+
+    # Vendor quotes (wedding-level)
+    data['vendor_quotes'] = [_serialize_model(q, exclude=exclude_fk) for q in wedding.vendor_quotes]
+
+    # Ceremony with timeline and readings
+    if wedding.ceremony:
+        ceremony_data = _serialize_model(wedding.ceremony, exclude=exclude_fk)
+        ceremony_data['timeline_items'] = [_serialize_model(i, exclude=['ceremony_id']) for i in wedding.ceremony.timeline_items]
+        ceremony_data['readings'] = [_serialize_model(r, exclude=['ceremony_id']) for r in wedding.ceremony.readings]
+        data['ceremony'] = ceremony_data
+    else:
+        data['ceremony'] = None
+
+    # Reception with timeline, menu, tables
+    if wedding.reception:
+        reception_data = _serialize_model(wedding.reception, exclude=exclude_fk)
+        reception_data['timeline_items'] = [_serialize_model(i, exclude=['reception_id']) for i in wedding.reception.timeline_items]
+        reception_data['menu_items'] = [_serialize_model(m, exclude=['reception_id']) for m in wedding.reception.menu_items]
+        reception_data['seating_tables'] = [_serialize_model(t, exclude=['reception_id']) for t in wedding.reception.seating_tables]
+        data['reception'] = reception_data
+    else:
+        data['reception'] = None
+
+    # Honeymoon with itinerary and packing
+    if wedding.honeymoon:
+        honeymoon_data = _serialize_model(wedding.honeymoon, exclude=exclude_fk)
+        honeymoon_data['itinerary_items'] = [_serialize_model(i, exclude=['honeymoon_id']) for i in wedding.honeymoon.itinerary_items]
+        honeymoon_data['packing_items'] = [_serialize_model(p, exclude=['honeymoon_id']) for p in wedding.honeymoon.packing_items]
+        data['honeymoon'] = honeymoon_data
+    else:
+        data['honeymoon'] = None
+
+    # Branding
+    data['branding'] = _serialize_model(wedding.branding, exclude=exclude_fk) if wedding.branding else None
+
+    # Budget with expenses and category limits
+    if wedding.budget:
+        budget_data = _serialize_model(wedding.budget, exclude=exclude_fk)
+        budget_data['expenses'] = [_serialize_model(e, exclude=['budget_id']) for e in wedding.budget.expenses]
+        budget_data['category_limits'] = [_serialize_model(l, exclude=['budget_id']) for l in wedding.budget.category_limits]
+        data['budget'] = budget_data
+    else:
+        data['budget'] = None
+
+    # Rehearsal dinner
+    data['rehearsal_dinner'] = _serialize_model(wedding.rehearsal_dinner, exclude=exclude_fk) if wedding.rehearsal_dinner else None
+
+    # Marriage license
+    data['marriage_license'] = _serialize_model(wedding.marriage_license, exclude=exclude_fk) if wedding.marriage_license else None
+
+    response = make_response(json.dumps(data, indent=2, default=str))
+    response.headers['Content-Type'] = 'application/json'
+    safe_name = wedding.couple_names.replace(' ', '_').replace('/', '_')[:50]
+    response.headers['Content-Disposition'] = f'attachment; filename=wedding_{safe_name}_{wedding_id}.json'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/import/full', methods=['POST'])
+@login_required
+def import_wedding_json(wedding_id):
+    """Import a wedding plan from a JSON file, merging into the current wedding."""
+    wedding = get_wedding_or_403(wedding_id)
+
+    if 'file' not in request.files:
+        flash('No file uploaded.', 'error')
+        return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+    file = request.files['file']
+    if file.filename == '' or not file.filename.lower().endswith('.json'):
+        flash('Please upload a JSON file.', 'error')
+        return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+
+    try:
+        content = file.read().decode('utf-8')
+        data = json.loads(content)
+    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+        flash(f'Invalid JSON file: {str(e)}', 'error')
+        return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+
+    if 'export_version' not in data:
+        flash('This does not appear to be a valid Wedding Organizer export file.', 'error')
+        return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+
+    def _parse_dt(val):
+        if not val:
+            return None
+        for fmt in ('%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
+            try:
+                return datetime.strptime(val, fmt)
+            except (ValueError, TypeError):
+                continue
+        return None
+
+    def _parse_date(val):
+        if not val:
+            return None
+        try:
+            return datetime.strptime(val, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None
+
+    def _parse_time(val):
+        if not val:
+            return None
+        for fmt in ('%H:%M:%S', '%H:%M'):
+            try:
+                return datetime.strptime(val, fmt).time()
+            except (ValueError, TypeError):
+                continue
+        return None
+
+    def _safe_float(val):
+        try:
+            return float(val) if val else None
+        except (ValueError, TypeError):
+            return None
+
+    def _safe_int(val):
+        try:
+            return int(val) if val else None
+        except (ValueError, TypeError):
+            return None
+
+    def _safe_bool(val):
+        if isinstance(val, bool):
+            return val
+        if isinstance(val, str):
+            return val.lower() in ('true', '1', 'yes')
+        return bool(val) if val else False
+
+    counts = {}
+
+    # Import simple list models
+    model_map = {
+        'guests': (Guest, {'name': str, 'email': str, 'phone': str, 'address': str,
+                          'rsvp_status': str, 'meal_choice': str, 'dietary_restrictions': str,
+                          'side': str, 'guest_type': str, 'household_group': str, 'social_groups': str,
+                          'is_plus_one': _safe_bool, 'plus_one_of': str,
+                          'gift_received': _safe_bool, 'thank_you_sent': _safe_bool,
+                          'rsvp_notes': str}),
+        'tasks': (Task, {'title': str, 'description': str, 'priority': str, 'category': str,
+                        'assigned_to': str, 'completed': _safe_bool, 'is_milestone': _safe_bool,
+                        'due_date': _parse_dt}),
+        'bridal_party': (BridalPartyMember, {'name': str, 'role': str, 'side': str, 'email': str,
+                                             'phone': str, 'responsibilities': str,
+                                             'gift_idea': str, 'gift_cost': _safe_float,
+                                             'gift_purchased': _safe_bool, 'processional_order': _safe_int}),
+        'registry_items': (RegistryItem, {'item_name': str, 'store': str, 'url': str,
+                                         'price': _safe_float, 'quantity_requested': _safe_int,
+                                         'quantity_purchased': _safe_int, 'purchased_by': str}),
+        'attire': (Attire, {'person_name': str, 'person_type': str, 'garment_type': str,
+                           'designer': str, 'color': str, 'size': str, 'store': str,
+                           'price': _safe_float, 'purchased': _safe_bool, 'accessories': str, 'notes': str}),
+        'songs': (Song, {'title': str, 'artist': str, 'moment': str, 'spotify_url': str,
+                        'duration_minutes': _safe_float, 'notes': str, 'order': _safe_int}),
+        'photo_shots': (PhotoShot, {'category': str, 'description': str, 'people': str,
+                                    'priority': str, 'captured': _safe_bool, 'notes': str}),
+        'floral_items': (FloralItem, {'item_type': str, 'recipient': str, 'flowers': str,
+                                      'colors': str, 'quantity': _safe_int, 'cost': _safe_float, 'notes': str}),
+        'invitations': (Invitation, {'item_type': str, 'designer': str, 'quantity': _safe_int,
+                                     'cost': _safe_float, 'status': str, 'notes': str}),
+        'speeches': (SpeechToast, {'speaker_name': str, 'speech_type': str, 'order': _safe_int,
+                                   'duration_minutes': _safe_int, 'reviewed': _safe_bool, 'notes': str}),
+        'favors': (WeddingFavor, {'description': str, 'quantity': _safe_int, 'cost_per_item': _safe_float,
+                                  'total_cost': _safe_float, 'assembled': _safe_bool, 'vendor': str, 'notes': str}),
+        'gifts': (Gift, {'event': str, 'from_name': str, 'description': str,
+                         'estimated_value': _safe_float, 'thank_you_sent': _safe_bool, 'notes': str,
+                         'date_received': _parse_date}),
+        'tips': (TipItem, {'recipient': str, 'service_category': str, 'suggested_amount': _safe_float,
+                           'actual_amount': _safe_float, 'payment_method': str,
+                           'envelope_prepared': _safe_bool, 'given': _safe_bool, 'notes': str}),
+        'contingency_plans': (ContingencyPlan, {'category': str, 'title': str, 'description': str,
+                                                'contact_name': str, 'contact_phone': str, 'notes': str}),
+        'accommodations': (Accommodation, {'accommodation_type': str, 'name': str, 'address': str,
+                                           'phone': str, 'website': str, 'block_code': str, 'rate': str,
+                                           'rooms_reserved': _safe_int, 'welcome_bag': _safe_bool, 'notes': str}),
+        'day_of_items': (DayOfTimelineItem, {'title': str, 'description': str, 'location': str,
+                                             'who': str, 'category': str, 'order': _safe_int,
+                                             'time': _parse_time}),
+        'hair_makeup': (HairMakeup, {'person_name': str, 'service_type': str, 'stylist_name': str,
+                                     'style_notes': str, 'trial_completed': _safe_bool,
+                                     'cost': _safe_float, 'notes': str, 'appointment_time': _parse_time}),
+        'guest_groups': (GuestGroup, {'name': str, 'color': str, 'seat_together': _safe_bool,
+                                      'priority': _safe_int, 'notes': str}),
+    }
+
+    for key, (model_cls, field_map) in model_map.items():
+        items = data.get(key, [])
+        if not items:
+            continue
+        count = 0
+        for item_data in items:
+            obj = model_cls(wedding_id=wedding_id)
+            for field, converter in field_map.items():
+                val = item_data.get(field)
+                if val is not None and val != '':
+                    try:
+                        setattr(obj, field, converter(val) if converter != str else sanitize_string(str(val)))
+                    except (ValueError, TypeError):
+                        pass
+            db.session.add(obj)
+            count += 1
+        counts[key] = count
+
+    # Import vendors with nested communication log
+    vendor_items = data.get('vendors', [])
+    if vendor_items:
+        v_count = 0
+        for v_data in vendor_items:
+            vendor = Vendor(wedding_id=wedding_id)
+            for field in ['category', 'business_name', 'contact_name', 'email', 'phone',
+                         'website', 'notes', 'setup_instructions', 'service_location']:
+                val = v_data.get(field)
+                if val:
+                    setattr(vendor, field, sanitize_string(str(val)))
+            for field in ['total_cost', 'deposit_amount', 'balance_due']:
+                val = v_data.get(field)
+                if val is not None:
+                    try:
+                        setattr(vendor, field, float(val))
+                    except (ValueError, TypeError):
+                        pass
+            vendor.contract_signed = _safe_bool(v_data.get('contract_signed'))
+            vendor.deposit_paid = _safe_bool(v_data.get('deposit_paid'))
+            vendor.service_date = _parse_date(v_data.get('service_date'))
+            db.session.add(vendor)
+            db.session.flush()
+            for note_data in v_data.get('communication_log', []):
+                note = VendorNote(vendor_id=vendor.id)
+                for f in ['note_type', 'subject', 'content']:
+                    val = note_data.get(f)
+                    if val:
+                        setattr(note, f, sanitize_string(str(val)))
+                note.date = _parse_dt(note_data.get('date')) or datetime.utcnow()
+                db.session.add(note)
+            v_count += 1
+        counts['vendors'] = v_count
+
+    db.session.commit()
+
+    summary_parts = [f'{v} {k.replace("_", " ")}' for k, v in counts.items() if v > 0]
+    if summary_parts:
+        flash(f'Successfully imported: {", ".join(summary_parts)}.', 'success')
+    else:
+        flash('No data was imported from the file.', 'warning')
+
+    return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
 
 # ============================================
 # GLOBAL SEARCH
@@ -5078,7 +6492,8 @@ def inventory_bin_assign(wedding_id, bin_id):
 def inventory_bin_print(wedding_id, bin_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     bin = InventoryBin.query.get_or_404(bin_id)
-    return render_template('inventory/bin_print.html', wedding=wedding, bin=bin)
+    return _render_or_pdf('inventory/bin_print.html', f'bin_{bin.label}_{wedding_id}.pdf',
+                          wedding=wedding, bin=bin)
 
 
 @app.route('/wedding/<int:wedding_id>/inventory/print')
@@ -5087,7 +6502,8 @@ def inventory_print_all(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
     unassigned = InventoryItem.query.filter_by(wedding_id=wedding_id, bin_id=None).all()
-    return render_template('inventory/print_all.html', wedding=wedding, bins=bins, unassigned=unassigned)
+    return _render_or_pdf('inventory/print_all.html', f'inventory_{wedding_id}.pdf',
+                          wedding=wedding, bins=bins, unassigned=unassigned)
 
 
 @app.route('/wedding/<int:wedding_id>/inventory/labels')
@@ -5095,7 +6511,8 @@ def inventory_print_all(wedding_id):
 def inventory_labels_print(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
-    return render_template('inventory/labels_print.html', wedding=wedding, bins=bins)
+    return _render_or_pdf('inventory/labels_print.html', f'labels_{wedding_id}.pdf',
+                          wedding=wedding, bins=bins)
 
 
 @app.route('/wedding/<int:wedding_id>/inventory/export')
@@ -5114,6 +6531,117 @@ def inventory_export_csv(wedding_id):
     output.seek(0)
     return Response(output, mimetype='text/csv',
                    headers={'Content-Disposition': 'attachment;filename=inventory.csv'})
+
+
+# ============================================
+# EMERGENCY KIT MANAGEMENT ROUTES
+# ============================================
+
+EMERGENCY_KIT_CATEGORIES = ['fashion', 'health', 'beauty', 'tools', 'food', 'documents']
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit')
+@login_required
+def emergency_kit_view(wedding_id):
+    """View and manage emergency kit items."""
+    wedding = get_wedding_or_403(wedding_id)
+    if not wedding.emergency_kit_items:
+        seed_default_emergency_kit(wedding.id)
+    items_by_category = {}
+    for cat in EMERGENCY_KIT_CATEGORIES:
+        items_by_category[cat] = sorted(
+            [i for i in wedding.emergency_kit_items if i.category == cat],
+            key=lambda x: x.item_name
+        )
+    total = len(wedding.emergency_kit_items)
+    packed = sum(1 for i in wedding.emergency_kit_items if i.packed)
+    return render_template('emergency_kit_manage.html', wedding=wedding,
+                           items_by_category=items_by_category,
+                           categories=EMERGENCY_KIT_CATEGORIES,
+                           total=total, packed=packed)
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/add', methods=['POST'])
+@login_required
+def emergency_kit_add(wedding_id):
+    """Add a new emergency kit item."""
+    wedding = get_wedding_or_403(wedding_id)
+    item_name = request.form.get('item_name', '').strip()
+    category = request.form.get('category', 'tools')
+    notes = request.form.get('notes', '').strip()
+    if not item_name:
+        flash('Item name is required.', 'error')
+        return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+    if category not in EMERGENCY_KIT_CATEGORIES:
+        category = 'tools'
+    item = EmergencyKitItem(
+        wedding_id=wedding_id,
+        item_name=item_name,
+        category=category,
+        packed=False,
+        notes=notes or None
+    )
+    db.session.add(item)
+    db.session.commit()
+    flash('Item added to emergency kit!', 'success')
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/<int:item_id>/edit', methods=['POST'])
+@login_required
+def emergency_kit_edit(wedding_id, item_id):
+    """Edit an emergency kit item."""
+    wedding = get_wedding_or_403(wedding_id)
+    item = EmergencyKitItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    item_name = request.form.get('item_name', '').strip()
+    if not item_name:
+        flash('Item name is required.', 'error')
+        return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+    item.item_name = item_name
+    category = request.form.get('category', item.category)
+    if category in EMERGENCY_KIT_CATEGORIES:
+        item.category = category
+    item.notes = request.form.get('notes', '').strip() or None
+    db.session.commit()
+    flash('Item updated!', 'success')
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/<int:item_id>/delete', methods=['POST'])
+@login_required
+def emergency_kit_delete(wedding_id, item_id):
+    """Delete an emergency kit item."""
+    wedding = get_wedding_or_403(wedding_id)
+    item = EmergencyKitItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Item removed from emergency kit.', 'success')
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/<int:item_id>/toggle', methods=['POST'])
+@login_required
+def emergency_kit_toggle(wedding_id, item_id):
+    """Toggle packed status of an emergency kit item."""
+    wedding = get_wedding_or_403(wedding_id)
+    item = EmergencyKitItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    item.packed = not item.packed
+    db.session.commit()
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'packed': item.packed, 'id': item.id})
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/reset', methods=['POST'])
+@login_required
+def emergency_kit_reset(wedding_id):
+    """Reset emergency kit to default items."""
+    wedding = get_wedding_or_403(wedding_id)
+    EmergencyKitItem.query.filter_by(wedding_id=wedding.id).delete()
+    db.session.commit()
+    seed_default_emergency_kit(wedding.id)
+    flash('Emergency kit reset to defaults.', 'success')
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
 
 
 # Start reminder thread:
