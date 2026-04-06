@@ -1,0 +1,13 @@
+Category,Item,Estimated Cost,Actual Cost,Paid Amount,Payment Status,Covered By,Notes
+Venue,Ceremony venue rental,3000,3000,1500,deposit,,Includes setup and breakdown
+Venue,Reception venue rental,5000,5000,2500,deposit,,
+Catering,Dinner service (150 guests),4500,,0,unpaid,,Buffet style
+Catering,Wedding cake,500,,0,unpaid,,3-tier vanilla
+Photography,Photographer (8 hours),3500,3500,1000,deposit,,Includes second shooter
+Flowers,Bridal bouquet,250,,0,unpaid,,White roses and peonies
+Flowers,Centerpieces (15 tables),750,,0,unpaid,,
+Music,DJ services,800,,200,deposit,,5 hours reception
+Attire,Wedding dress,2000,1800,1800,paid,Mother of Bride,
+Attire,Suit rental,300,,0,unpaid,,
+Stationery,Save the dates,150,150,150,paid,,100 printed
+Stationery,Invitations,300,,0,unpaid,,Custom design

@@ -4493,6 +4493,706 @@ def export_mailing_labels(wedding_id):
     return response
 
 # ============================================
+# CSV EXPORTS - ADDITIONAL MODULES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/export/bridal-party')
+@login_required
+def export_bridal_party_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Name', 'Role', 'Side', 'Email', 'Phone', 'Processional Order',
+                     'Responsibilities', 'Gift Idea', 'Gift Cost', 'Gift Purchased'])
+    for m in wedding.bridal_party:
+        writer.writerow([
+            m.name, m.role or '', m.side or '', m.email or '', m.phone or '',
+            m.processional_order or '', m.responsibilities or '', m.gift_idea or '',
+            m.gift_cost or 0, 'Yes' if m.gift_purchased else 'No'
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=bridal_party_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/registry')
+@login_required
+def export_registry_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Item Name', 'Store', 'URL', 'Price', 'Qty Requested', 'Qty Purchased', 'Purchased By'])
+    for r in wedding.registry_items:
+        writer.writerow([
+            r.item_name, r.store or '', r.url or '', r.price or 0,
+            r.quantity_requested or 1, r.quantity_purchased or 0, r.purchased_by or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=registry_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/music')
+@login_required
+def export_music_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Title', 'Artist', 'Moment', 'Duration (min)', 'Spotify URL', 'Notes'])
+    for s in wedding.songs:
+        writer.writerow([
+            s.title, s.artist or '', s.moment or '', s.duration_minutes or '',
+            s.spotify_url or '', s.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=music_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/photos')
+@login_required
+def export_photos_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Category', 'Description', 'People', 'Priority', 'Captured', 'Notes'])
+    for s in wedding.photo_shots:
+        writer.writerow([
+            s.category or '', s.description, s.people or '', s.priority or '',
+            'Yes' if s.captured else 'No', s.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=shot_list_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/attire')
+@login_required
+def export_attire_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Person Name', 'Person Type', 'Garment Type', 'Designer', 'Color',
+                     'Size', 'Store', 'Price', 'Purchased', 'Accessories', 'Notes'])
+    for a in wedding.attire:
+        writer.writerow([
+            a.person_name or '', a.person_type or '', a.garment_type or '',
+            a.designer or '', a.color or '', a.size or '', a.store or '',
+            a.price or 0, 'Yes' if a.purchased else 'No',
+            a.accessories or '', a.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=attire_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/gifts')
+@login_required
+def export_gifts_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Event', 'From', 'Description', 'Estimated Value', 'Date Received',
+                     'Thank You Sent', 'Notes'])
+    for g in wedding.gifts:
+        writer.writerow([
+            g.event, g.from_name, g.description or '', g.estimated_value or 0,
+            str(g.date_received or ''), 'Yes' if g.thank_you_sent else 'No',
+            g.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=gifts_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/flowers')
+@login_required
+def export_flowers_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Item Type', 'Recipient', 'Flowers', 'Colors', 'Quantity', 'Cost', 'Notes'])
+    for f in wedding.floral_items:
+        writer.writerow([
+            f.item_type, f.recipient or '', f.flowers or '', f.colors or '',
+            f.quantity or 1, f.cost or 0, f.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=flowers_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/speeches')
+@login_required
+def export_speeches_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Speaker Name', 'Type', 'Order', 'Duration (min)', 'Reviewed', 'Notes'])
+    for s in wedding.speeches:
+        writer.writerow([
+            s.speaker_name, s.speech_type or '', s.order or 0,
+            s.duration_minutes or '', 'Yes' if s.reviewed else 'No', s.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=speeches_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/favors')
+@login_required
+def export_favors_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Description', 'Quantity', 'Cost Per Item', 'Total Cost',
+                     'Assembled', 'Vendor', 'Notes'])
+    for f in wedding.favors:
+        writer.writerow([
+            f.description, f.quantity or 0, f.cost_per_item or 0, f.total_cost or 0,
+            'Yes' if f.assembled else 'No', f.vendor or '', f.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=favors_{wedding_id}.csv'
+    return response
+
+# ============================================
+# SAMPLE CSV TEMPLATE DOWNLOADS
+# ============================================
+
+@app.route('/templates/<template_name>.csv')
+def download_sample_csv(template_name):
+    """Download a sample CSV template for importing data."""
+    allowed = {'guests', 'vendors', 'tasks', 'budget'}
+    if template_name not in allowed:
+        abort(404)
+    return app.send_static_file(f'templates/{template_name}_template.csv')
+
+# ============================================
+# CSV IMPORTS
+# ============================================
+
+def _parse_csv_upload(request_obj):
+    """Parse an uploaded CSV file and return rows as list of dicts. Returns (rows, error)."""
+    if 'file' not in request_obj.files:
+        return None, 'No file uploaded.'
+    file = request_obj.files['file']
+    if file.filename == '':
+        return None, 'No file selected.'
+    if not file.filename.lower().endswith('.csv'):
+        return None, 'Please upload a CSV file.'
+    try:
+        content = file.read().decode('utf-8-sig')  # utf-8-sig handles BOM from Excel
+        reader = csv.DictReader(io.StringIO(content))
+        rows = list(reader)
+        if not rows:
+            return None, 'CSV file is empty.'
+        return rows, None
+    except UnicodeDecodeError:
+        return None, 'Could not read file. Please ensure it is a UTF-8 encoded CSV.'
+    except csv.Error as e:
+        return None, f'CSV parsing error: {str(e)}'
+
+@app.route('/wedding/<int:wedding_id>/import/guests', methods=['POST'])
+@login_required
+def import_guests_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    rows, error = _parse_csv_upload(request)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('guests_view', wedding_id=wedding_id))
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        name = row.get('Name', row.get('name', '')).strip()
+        if not name:
+            skipped += 1
+            continue
+        guest = Guest(
+            wedding_id=wedding_id,
+            name=sanitize_string(name),
+            email=sanitize_string(row.get('Email', row.get('email', '')).strip()) or None,
+            phone=sanitize_string(row.get('Phone', row.get('phone', '')).strip()) or None,
+            address=sanitize_string(row.get('Address', row.get('address', '')).strip()) or None,
+            rsvp_status=row.get('RSVP Status', row.get('rsvp_status', 'pending')).strip().lower() or 'pending',
+            meal_choice=sanitize_string(row.get('Meal Choice', row.get('meal_choice', '')).strip()) or None,
+            dietary_restrictions=sanitize_string(row.get('Dietary Restrictions', row.get('dietary_restrictions', '')).strip()) or None,
+            side=sanitize_string(row.get('Side', row.get('side', '')).strip()) or None,
+            guest_type=sanitize_string(row.get('Guest Type', row.get('guest_type', '')).strip()) or None,
+            social_groups=sanitize_string(row.get('Social Groups', row.get('social_groups', '')).strip()) or None,
+            household_group=sanitize_string(row.get('Household Group', row.get('household_group', '')).strip()) or None,
+        )
+        # Handle plus one
+        plus_one = row.get('Plus One', row.get('plus_one_of', '')).strip()
+        if plus_one:
+            guest.is_plus_one = True
+            guest.plus_one_of = sanitize_string(plus_one)
+        db.session.add(guest)
+        imported += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {imported} guest(s). {skipped} row(s) skipped (no name).', 'success')
+    return redirect(url_for('guests_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/import/vendors', methods=['POST'])
+@login_required
+def import_vendors_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    rows, error = _parse_csv_upload(request)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('vendors_view', wedding_id=wedding_id))
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        business_name = row.get('Business Name', row.get('business_name', '')).strip()
+        category = row.get('Category', row.get('category', '')).strip()
+        if not business_name or not category:
+            skipped += 1
+            continue
+        vendor = Vendor(
+            wedding_id=wedding_id,
+            category=sanitize_string(category),
+            business_name=sanitize_string(business_name),
+            contact_name=sanitize_string(row.get('Contact', row.get('contact_name', '')).strip()) or None,
+            email=sanitize_string(row.get('Email', row.get('email', '')).strip()) or None,
+            phone=sanitize_string(row.get('Phone', row.get('phone', '')).strip()) or None,
+            website=sanitize_string(row.get('Website', row.get('website', '')).strip()) or None,
+            notes=sanitize_string(row.get('Notes', row.get('notes', '')).strip()) or None,
+        )
+        # Parse numeric fields safely
+        try:
+            vendor.total_cost = float(row.get('Total Cost', row.get('total_cost', 0)) or 0)
+        except (ValueError, TypeError):
+            vendor.total_cost = 0
+        try:
+            vendor.deposit_amount = float(row.get('Deposit', row.get('deposit_amount', 0)) or 0)
+        except (ValueError, TypeError):
+            vendor.deposit_amount = 0
+        db.session.add(vendor)
+        imported += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {imported} vendor(s). {skipped} row(s) skipped.', 'success')
+    return redirect(url_for('vendors_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/import/tasks', methods=['POST'])
+@login_required
+def import_tasks_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    rows, error = _parse_csv_upload(request)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('tasks_view', wedding_id=wedding_id))
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        title = row.get('Title', row.get('title', '')).strip()
+        if not title:
+            skipped += 1
+            continue
+        task = Task(
+            wedding_id=wedding_id,
+            title=sanitize_string(title),
+            description=sanitize_string(row.get('Description', row.get('description', '')).strip()) or None,
+            priority=row.get('Priority', row.get('priority', 'medium')).strip().lower() or 'medium',
+            category=sanitize_string(row.get('Category', row.get('category', '')).strip()) or None,
+            assigned_to=sanitize_string(row.get('Assigned To', row.get('assigned_to', '')).strip()) or None,
+        )
+        # Parse due date
+        due_str = row.get('Due Date', row.get('due_date', '')).strip()
+        if due_str:
+            for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%d/%m/%Y'):
+                try:
+                    task.due_date = datetime.strptime(due_str, fmt)
+                    break
+                except ValueError:
+                    continue
+        if not task.due_date:
+            task.due_date = wedding.wedding_date  # fallback to wedding date
+        # Parse completed
+        completed_str = row.get('Completed', row.get('completed', 'No')).strip().lower()
+        task.completed = completed_str in ('yes', 'true', '1', 'x')
+        db.session.add(task)
+        imported += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {imported} task(s). {skipped} row(s) skipped.', 'success')
+    return redirect(url_for('tasks_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/import/budget', methods=['POST'])
+@login_required
+def import_budget_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    rows, error = _parse_csv_upload(request)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('budget_view', wedding_id=wedding_id))
+
+    # Ensure budget exists
+    if not wedding.budget:
+        budget = Budget(wedding_id=wedding_id, total_budget=0)
+        db.session.add(budget)
+        db.session.flush()
+    else:
+        budget = wedding.budget
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        item_name = row.get('Item', row.get('item_name', row.get('Item Name', ''))).strip()
+        category = row.get('Category', row.get('category', '')).strip()
+        if not item_name or not category:
+            skipped += 1
+            continue
+        expense = BudgetExpense(
+            budget_id=budget.id,
+            category=sanitize_string(category),
+            item_name=sanitize_string(item_name),
+            notes=sanitize_string(row.get('Notes', row.get('notes', '')).strip()) or None,
+            covered_by=sanitize_string(row.get('Covered By', row.get('covered_by', '')).strip()) or None,
+            payment_status=row.get('Payment Status', row.get('payment_status', '')).strip() or None,
+        )
+        for field, keys in [
+            ('estimated_cost', ['Estimated Cost', 'estimated_cost']),
+            ('actual_cost', ['Actual Cost', 'actual_cost']),
+            ('paid_amount', ['Paid Amount', 'paid_amount']),
+        ]:
+            for key in keys:
+                val = row.get(key, '').strip()
+                if val:
+                    try:
+                        setattr(expense, field, float(val))
+                    except (ValueError, TypeError):
+                        pass
+                    break
+        db.session.add(expense)
+        imported += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {imported} expense(s). {skipped} row(s) skipped.', 'success')
+    return redirect(url_for('budget_view', wedding_id=wedding_id))
+
+# ============================================
+# FULL WEDDING JSON EXPORT / IMPORT
+# ============================================
+
+def _serialize_date(val):
+    """Safely serialize date/datetime/time to string."""
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val.isoformat()
+    if isinstance(val, date):
+        return val.isoformat()
+    # time objects
+    if hasattr(val, 'isoformat'):
+        return val.isoformat()
+    return str(val)
+
+def _serialize_model(obj, exclude=None):
+    """Serialize a SQLAlchemy model to a dict, excluding specified fields."""
+    exclude = set(exclude or [])
+    exclude.update({'id', '_sa_instance_state'})
+    result = {}
+    for col in obj.__table__.columns:
+        if col.name in exclude:
+            continue
+        val = getattr(obj, col.name)
+        result[col.name] = _serialize_date(val) if isinstance(val, (datetime, date)) or (hasattr(val, 'isoformat') and callable(val.isoformat)) else val
+    return result
+
+@app.route('/wedding/<int:wedding_id>/export/full')
+@login_required
+def export_wedding_json(wedding_id):
+    """Export the entire wedding plan as a single JSON file."""
+    wedding = get_wedding_or_403(wedding_id)
+    exclude_fk = ['wedding_id']
+
+    data = {
+        'export_version': '1.0',
+        'exported_at': datetime.utcnow().isoformat(),
+        'wedding': _serialize_model(wedding, exclude=['id']),
+        'people': [_serialize_model(p, exclude=exclude_fk) for p in wedding.people],
+        'guests': [_serialize_model(g, exclude=exclude_fk + ['table_id', 'person_id']) for g in wedding.guests],
+        'tasks': [_serialize_model(t, exclude=exclude_fk + ['depends_on_id']) for t in wedding.tasks],
+        'vendors': [],
+        'bridal_party': [_serialize_model(m, exclude=exclude_fk + ['person_id']) for m in wedding.bridal_party],
+        'registry_items': [_serialize_model(r, exclude=exclude_fk) for r in wedding.registry_items],
+        'attire': [_serialize_model(a, exclude=exclude_fk + ['person_id']) for a in wedding.attire],
+        'songs': [_serialize_model(s, exclude=exclude_fk) for s in wedding.songs],
+        'photo_shots': [_serialize_model(s, exclude=exclude_fk) for s in wedding.photo_shots],
+        'floral_items': [_serialize_model(f, exclude=exclude_fk) for f in wedding.floral_items],
+        'invitations': [_serialize_model(i, exclude=exclude_fk) for i in wedding.invitations],
+        'speeches': [_serialize_model(s, exclude=exclude_fk) for s in wedding.speeches],
+        'favors': [_serialize_model(f, exclude=exclude_fk) for f in wedding.favors],
+        'gifts': [_serialize_model(g, exclude=exclude_fk) for g in wedding.gifts],
+        'tips': [_serialize_model(t, exclude=exclude_fk) for t in wedding.tips],
+        'contingency_plans': [_serialize_model(c, exclude=exclude_fk) for c in wedding.contingency_plans],
+        'accommodations': [_serialize_model(a, exclude=exclude_fk) for a in wedding.accommodations],
+        'day_of_items': [_serialize_model(i, exclude=exclude_fk) for i in wedding.day_of_items],
+        'hair_makeup': [_serialize_model(h, exclude=exclude_fk) for h in wedding.hair_makeup],
+        'guest_groups': [_serialize_model(g, exclude=exclude_fk) for g in wedding.guest_groups],
+        'inventory_items': [_serialize_model(i, exclude=exclude_fk + ['bin_id']) for i in wedding.inventory_items],
+        'inventory_bins': [_serialize_model(b, exclude=exclude_fk) for b in wedding.inventory_bins],
+    }
+
+    # Vendors with nested communication log and quotes
+    for v in wedding.vendors:
+        vendor_data = _serialize_model(v, exclude=exclude_fk)
+        vendor_data['communication_log'] = [_serialize_model(n, exclude=['vendor_id']) for n in v.communication_log]
+        data['vendors'].append(vendor_data)
+
+    # Vendor quotes (wedding-level)
+    data['vendor_quotes'] = [_serialize_model(q, exclude=exclude_fk) for q in wedding.vendor_quotes]
+
+    # Ceremony with timeline and readings
+    if wedding.ceremony:
+        ceremony_data = _serialize_model(wedding.ceremony, exclude=exclude_fk)
+        ceremony_data['timeline_items'] = [_serialize_model(i, exclude=['ceremony_id']) for i in wedding.ceremony.timeline_items]
+        ceremony_data['readings'] = [_serialize_model(r, exclude=['ceremony_id']) for r in wedding.ceremony.readings]
+        data['ceremony'] = ceremony_data
+    else:
+        data['ceremony'] = None
+
+    # Reception with timeline, menu, tables
+    if wedding.reception:
+        reception_data = _serialize_model(wedding.reception, exclude=exclude_fk)
+        reception_data['timeline_items'] = [_serialize_model(i, exclude=['reception_id']) for i in wedding.reception.timeline_items]
+        reception_data['menu_items'] = [_serialize_model(m, exclude=['reception_id']) for m in wedding.reception.menu_items]
+        reception_data['seating_tables'] = [_serialize_model(t, exclude=['reception_id']) for t in wedding.reception.seating_tables]
+        data['reception'] = reception_data
+    else:
+        data['reception'] = None
+
+    # Honeymoon with itinerary and packing
+    if wedding.honeymoon:
+        honeymoon_data = _serialize_model(wedding.honeymoon, exclude=exclude_fk)
+        honeymoon_data['itinerary_items'] = [_serialize_model(i, exclude=['honeymoon_id']) for i in wedding.honeymoon.itinerary_items]
+        honeymoon_data['packing_items'] = [_serialize_model(p, exclude=['honeymoon_id']) for p in wedding.honeymoon.packing_items]
+        data['honeymoon'] = honeymoon_data
+    else:
+        data['honeymoon'] = None
+
+    # Branding
+    data['branding'] = _serialize_model(wedding.branding, exclude=exclude_fk) if wedding.branding else None
+
+    # Budget with expenses and category limits
+    if wedding.budget:
+        budget_data = _serialize_model(wedding.budget, exclude=exclude_fk)
+        budget_data['expenses'] = [_serialize_model(e, exclude=['budget_id']) for e in wedding.budget.expenses]
+        budget_data['category_limits'] = [_serialize_model(l, exclude=['budget_id']) for l in wedding.budget.category_limits]
+        data['budget'] = budget_data
+    else:
+        data['budget'] = None
+
+    # Rehearsal dinner
+    data['rehearsal_dinner'] = _serialize_model(wedding.rehearsal_dinner, exclude=exclude_fk) if wedding.rehearsal_dinner else None
+
+    # Marriage license
+    data['marriage_license'] = _serialize_model(wedding.marriage_license, exclude=exclude_fk) if wedding.marriage_license else None
+
+    response = make_response(json.dumps(data, indent=2, default=str))
+    response.headers['Content-Type'] = 'application/json'
+    safe_name = wedding.couple_names.replace(' ', '_').replace('/', '_')[:50]
+    response.headers['Content-Disposition'] = f'attachment; filename=wedding_{safe_name}_{wedding_id}.json'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/import/full', methods=['POST'])
+@login_required
+def import_wedding_json(wedding_id):
+    """Import a wedding plan from a JSON file, merging into the current wedding."""
+    wedding = get_wedding_or_403(wedding_id)
+
+    if 'file' not in request.files:
+        flash('No file uploaded.', 'error')
+        return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+    file = request.files['file']
+    if file.filename == '' or not file.filename.lower().endswith('.json'):
+        flash('Please upload a JSON file.', 'error')
+        return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+
+    try:
+        content = file.read().decode('utf-8')
+        data = json.loads(content)
+    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+        flash(f'Invalid JSON file: {str(e)}', 'error')
+        return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+
+    if 'export_version' not in data:
+        flash('This does not appear to be a valid Wedding Organizer export file.', 'error')
+        return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+
+    def _parse_dt(val):
+        if not val:
+            return None
+        for fmt in ('%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
+            try:
+                return datetime.strptime(val, fmt)
+            except (ValueError, TypeError):
+                continue
+        return None
+
+    def _parse_date(val):
+        if not val:
+            return None
+        try:
+            return datetime.strptime(val, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None
+
+    def _parse_time(val):
+        if not val:
+            return None
+        for fmt in ('%H:%M:%S', '%H:%M'):
+            try:
+                return datetime.strptime(val, fmt).time()
+            except (ValueError, TypeError):
+                continue
+        return None
+
+    def _safe_float(val):
+        try:
+            return float(val) if val else None
+        except (ValueError, TypeError):
+            return None
+
+    def _safe_int(val):
+        try:
+            return int(val) if val else None
+        except (ValueError, TypeError):
+            return None
+
+    def _safe_bool(val):
+        if isinstance(val, bool):
+            return val
+        if isinstance(val, str):
+            return val.lower() in ('true', '1', 'yes')
+        return bool(val) if val else False
+
+    counts = {}
+
+    # Import simple list models
+    model_map = {
+        'guests': (Guest, {'name': str, 'email': str, 'phone': str, 'address': str,
+                          'rsvp_status': str, 'meal_choice': str, 'dietary_restrictions': str,
+                          'side': str, 'guest_type': str, 'household_group': str, 'social_groups': str,
+                          'is_plus_one': _safe_bool, 'plus_one_of': str,
+                          'gift_received': _safe_bool, 'thank_you_sent': _safe_bool,
+                          'rsvp_notes': str}),
+        'tasks': (Task, {'title': str, 'description': str, 'priority': str, 'category': str,
+                        'assigned_to': str, 'completed': _safe_bool, 'is_milestone': _safe_bool,
+                        'due_date': _parse_dt}),
+        'bridal_party': (BridalPartyMember, {'name': str, 'role': str, 'side': str, 'email': str,
+                                             'phone': str, 'responsibilities': str,
+                                             'gift_idea': str, 'gift_cost': _safe_float,
+                                             'gift_purchased': _safe_bool, 'processional_order': _safe_int}),
+        'registry_items': (RegistryItem, {'item_name': str, 'store': str, 'url': str,
+                                         'price': _safe_float, 'quantity_requested': _safe_int,
+                                         'quantity_purchased': _safe_int, 'purchased_by': str}),
+        'attire': (Attire, {'person_name': str, 'person_type': str, 'garment_type': str,
+                           'designer': str, 'color': str, 'size': str, 'store': str,
+                           'price': _safe_float, 'purchased': _safe_bool, 'accessories': str, 'notes': str}),
+        'songs': (Song, {'title': str, 'artist': str, 'moment': str, 'spotify_url': str,
+                        'duration_minutes': _safe_float, 'notes': str, 'order': _safe_int}),
+        'photo_shots': (PhotoShot, {'category': str, 'description': str, 'people': str,
+                                    'priority': str, 'captured': _safe_bool, 'notes': str}),
+        'floral_items': (FloralItem, {'item_type': str, 'recipient': str, 'flowers': str,
+                                      'colors': str, 'quantity': _safe_int, 'cost': _safe_float, 'notes': str}),
+        'invitations': (Invitation, {'item_type': str, 'designer': str, 'quantity': _safe_int,
+                                     'cost': _safe_float, 'status': str, 'notes': str}),
+        'speeches': (SpeechToast, {'speaker_name': str, 'speech_type': str, 'order': _safe_int,
+                                   'duration_minutes': _safe_int, 'reviewed': _safe_bool, 'notes': str}),
+        'favors': (WeddingFavor, {'description': str, 'quantity': _safe_int, 'cost_per_item': _safe_float,
+                                  'total_cost': _safe_float, 'assembled': _safe_bool, 'vendor': str, 'notes': str}),
+        'gifts': (Gift, {'event': str, 'from_name': str, 'description': str,
+                         'estimated_value': _safe_float, 'thank_you_sent': _safe_bool, 'notes': str,
+                         'date_received': _parse_date}),
+        'tips': (TipItem, {'recipient': str, 'service_category': str, 'suggested_amount': _safe_float,
+                           'actual_amount': _safe_float, 'payment_method': str,
+                           'envelope_prepared': _safe_bool, 'given': _safe_bool, 'notes': str}),
+        'contingency_plans': (ContingencyPlan, {'category': str, 'title': str, 'description': str,
+                                                'contact_name': str, 'contact_phone': str, 'notes': str}),
+        'accommodations': (Accommodation, {'accommodation_type': str, 'name': str, 'address': str,
+                                           'phone': str, 'website': str, 'block_code': str, 'rate': str,
+                                           'rooms_reserved': _safe_int, 'welcome_bag': _safe_bool, 'notes': str}),
+        'day_of_items': (DayOfTimelineItem, {'title': str, 'description': str, 'location': str,
+                                             'who': str, 'category': str, 'order': _safe_int,
+                                             'time': _parse_time}),
+        'hair_makeup': (HairMakeup, {'person_name': str, 'service_type': str, 'stylist_name': str,
+                                     'style_notes': str, 'trial_completed': _safe_bool,
+                                     'cost': _safe_float, 'notes': str, 'appointment_time': _parse_time}),
+        'guest_groups': (GuestGroup, {'name': str, 'color': str, 'seat_together': _safe_bool,
+                                      'priority': _safe_int, 'notes': str}),
+    }
+
+    for key, (model_cls, field_map) in model_map.items():
+        items = data.get(key, [])
+        if not items:
+            continue
+        count = 0
+        for item_data in items:
+            obj = model_cls(wedding_id=wedding_id)
+            for field, converter in field_map.items():
+                val = item_data.get(field)
+                if val is not None and val != '':
+                    try:
+                        setattr(obj, field, converter(val) if converter != str else sanitize_string(str(val)))
+                    except (ValueError, TypeError):
+                        pass
+            db.session.add(obj)
+            count += 1
+        counts[key] = count
+
+    # Import vendors with nested communication log
+    vendor_items = data.get('vendors', [])
+    if vendor_items:
+        v_count = 0
+        for v_data in vendor_items:
+            vendor = Vendor(wedding_id=wedding_id)
+            for field in ['category', 'business_name', 'contact_name', 'email', 'phone',
+                         'website', 'notes', 'setup_instructions', 'service_location']:
+                val = v_data.get(field)
+                if val:
+                    setattr(vendor, field, sanitize_string(str(val)))
+            for field in ['total_cost', 'deposit_amount', 'balance_due']:
+                val = v_data.get(field)
+                if val is not None:
+                    try:
+                        setattr(vendor, field, float(val))
+                    except (ValueError, TypeError):
+                        pass
+            vendor.contract_signed = _safe_bool(v_data.get('contract_signed'))
+            vendor.deposit_paid = _safe_bool(v_data.get('deposit_paid'))
+            vendor.service_date = _parse_date(v_data.get('service_date'))
+            db.session.add(vendor)
+            db.session.flush()
+            for note_data in v_data.get('communication_log', []):
+                note = VendorNote(vendor_id=vendor.id)
+                for f in ['note_type', 'subject', 'content']:
+                    val = note_data.get(f)
+                    if val:
+                        setattr(note, f, sanitize_string(str(val)))
+                note.date = _parse_dt(note_data.get('date')) or datetime.utcnow()
+                db.session.add(note)
+            v_count += 1
+        counts['vendors'] = v_count
+
+    db.session.commit()
+
+    summary_parts = [f'{v} {k.replace("_", " ")}' for k, v in counts.items() if v > 0]
+    if summary_parts:
+        flash(f'Successfully imported: {", ".join(summary_parts)}.', 'success')
+    else:
+        flash('No data was imported from the file.', 'warning')
+
+    return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+
+# ============================================
 # GLOBAL SEARCH
 # ============================================
 

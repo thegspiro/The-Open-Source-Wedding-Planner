@@ -4,6 +4,41 @@ All notable changes to the Wedding Organizer are documented in this file.
 
 ---
 
+## [2.6.0] - 2026-04-06 — Comprehensive Import/Export System
+
+### Added
+
+#### CSV Imports (4 modules)
+- **Guest CSV import** with file upload - bulk add guests from spreadsheets
+- **Vendor CSV import** - batch add vendors from CSV files
+- **Task CSV import** - import task lists with flexible date parsing (YYYY-MM-DD, MM/DD/YYYY, etc.)
+- **Budget CSV import** - import expenses with auto-creation of budget if needed
+- **Sample CSV templates** - downloadable template files with example data for guests, vendors, tasks, and budget
+- **"Download Template" buttons** on guests, vendors, tasks, and budget pages
+
+#### CSV Exports (9 new modules)
+- **Bridal party export** - name, role, side, contact, responsibilities, gift tracking
+- **Registry export** - items, stores, prices, purchase status
+- **Music/playlist export** - songs, artists, moments, Spotify URLs
+- **Photography shot list export** - categories, descriptions, priority, capture status
+- **Attire export** - garments, designers, sizes, fittings
+- **Gift tracking export** - events, givers, values, thank-you status
+- **Flowers/decor export** - arrangements, recipients, quantities, costs
+- **Speeches/toasts export** - speakers, types, order, duration
+- **Wedding favors export** - descriptions, quantities, costs, assembly status
+
+#### Full Wedding JSON Export/Import
+- **Export entire wedding** as a single JSON file from the dashboard - includes ALL modules (ceremony, reception, honeymoon, guests, vendors, budget, tasks, bridal party, registry, music, photos, flowers, attire, gifts, speeches, favors, tips, contingency plans, accommodations, timeline, hair/makeup, guest groups, inventory, seating tables, vendor communication logs, and more)
+- **Import wedding from JSON** - restore or transfer a complete wedding plan between instances
+- **Export/Import buttons** on the wedding dashboard
+
+#### UI Updates
+- Export CSV buttons added to 9 additional module pages (bridal party, registry, music, photos, attire, gifts, flowers, speeches, favors)
+- Import CSV buttons with inline file upload on guests, vendors, tasks, and budget pages
+- All import buttons use hidden file inputs for clean UX - click to browse, auto-submit on selection
+
+---
+
 ## [2.5.0] - 2026-04-06 — Installation Docs, Deployment Guides & Infrastructure
 
 ### Added
