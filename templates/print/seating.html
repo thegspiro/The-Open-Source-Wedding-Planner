@@ -97,6 +97,51 @@
             margin: 20px auto 0;
         }
 
+        .section-title {
+            font-family: var(--heading-font);
+            font-size: 18px;
+            font-weight: normal;
+            color: var(--primary);
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+        }
+
+        .floor-plan-section {
+            margin-bottom: 30px;
+            page-break-after: always;
+        }
+
+        .floor-plan-print {
+            position: relative;
+            min-height: 400px;
+            border: 1px solid var(--secondary);
+            border-radius: 4px;
+            background: #fcfaf7;
+            padding: 10px;
+        }
+
+        .floor-table {
+            position: absolute;
+            text-align: center;
+        }
+
+        .floor-table svg {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .floor-table-label {
+            font-size: 8px;
+            color: #888;
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+        }
+
         .tables-grid {
             display: flex;
             flex-wrap: wrap;
@@ -255,7 +300,41 @@
         <div class="header-border"></div>
     </div>
 
+    {# Visual Floor Plan #}
+    {% if tables and table_floor_data %}
+    <div class="floor-plan-section">
+        <h2 class="section-title">Floor Plan</h2>
+        <div class="floor-plan-print">
+            {% for table in tables %}
+            {% set fd = table_floor_data[table.id] %}
+            {% set shape = table.table_shape or 'round' %}
+            {% set assigned_count = table.assigned_guests|length %}
+            <div class="floor-table" style="left: {{ table.x_position * 0.7 if table.x_position else 0 }}px; top: {{ table.y_position * 0.7 if table.y_position else 0 }}px; width: {{ fd.svg_w }}px;">
+                <svg width="{{ fd.svg_w }}" height="{{ fd.svg_h }}" viewBox="0 0 {{ fd.svg_w }} {{ fd.svg_h }}">
+                    {% if shape == 'round' %}
+                    <circle cx="{{ fd.cx }}" cy="{{ fd.cy }}" r="{{ fd.tw / 2 }}" fill="#f8f6f3" stroke="#8B7355" stroke-width="2" />
+                    {% elif shape == 'oval' %}
+                    <ellipse cx="{{ fd.cx }}" cy="{{ fd.cy }}" rx="{{ fd.tw / 2 }}" ry="{{ fd.th / 2 }}" fill="#f8f6f3" stroke="#8B7355" stroke-width="2" />
+                    {% elif shape in ('rectangular', 'serpentine') %}
+                    <rect x="22" y="22" width="{{ fd.tw }}" height="{{ fd.th }}" rx="{% if shape == 'serpentine' %}{{ fd.th / 2 }}{% else %}4{% endif %}" fill="#f8f6f3" stroke="#8B7355" stroke-width="2" />
+                    {% elif shape == 'square' %}
+                    <rect x="22" y="22" width="{{ fd.tw }}" height="{{ fd.th }}" rx="3" fill="#f8f6f3" stroke="#8B7355" stroke-width="2" />
+                    {% endif %}
+                    <text x="{{ fd.cx }}" y="{{ fd.cy + 1 }}" text-anchor="middle" dominant-baseline="middle" font-family="serif" font-size="11" font-weight="bold" fill="#3a3a3a">{{ table.table_number }}</text>
+                    {% for chair in fd.chairs %}
+                    <circle cx="{{ chair.x }}" cy="{{ chair.y }}" r="4.5" fill="{% if chair.filled %}#8B7355{% else %}#fff{% endif %}" stroke="{% if chair.filled %}#6b5540{% else %}#ccc{% endif %}" stroke-width="1" />
+                    {% endfor %}
+                </svg>
+                <div class="floor-table-label">{% if table.table_name %}{{ table.table_name }}{% else %}Table {{ table.table_number }}{% endif %}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Guest List by Table #}
     {% if tables %}
+    <h2 class="section-title">Guest Assignments</h2>
     <div class="tables-grid">
         {% for table in tables %}
         <div class="table-card">

@@ -4029,6 +4029,95 @@ def guest_group_remove_guest(wedding_id, group_id, guest_id):
     return redirect(url_for('guest_groups_view', wedding_id=wedding_id))
 
 
+def compute_table_floor_data(tables, scale=1.4):
+    """Compute SVG floor plan rendering data for a list of tables.
+
+    Returns a dict keyed by table.id with dimensions, center point,
+    and chair positions (with filled/empty status).
+    """
+    import math
+    CHAIR_GAP = 14
+    PAD = 22
+
+    result = {}
+    for table in tables:
+        ref = TABLE_SIZE_REFERENCE.get(table.table_size)
+        shape = table.table_shape or 'round'
+        cap = table.capacity
+        assigned_count = len(table.assigned_guests)
+
+        if ref:
+            if shape in ('round', 'oval'):
+                tw = ref.get('diameter', 60) * scale
+                th = tw if shape == 'round' else tw * 0.67
+            elif shape == 'rectangular':
+                tw = ref.get('length', 72) * scale
+                th = ref.get('width', 30) * scale
+            elif shape == 'square':
+                tw = ref.get('side', 48) * scale
+                th = tw
+            else:
+                tw = ref.get('length', 96) * scale
+                th = ref.get('width', 30) * scale
+        else:
+            base = 50 + cap * 6
+            if shape in ('round', 'oval'):
+                tw = base * scale
+                th = tw if shape == 'round' else tw * 0.67
+            elif shape in ('rectangular', 'serpentine'):
+                tw = (base + 30) * scale
+                th = base * 0.45 * scale
+            elif shape == 'square':
+                tw = base * scale
+                th = tw
+            else:
+                tw = base * scale
+                th = tw
+
+        tw = round(tw)
+        th = round(th)
+        svg_w = tw + PAD * 2
+        svg_h = th + PAD * 2
+        cx = svg_w / 2
+        cy = svg_h / 2
+
+        chairs = []
+        if shape in ('round', 'oval'):
+            rx = tw / 2 + CHAIR_GAP
+            ry = th / 2 + CHAIR_GAP
+            for i in range(cap):
+                angle = (2 * math.pi * i / cap) - math.pi / 2
+                x = round(cx + rx * math.cos(angle), 1)
+                y = round(cy + ry * math.sin(angle), 1)
+                chairs.append({'x': x, 'y': y, 'filled': i < assigned_count})
+        else:
+            perimeter = 2 * (tw + th)
+            spacing = perimeter / cap if cap > 0 else perimeter
+            for i in range(cap):
+                dist = spacing * i + spacing / 2
+                if dist < tw:
+                    x = PAD + dist
+                    y = PAD - CHAIR_GAP
+                elif dist < tw + th:
+                    x = PAD + tw + CHAIR_GAP
+                    y = PAD + (dist - tw)
+                elif dist < 2 * tw + th:
+                    x = PAD + tw - (dist - tw - th)
+                    y = PAD + th + CHAIR_GAP
+                else:
+                    x = PAD - CHAIR_GAP
+                    y = PAD + th - (dist - 2 * tw - th)
+                chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': i < assigned_count})
+
+        result[table.id] = {
+            'tw': tw, 'th': th,
+            'svg_w': svg_w, 'svg_h': svg_h,
+            'cx': cx, 'cy': cy,
+            'chairs': chairs,
+        }
+    return result
+
+
 @app.route('/wedding/<int:wedding_id>/seating-chart')
 @login_required
 def seating_chart(wedding_id):
@@ -4115,93 +4204,7 @@ def seating_chart(wedding_id):
         'capacity_surplus': total_capacity - total_attending,
     }
 
-    # Compute floor plan rendering data for each table (proportional sizes + chair positions)
-    import math
-    FLOOR_SCALE = 1.4  # 1 real inch ≈ 1.4px on canvas
-    CHAIR_RADIUS = 7
-    CHAIR_GAP = 14  # distance from table edge to chair center
-    PAD = 22  # padding around table for chairs
-
-    table_floor_data = {}
-    for table in tables:
-        ref = TABLE_SIZE_REFERENCE.get(table.table_size)
-        shape = table.table_shape or 'round'
-        cap = table.capacity
-        assigned_count = len(table.assigned_guests)
-
-        # Compute table pixel dimensions from reference or fallback
-        if ref:
-            if shape in ('round', 'oval'):
-                tw = ref.get('diameter', 60) * FLOOR_SCALE
-                th = tw if shape == 'round' else tw * 0.67
-            elif shape == 'rectangular':
-                tw = ref.get('length', 72) * FLOOR_SCALE
-                th = ref.get('width', 30) * FLOOR_SCALE
-            elif shape == 'square':
-                tw = ref.get('side', 48) * FLOOR_SCALE
-                th = tw
-            else:
-                tw = ref.get('length', 96) * FLOOR_SCALE
-                th = ref.get('width', 30) * FLOOR_SCALE
-        else:
-            base = 50 + cap * 6
-            if shape in ('round', 'oval'):
-                tw = base * FLOOR_SCALE
-                th = tw if shape == 'round' else tw * 0.67
-            elif shape in ('rectangular', 'serpentine'):
-                tw = (base + 30) * FLOOR_SCALE
-                th = base * 0.45 * FLOOR_SCALE
-            elif shape == 'square':
-                tw = base * FLOOR_SCALE
-                th = tw
-            else:
-                tw = base * FLOOR_SCALE
-                th = tw
-
-        tw = round(tw)
-        th = round(th)
-        svg_w = tw + PAD * 2
-        svg_h = th + PAD * 2
-        cx = svg_w / 2
-        cy = svg_h / 2
-
-        # Compute chair positions around the table perimeter
-        chairs = []
-        if shape in ('round', 'oval'):
-            rx = tw / 2 + CHAIR_GAP
-            ry = th / 2 + CHAIR_GAP
-            for i in range(cap):
-                angle = (2 * math.pi * i / cap) - math.pi / 2  # start from top
-                x = round(cx + rx * math.cos(angle), 1)
-                y = round(cy + ry * math.sin(angle), 1)
-                chairs.append({'x': x, 'y': y, 'filled': i < assigned_count})
-        else:
-            # Rectangular/square/serpentine: distribute chairs along the perimeter
-            perimeter = 2 * (tw + th)
-            spacing = perimeter / cap if cap > 0 else perimeter
-            for i in range(cap):
-                dist = spacing * i + spacing / 2  # offset from corner
-                # Walk around the perimeter: top → right → bottom → left
-                if dist < tw:
-                    x = PAD + dist
-                    y = PAD - CHAIR_GAP
-                elif dist < tw + th:
-                    x = PAD + tw + CHAIR_GAP
-                    y = PAD + (dist - tw)
-                elif dist < 2 * tw + th:
-                    x = PAD + tw - (dist - tw - th)
-                    y = PAD + th + CHAIR_GAP
-                else:
-                    x = PAD - CHAIR_GAP
-                    y = PAD + th - (dist - 2 * tw - th)
-                chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': i < assigned_count})
-
-        table_floor_data[table.id] = {
-            'tw': tw, 'th': th,
-            'svg_w': svg_w, 'svg_h': svg_h,
-            'cx': cx, 'cy': cy,
-            'chairs': chairs,
-        }
+    table_floor_data = compute_table_floor_data(tables)
 
     return render_template('seating/chart.html', wedding=wedding, tables=tables,
                          unassigned_guests=unassigned, preferences=preferences,
@@ -4954,11 +4957,13 @@ def print_emergency_contacts(wedding_id):
 @app.route('/wedding/<int:wedding_id>/print/seating')
 @login_required
 def print_seating(wedding_id):
-    """Printable seating chart."""
+    """Printable seating chart with visual floor plan."""
     wedding = get_wedding_or_403(wedding_id)
     tables = wedding.reception.seating_tables if wedding.reception else []
+    table_floor_data = compute_table_floor_data(tables, scale=1.0)
     return _render_or_pdf('print/seating.html', f'seating_{wedding_id}.pdf',
-                          wedding=wedding, tables=tables)
+                          wedding=wedding, tables=tables,
+                          table_floor_data=table_floor_data)
 
 @app.route('/wedding/<int:wedding_id>/print')
 @login_required
