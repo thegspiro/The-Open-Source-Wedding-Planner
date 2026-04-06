@@ -16,7 +16,12 @@
         <a href="{{ url_for('print_timeline', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
             <div class="pc-icon">&#128197;</div>
             <div class="pc-title">Day-Of Timeline</div>
-            <div class="pc-desc">Complete schedule of events with times, locations, and who's involved</div>
+            <div class="pc-desc">Complete master schedule of events with times, locations, and who's involved</div>
+        </a>
+        <a href="{{ url_for('print_personal_timelines', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px); border-color: #c9a96e;">
+            <div class="pc-icon">&#128100;</div>
+            <div class="pc-title">Personal Timelines</div>
+            <div class="pc-desc">Individual timelines for each person: bride, groom, wedding party, vendors</div>
         </a>
         <a href="{{ url_for('print_emergency_contacts', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
             <div class="pc-icon">&#128222;</div>

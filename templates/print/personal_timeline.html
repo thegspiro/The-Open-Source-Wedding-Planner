@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ participant.name }} - Personal Timeline - {{ wedding.couple_names }}</title>
+    <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--body-font);
+            color: #3a3a3a;
+            line-height: 1.6;
+            padding: 20px 40px;
+            background: #fff;
+        }
+
+        .print-btn {
+            display: inline-block; padding: 8px 20px; background: var(--primary);
+            color: #fff; border: none; cursor: pointer; font-size: 14px;
+            margin-bottom: 20px; font-family: var(--body-font); border-radius: 4px;
+        }
+        .print-btn:hover { opacity: 0.85; }
+
+        .print-header {
+            text-align: center;
+            padding: 30px 20px 25px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--secondary);
+            position: relative;
+        }
+
+        .print-header::before {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 2px;
+            background: var(--accent);
+            margin: 0 auto 15px;
+        }
+
+        .monogram {
+            font-family: var(--heading-font);
+            font-size: 36px;
+            color: var(--primary);
+            letter-spacing: 4px;
+            margin-bottom: 8px;
+        }
+
+        .print-header h1 {
+            font-family: var(--heading-font);
+            font-size: 26px;
+            font-weight: normal;
+            color: var(--primary);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .person-role {
+            font-size: 12px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .print-header .couple-names {
+            font-family: var(--heading-font);
+            font-size: 15px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .print-header .wedding-date {
+            font-size: 12px;
+            color: #aaa;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .print-header::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 2px;
+            background: var(--accent);
+            margin: 15px auto 0;
+        }
+
+        /* Personal note */
+        .personal-note {
+            background: rgba(212, 197, 178, 0.1);
+            border: 1px solid var(--secondary);
+            border-radius: 4px;
+            padding: 14px 18px;
+            margin-bottom: 25px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .personal-note strong {
+            color: var(--primary);
+        }
+
+        /* Section headers */
+        .section-title {
+            font-family: var(--heading-font);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--primary);
+            border-bottom: 1px solid var(--secondary);
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+            margin-top: 28px;
+        }
+
+        .section-title:first-of-type {
+            margin-top: 0;
+        }
+
+        /* Timeline items */
+        .timeline-list {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 15px;
+            padding: 10px 0;
+            border-bottom: 1px solid #ece8e2;
+        }
+
+        .timeline-item:last-child {
+            border-bottom: none;
+        }
+
+        .tl-time {
+            width: 80px;
+            flex-shrink: 0;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 14px;
+            padding-top: 1px;
+        }
+
+        .tl-content {
+            flex: 1;
+        }
+
+        .tl-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .tl-location {
+            font-size: 12px;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .tl-description {
+            font-size: 12px;
+            color: #777;
+            margin-top: 2px;
+        }
+
+        .tl-category {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #bbb;
+            font-weight: 600;
+        }
+
+        .tl-tag {
+            display: inline-block;
+            font-size: 9px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: rgba(201, 169, 110, 0.15);
+            color: var(--accent);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 3px;
+        }
+
+        /* Hair & makeup */
+        .hm-card {
+            border: 1px solid var(--secondary);
+            border-left: 3px solid var(--accent);
+            padding: 10px 14px;
+            border-radius: 0 3px 3px 0;
+            margin-bottom: 10px;
+        }
+
+        .hm-time {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 14px;
+        }
+
+        .hm-service {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .hm-detail {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Responsibilities */
+        .resp-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .resp-list li {
+            padding: 5px 0;
+            border-bottom: 1px dotted #e8e2da;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .resp-list li::before {
+            content: '';
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid var(--secondary);
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        /* Contact info */
+        .contact-card {
+            background: rgba(212, 197, 178, 0.08);
+            border: 1px solid var(--secondary);
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin-bottom: 15px;
+        }
+
+        .contact-card .cc-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .contact-card .cc-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0;
+        }
+
+        .contact-card .cc-item {
+            width: 50%;
+            padding: 3px 0;
+            font-size: 12px;
+        }
+
+        .contact-card .cc-item strong {
+            color: #555;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 10px;
+            color: #ccc;
+            margin-top: 35px;
+            padding-top: 15px;
+            border-top: 1px solid var(--secondary);
+            letter-spacing: 0.5px;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        @page {
+            size: letter;
+            margin: 0.6in 0.5in;
+        }
+
+        @media print {
+            .print-btn { display: none !important; }
+            body { padding: 0; font-size: 11px; }
+            .print-header h1 { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">Print</button>
+    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+
+    <div class="print-header">
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <div class="person-role">{{ participant.role|replace('_', ' ')|title if participant.role else 'Wedding Party' }}</div>
+        <h1>{{ participant.name }}</h1>
+        <div class="couple-names">{{ wedding.couple_names }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+    </div>
+
+    <!-- Personal note with key contact info -->
+    <div class="personal-note">
+        <strong>{{ participant.name }}</strong> &mdash; this is your personal timeline for the day.
+        {% if participant.phone %} Your contact: {{ participant.phone }}.{% endif %}
+        {% if participant.notes %}<br>{{ participant.notes }}{% endif %}
+    </div>
+
+    <!-- Hair & Makeup (if applicable) -->
+    {% if hair_makeup_appts %}
+    <h2 class="section-title">Hair &amp; Makeup</h2>
+    {% for appt in hair_makeup_appts %}
+    <div class="hm-card">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div>
+                <span class="hm-time">{% if appt.appointment_time %}{{ appt.appointment_time.strftime('%I:%M %p') }}{% else %}&mdash;{% endif %}</span>
+                &nbsp;
+                <span class="hm-service">
+                    {% if appt.service_type == 'both' %}Hair &amp; Makeup
+                    {% elif appt.service_type %}{{ appt.service_type|title }}
+                    {% endif %}
+                </span>
+            </div>
+            {% if appt.stylist_name %}
+            <div class="hm-detail">Stylist: {{ appt.stylist_name }}</div>
+            {% endif %}
+        </div>
+        {% if appt.style_notes %}
+        <div class="hm-detail" style="margin-top: 4px; font-style: italic; color: #888;">{{ appt.style_notes }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Personal Timeline -->
+    {% if timeline_items %}
+    <h2 class="section-title">Your Day</h2>
+    <ul class="timeline-list">
+        {% for item in timeline_items %}
+        <li class="timeline-item">
+            <div class="tl-time">
+                {% if item.time %}
+                {{ item.time.strftime('%I:%M %p') }}
+                {% else %}
+                &mdash;
+                {% endif %}
+            </div>
+            <div class="tl-content">
+                <div class="tl-title">{{ item.title }}</div>
+                {% if item.location %}
+                <div class="tl-location">{{ item.location }}</div>
+                {% endif %}
+                {% if item.description %}
+                <div class="tl-description">{{ item.description }}</div>
+                {% endif %}
+                {% if item.category %}
+                <span class="tl-tag">{{ item.category|replace('_', ' ') }}</span>
+                {% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <h2 class="section-title">Your Day</h2>
+    <p class="empty-message">No timeline items assigned yet. Check the master timeline for the full schedule.</p>
+    {% endif %}
+
+    <!-- Responsibilities (if bridal party member) -->
+    {% if responsibilities %}
+    <h2 class="section-title">Your Responsibilities</h2>
+    <ul class="resp-list">
+        {% for resp in responsibilities %}
+        <li>{{ resp }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <!-- Key Contacts -->
+    {% if key_contacts %}
+    <h2 class="section-title">Key Contacts</h2>
+    {% for contact in key_contacts %}
+    <div class="contact-card">
+        <div class="cc-label">{{ contact.role|replace('_', ' ')|title if contact.role else 'Contact' }}</div>
+        <div class="cc-grid">
+            <div class="cc-item"><strong>{{ contact.name }}</strong></div>
+            {% if contact.phone %}
+            <div class="cc-item">{{ contact.phone }}</div>
+            {% endif %}
+            {% if contact.email %}
+            <div class="cc-item">{{ contact.email }}</div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="footer-note">
+        Personal timeline for {{ participant.name }} &middot; {{ wedding.couple_names }}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
+    </div>
+</body>
+</html>

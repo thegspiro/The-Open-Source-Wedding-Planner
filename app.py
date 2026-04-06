@@ -4502,6 +4502,91 @@ def print_center(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     return render_template('print/print_center.html', wedding=wedding)
 
+def _build_personal_timeline(wedding, participant):
+    """Build personalized timeline data for a single participant."""
+    from datetime import time as time_type
+    # Get timeline items assigned to this participant
+    assigned_items = sorted(
+        participant.timeline_items,
+        key=lambda x: (x.time or time_type.min, x.order)
+    )
+    # Also include items where their name appears in the 'who' field
+    name_lower = participant.name.lower()
+    for item in wedding.day_of_items:
+        if item not in assigned_items and item.who and name_lower in item.who.lower():
+            assigned_items.append(item)
+    assigned_items = sorted(assigned_items, key=lambda x: (x.time or time_type.min, x.order))
+
+    # Get hair & makeup appointments matching this person's name
+    hair_makeup = [appt for appt in wedding.hair_makeup
+                   if appt.person_name and appt.person_name.lower() == name_lower]
+    hair_makeup = sorted(hair_makeup, key=lambda x: (x.appointment_time or time_type.min))
+
+    # Get responsibilities from bridal party member if linked
+    responsibilities = []
+    if participant.bridal_party_member and participant.bridal_party_member.responsibilities:
+        responsibilities = [r.strip() for r in participant.bridal_party_member.responsibilities.split('\n') if r.strip()]
+    elif participant.notes:
+        responsibilities = [r.strip() for r in participant.notes.split('\n') if r.strip()]
+
+    # Key contacts: couple + coordinator/planner
+    key_contacts = []
+    for p in wedding.participants:
+        if p.id != participant.id and p.role_category in ('couple', 'handler'):
+            key_contacts.append(p)
+    # Also add planner vendors
+    for v in wedding.vendors:
+        if v.category == 'planner' and v.contact_name:
+            class _Contact:
+                def __init__(self, name, role, phone, email):
+                    self.name = name
+                    self.role = role
+                    self.phone = phone
+                    self.email = email
+            key_contacts.append(_Contact(v.contact_name, 'wedding_planner', v.phone, v.email))
+
+    return {
+        'participant': participant,
+        'timeline_items': assigned_items,
+        'hair_makeup': hair_makeup,
+        'responsibilities': responsibilities,
+        'key_contacts': key_contacts,
+    }
+
+@app.route('/wedding/<int:wedding_id>/print/personal-timelines')
+@login_required
+def print_personal_timelines(wedding_id):
+    """Selection page: choose which participant's timeline to print."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('print/personal_timelines.html',
+                           wedding=wedding, participants=wedding.participants)
+
+@app.route('/wedding/<int:wedding_id>/print/personal-timeline/<int:participant_id>')
+@login_required
+def print_personal_timeline(wedding_id, participant_id):
+    """Printable personal timeline for a specific participant."""
+    wedding = get_wedding_or_403(wedding_id)
+    participant = WeddingParticipant.query.get_or_404(participant_id)
+    if participant.wedding_id != wedding.id:
+        abort(404)
+    data = _build_personal_timeline(wedding, participant)
+    return _render_or_pdf('print/personal_timeline.html',
+                          f'timeline_{participant.name.replace(" ", "_")}_{wedding_id}.pdf',
+                          wedding=wedding, **data)
+
+@app.route('/wedding/<int:wedding_id>/print/all-personal-timelines')
+@login_required
+def print_all_personal_timelines(wedding_id):
+    """Printable combined personal timelines for all participants (one page per person)."""
+    wedding = get_wedding_or_403(wedding_id)
+    participant_data = []
+    for p in sorted(wedding.participants, key=lambda x: (x.role_category or 'zzz', x.name)):
+        data = _build_personal_timeline(wedding, p)
+        participant_data.append(data)
+    return _render_or_pdf('print/all_personal_timelines.html',
+                          f'all_personal_timelines_{wedding_id}.pdf',
+                          wedding=wedding, participant_data=participant_data)
+
 @app.route('/wedding/<int:wedding_id>/print/ceremony-program')
 @login_required
 def print_ceremony_program(wedding_id):
