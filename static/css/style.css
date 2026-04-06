@@ -1544,6 +1544,65 @@ footer p { margin: 0; }
     background: var(--color-bg-card);
 }
 
+/* Fixture legend swatches */
+.fixture-legend-entertainment { border-color: #7b1fa2; color: #7b1fa2; }
+.fixture-legend-food { border-color: #e65100; color: #e65100; }
+.fixture-legend-access { border-color: #1565c0; color: #1565c0; }
+
+/* Venue fixture cards on floor plan */
+.venue-fixture-card {
+    position: absolute;
+    border: 2px dashed #bbb;
+    border-radius: var(--radius-sm);
+    background: rgba(245, 245, 245, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    user-select: none;
+    z-index: 1;
+    overflow: hidden;
+}
+.venue-fixture-card:hover { z-index: 10; box-shadow: var(--shadow-md); }
+.venue-fixture-card:active { cursor: grabbing; }
+
+.fixture-cat-entertainment { border-color: #7b1fa2; background: rgba(243, 229, 245, 0.85); }
+.fixture-cat-food_drink { border-color: #e65100; background: rgba(255, 243, 224, 0.85); }
+.fixture-cat-access { border-color: #1565c0; background: rgba(227, 242, 253, 0.85); }
+.fixture-cat-other { border-color: #757575; background: rgba(245, 245, 245, 0.85); }
+
+.fixture-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+}
+.fixture-label {
+    font-size: 0.6rem;
+    color: var(--color-text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    text-align: center;
+    padding: 0 2px;
+}
+
+/* Fixture list in sidebar */
+.fixture-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.fixture-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--color-border-light);
+    font-size: 0.85rem;
+}
+.fixture-list li:last-child { border-bottom: none; }
+
 /* Seating panels */
 .seating-add-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 .seating-add-panel {

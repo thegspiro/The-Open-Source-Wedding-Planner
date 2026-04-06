@@ -14,7 +14,7 @@ from models import (
     ActivityLog, Comment,
     InventoryItem, InventoryBin, EmergencyKitItem,
     BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES,
-    TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES,
+    TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES, VenueFixture, VENUE_FIXTURE_TYPES,
     INVENTORY_CATEGORIES, INVENTORY_AREAS
 )
 from flask_migrate import Migrate
@@ -4216,6 +4216,7 @@ def seating_chart(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     reception = wedding.reception
     tables = reception.seating_tables if reception else []
+    fixtures = reception.venue_fixtures if reception else []
     all_guests = wedding.guests
     all_attending = [g for g in all_guests if g.rsvp_status == 'accepted']
     # Unassigned includes all guests without a table (regardless of RSVP status)
@@ -4298,7 +4299,15 @@ def seating_chart(wedding_id):
 
     table_floor_data = compute_table_floor_data(tables)
 
-    # Compute canvas size to fit all tables with padding
+    # Compute fixture pixel data
+    SCALE = 1.4
+    fixture_floor_data = {}
+    for f in fixtures:
+        fw = round(f.width_inches * SCALE)
+        fh = round(f.height_inches * SCALE)
+        fixture_floor_data[f.id] = {'w': fw, 'h': fh}
+
+    # Compute canvas size to fit all tables and fixtures with padding
     canvas_w = 900  # minimum width
     canvas_h = 600  # minimum height
     for table in tables:
@@ -4307,44 +4316,75 @@ def seating_chart(wedding_id):
         bottom = (table.y_position or 0) + fd['svg_h'] + 40
         canvas_w = max(canvas_w, right)
         canvas_h = max(canvas_h, bottom)
+    for f in fixtures:
+        ffd = fixture_floor_data[f.id]
+        right = (f.x_position or 0) + ffd['w'] + 20
+        bottom = (f.y_position or 0) + ffd['h'] + 40
+        canvas_w = max(canvas_w, right)
+        canvas_h = max(canvas_h, bottom)
 
     # Detect tables that are too close together (overlapping clearance zones)
     import math
-    min_clearance_px = (CHAIR_PUSHBACK_INCHES * 2 + 24) * 1.4  # bare minimum: chairs + 24" passage
+    min_clearance_px = (CHAIR_PUSHBACK_INCHES * 2 + 24) * SCALE  # bare minimum: chairs + 24" passage
+    # ADA requires 36" clear aisle for wheelchair access
+    ada_min_px = 36 * SCALE
     proximity_warnings = []
-    for i, t1 in enumerate(tables):
-        fd1 = table_floor_data[t1.id]
-        t1_cx = (t1.x_position or 0) + fd1['svg_w'] / 2
-        t1_cy = (t1.y_position or 0) + fd1['svg_h'] / 2
-        t1_rw = fd1['tw'] / 2
-        t1_rh = fd1['th'] / 2
-        for t2 in tables[i+1:]:
-            fd2 = table_floor_data[t2.id]
-            t2_cx = (t2.x_position or 0) + fd2['svg_w'] / 2
-            t2_cy = (t2.y_position or 0) + fd2['svg_h'] / 2
-            t2_rw = fd2['tw'] / 2
-            t2_rh = fd2['th'] / 2
-            dx = abs(t1_cx - t2_cx)
-            dy = abs(t1_cy - t2_cy)
-            # Edge-to-edge distance (approximate using axis-aligned bounding)
-            edge_dx = max(0, dx - t1_rw - t2_rw)
-            edge_dy = max(0, dy - t1_rh - t2_rh)
+    accessibility_warnings = []
+
+    # Collect all obstacle bounding boxes (tables + fixtures)
+    obstacles = []
+    for table in tables:
+        fd = table_floor_data[table.id]
+        ox = (table.x_position or 0) + (fd['svg_w'] - fd['tw']) / 2
+        oy = (table.y_position or 0) + (fd['svg_h'] - fd['th']) / 2
+        obstacles.append({
+            'name': table.table_name or f'Table {table.table_number}',
+            'x': ox, 'y': oy, 'w': fd['tw'], 'h': fd['th'],
+            'is_table': True,
+        })
+    for f in fixtures:
+        ffd = fixture_floor_data[f.id]
+        obstacles.append({
+            'name': f.label or VENUE_FIXTURE_TYPES.get(f.fixture_type, {}).get('label', f.fixture_type),
+            'x': f.x_position or 0, 'y': f.y_position or 0,
+            'w': ffd['w'], 'h': ffd['h'],
+            'is_table': False,
+        })
+
+    for i, o1 in enumerate(obstacles):
+        for o2 in obstacles[i+1:]:
+            dx = abs((o1['x'] + o1['w']/2) - (o2['x'] + o2['w']/2))
+            dy = abs((o1['y'] + o1['h']/2) - (o2['y'] + o2['h']/2))
+            edge_dx = max(0, dx - o1['w']/2 - o2['w']/2)
+            edge_dy = max(0, dy - o1['h']/2 - o2['h']/2)
             edge_dist = math.sqrt(edge_dx**2 + edge_dy**2)
-            if edge_dist < min_clearance_px:
-                t1_name = t1.table_name or f'Table {t1.table_number}'
-                t2_name = t2.table_name or f'Table {t2.table_number}'
-                real_inches = round(edge_dist / 1.4)
-                proximity_warnings.append(
-                    f'{t1_name} and {t2_name} are too close ({real_inches}" apart — need at least 84" for chairs + aisle)'
+
+            # Table-to-table needs chair clearance
+            if o1['is_table'] and o2['is_table']:
+                if edge_dist < min_clearance_px:
+                    real_inches = round(edge_dist / SCALE)
+                    proximity_warnings.append(
+                        f'{o1["name"]} and {o2["name"]} are too close ({real_inches}" apart — need at least 84" for chairs + aisle)'
+                    )
+
+            # Any pair: check ADA wheelchair clearance (36")
+            if edge_dist < ada_min_px:
+                real_inches = round(edge_dist / SCALE)
+                accessibility_warnings.append(
+                    f'{o1["name"]} and {o2["name"]} have only {real_inches}" clearance — wheelchairs need at least 36"'
                 )
 
     return render_template('seating/chart.html', wedding=wedding, tables=tables,
+                         fixtures=fixtures,
                          unassigned_guests=unassigned, preferences=preferences,
                          violations=violations, lonely_guests=lonely_guests, stats=stats,
                          proximity_warnings=proximity_warnings,
+                         accessibility_warnings=accessibility_warnings,
                          canvas_w=round(canvas_w), canvas_h=round(canvas_h),
                          table_size_ref=TABLE_SIZE_REFERENCE, table_roles=TABLE_ROLES,
-                         table_floor_data=table_floor_data)
+                         table_floor_data=table_floor_data,
+                         fixture_floor_data=fixture_floor_data,
+                         fixture_types=VENUE_FIXTURE_TYPES)
 
 
 @app.route('/wedding/<int:wedding_id>/seating-chart/table/add', methods=['POST'])
@@ -4597,6 +4637,77 @@ def seating_update_position(wedding_id):
     table = SeatingTable.query.get_or_404(table_id)
     table.x_position = x
     table.y_position = y
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
+# --- Venue Fixtures (dance floor, bar, stage, etc.) ---
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/fixture/add', methods=['POST'])
+@login_required
+def fixture_add(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    reception = wedding.reception
+    if not reception:
+        flash('Please set up reception details first.', 'warning')
+        return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+    fixture_type = request.form.get('fixture_type', '')
+    preset = VENUE_FIXTURE_TYPES.get(fixture_type)
+
+    if preset:
+        width = preset['width']
+        height = preset['height']
+        label = preset['label']
+    else:
+        width = request.form.get('width_inches', 72, type=int)
+        height = request.form.get('height_inches', 36, type=int)
+        label = request.form.get('label', 'Custom Fixture')
+
+    # Place below existing tables/fixtures
+    y_offset = 50
+    for t in reception.seating_tables:
+        y_offset = max(y_offset, (t.y_position or 0) + 150)
+    for f in reception.venue_fixtures:
+        y_offset = max(y_offset, (f.y_position or 0) + 100)
+
+    fixture = VenueFixture(
+        reception_id=reception.id,
+        fixture_type=fixture_type or 'custom',
+        label=request.form.get('label', '') or label,
+        width_inches=width,
+        height_inches=height,
+        x_position=50,
+        y_position=round(y_offset + 30),
+        notes=request.form.get('notes', ''),
+    )
+    db.session.add(fixture)
+    db.session.commit()
+    flash(f'{fixture.label} added to floor plan!', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/fixture/<int:fixture_id>/delete', methods=['POST'])
+@login_required
+def fixture_delete(wedding_id, fixture_id):
+    get_wedding_or_403(wedding_id)
+    fixture = VenueFixture.query.get_or_404(fixture_id)
+    db.session.delete(fixture)
+    db.session.commit()
+    flash('Fixture removed from floor plan.', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/fixture/update-position', methods=['POST'])
+@login_required
+def fixture_update_position(wedding_id):
+    """AJAX endpoint for drag-and-drop fixture positioning."""
+    fixture_id = request.json.get('fixture_id')
+    x = request.json.get('x')
+    y = request.json.get('y')
+    fixture = VenueFixture.query.get_or_404(fixture_id)
+    fixture.x_position = x
+    fixture.y_position = y
     db.session.commit()
     return jsonify({'status': 'ok'})
 
@@ -5117,10 +5228,21 @@ def print_seating(wedding_id):
     """Printable seating chart with visual floor plan."""
     wedding = get_wedding_or_403(wedding_id)
     tables = wedding.reception.seating_tables if wedding.reception else []
+    fixtures = wedding.reception.venue_fixtures if wedding.reception else []
     table_floor_data = compute_table_floor_data(tables, scale=1.0)
+    fixture_floor_data = {}
+    scale = 1.4
+    for f in fixtures:
+        fixture_floor_data[f.id] = {
+            'w': int(f.width_inches * scale),
+            'h': int(f.height_inches * scale),
+        }
     return _render_or_pdf('print/seating.html', f'seating_{wedding_id}.pdf',
                           wedding=wedding, tables=tables,
-                          table_floor_data=table_floor_data)
+                          table_floor_data=table_floor_data,
+                          fixtures=fixtures,
+                          fixture_floor_data=fixture_floor_data,
+                          fixture_types=VENUE_FIXTURE_TYPES)
 
 @app.route('/wedding/<int:wedding_id>/print')
 @login_required
@@ -5177,7 +5299,14 @@ def _get_print_context(document_type, wedding):
         ctx['vendors'] = wedding.vendors
         ctx['participants'] = wedding.participants
     elif document_type == 'seating':
-        ctx['tables'] = wedding.reception.seating_tables if wedding.reception else []
+        tables = wedding.reception.seating_tables if wedding.reception else []
+        fixtures = wedding.reception.venue_fixtures if wedding.reception else []
+        ctx['tables'] = tables
+        ctx['table_floor_data'] = compute_table_floor_data(tables, scale=1.0)
+        ctx['fixtures'] = fixtures
+        scale = 1.4
+        ctx['fixture_floor_data'] = {f.id: {'w': int(f.width_inches * scale), 'h': int(f.height_inches * scale)} for f in fixtures}
+        ctx['fixture_types'] = VENUE_FIXTURE_TYPES
     elif document_type == 'ceremony_program':
         ceremony = wedding.ceremony
         ctx['ceremony'] = ceremony

@@ -142,6 +142,23 @@
             text-align: center;
         }
 
+        .floor-fixture {
+            position: absolute;
+            border: 1.5px dashed #bbb;
+            border-radius: 3px;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .floor-fixture.cat-entertainment { border-color: #7b1fa2; background: #f3e5f5; }
+        .floor-fixture.cat-food_drink { border-color: #e65100; background: #fff3e0; }
+        .floor-fixture.cat-access { border-color: #1565c0; background: #e3f2fd; }
+        .floor-fixture-icon { font-size: 14px; line-height: 1; }
+        .floor-fixture-label { font-size: 7px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; text-align: center; }
+
         .tables-grid {
             display: flex;
             flex-wrap: wrap;
@@ -328,6 +345,22 @@
                 <div class="floor-table-label">{% if table.table_name %}{{ table.table_name }}{% else %}Table {{ table.table_number }}{% endif %}</div>
             </div>
             {% endfor %}
+
+            {# Venue Fixtures #}
+            {% if fixtures and fixture_floor_data %}
+            {% for f in fixtures %}
+            {% set ffd = fixture_floor_data[f.id] %}
+            {% set ft = fixture_types.get(f.fixture_type, {}) %}
+            {% set icon = ft.get('icon', '') %}
+            <div class="floor-fixture cat-{{ ft.get('category', 'other') }}"
+                 style="left: {{ f.x_position * 0.7 if f.x_position else 0 }}px; top: {{ f.y_position * 0.7 if f.y_position else 0 }}px; width: {{ ffd.w }}px; height: {{ ffd.h }}px;">
+                <div class="floor-fixture-icon">
+                    {% if icon == 'dance' %}&#x1F3B6;{% elif icon == 'stage' %}&#x1F3A4;{% elif icon == 'dj' %}&#x1F3A7;{% elif icon == 'bar' %}&#x1F378;{% elif icon == 'buffet' %}&#x1F37D;{% elif icon == 'cake' %}&#x1F382;{% elif icon == 'gift' %}&#x1F381;{% elif icon == 'photo' %}&#x1F4F7;{% elif icon == 'book' %}&#x1F4D6;{% elif icon == 'entrance' %}&#x1F6AA;{% elif icon == 'exit' %}&#x1F6AA;{% elif icon == 'restroom' %}&#x1F6BB;{% elif icon == 'accessible' %}&#x267F;{% else %}&#x25A0;{% endif %}
+                </div>
+                <div class="floor-fixture-label">{{ f.label or ft.get('label', f.fixture_type) }}</div>
+            </div>
+            {% endfor %}
+            {% endif %}
         </div>
     </div>
     {% endif %}

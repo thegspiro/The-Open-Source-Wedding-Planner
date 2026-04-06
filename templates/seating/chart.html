@@ -67,6 +67,17 @@
 </div>
 {% endif %}
 
+{# Wheelchair Accessibility Warnings #}
+{% if accessibility_warnings %}
+<div class="budget-warnings" style="margin-bottom: 1.5rem; border-color: #a0c8f0; background: #f0f6fe;">
+    <h3>&#9855; Wheelchair Accessibility Issues ({{ accessibility_warnings|length }})</h3>
+    <p class="form-help" style="margin-top: 0;">ADA requires at least 36" (3ft) clear aisle for wheelchair access between all obstacles. Drag items apart to create accessible pathways.</p>
+    {% for warning in accessibility_warnings %}
+    <div class="budget-warning" style="color: #1565c0;">{{ warning }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
 {# Lonely Guest Warnings #}
 {% if lonely_guests %}
 <div class="budget-warnings" style="margin-bottom: 1.5rem; border-color: #c9d1d9; background: #f6f8fa;">
@@ -172,6 +183,68 @@
     </div>
 </div>
 
+{# Venue Fixtures Section #}
+<div class="module-section">
+    <h2>Venue Fixtures</h2>
+    <p class="form-help">Add non-table elements to the floor plan: dance floor, bar, buffet, stage, entrances, etc. These help plan the full layout and check wheelchair accessibility.</p>
+
+    <div class="seating-add-panels">
+        <div class="seating-add-panel">
+            <h3>Add Fixture</h3>
+            <form method="POST" action="{{ url_for('fixture_add', wedding_id=wedding.id) }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fixture Type</label>
+                        <select name="fixture_type" id="fixture-type-select">
+                            <optgroup label="Entertainment">
+                                {% for key, ft in fixture_types.items() if ft.category == 'entertainment' %}
+                                <option value="{{ key }}">{{ ft.label }} ({{ ft.width }}"&times;{{ ft.height }}")</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Food &amp; Drink">
+                                {% for key, ft in fixture_types.items() if ft.category == 'food_drink' %}
+                                <option value="{{ key }}">{{ ft.label }} ({{ ft.width }}"&times;{{ ft.height }}")</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Access &amp; Navigation">
+                                {% for key, ft in fixture_types.items() if ft.category == 'access' %}
+                                <option value="{{ key }}">{{ ft.label }} ({{ ft.width }}"&times;{{ ft.height }}")</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Other">
+                                {% for key, ft in fixture_types.items() if ft.category == 'other' %}
+                                <option value="{{ key }}">{{ ft.label }} ({{ ft.width }}"&times;{{ ft.height }}")</option>
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Custom Label (optional)</label>
+                        <input type="text" name="label" placeholder="Override default name">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary btn-small">Add to Floor Plan</button>
+            </form>
+        </div>
+
+        {% if fixtures %}
+        <div class="seating-add-panel">
+            <h3>Current Fixtures</h3>
+            <ul class="fixture-list">
+                {% for f in fixtures %}
+                <li>
+                    <span>{{ f.label or fixture_types.get(f.fixture_type, {}).get('label', f.fixture_type) }} <small class="form-help">({{ f.width_inches }}"&times;{{ f.height_inches }}")</small></span>
+                    <form method="POST" action="{{ url_for('fixture_delete', wedding_id=wedding.id, fixture_id=f.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-tiny">&times;</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 {# Auto-Assign Section #}
 {% if tables %}
 <div class="module-section">
@@ -203,7 +276,7 @@
     <h2>Floor Plan <small class="form-help">(drag tables to reposition)</small></h2>
 
     {# Legend #}
-    {% if tables %}
+    {% if tables or fixtures %}
     <div class="floor-legend">
         <span class="legend-item"><span class="legend-dot legend-dot-filled"></span> Assigned</span>
         <span class="legend-item"><span class="legend-dot legend-dot-empty"></span> Open seat</span>
@@ -212,10 +285,16 @@
         <span class="legend-swatch" style="border-color: var(--color-accent);">VIP</span>
         <span class="legend-swatch" style="border-color: var(--color-success);">Kids</span>
         <span class="legend-swatch" style="border-color: #8d6e63;">King's</span>
+        {% if fixtures %}
+        <span style="color: var(--color-text-muted);">|</span>
+        <span class="legend-swatch fixture-legend-entertainment">Entertainment</span>
+        <span class="legend-swatch fixture-legend-food">Food/Drink</span>
+        <span class="legend-swatch fixture-legend-access">Access</span>
+        {% endif %}
     </div>
     {% endif %}
 
-    {% if tables %}
+    {% if tables or fixtures %}
     <div class="seating-floor" id="floor-plan" style="min-width: {{ canvas_w }}px; min-height: {{ canvas_h }}px;">
         {% for table in tables %}
         {% set fd = table_floor_data[table.id] %}
@@ -259,6 +338,21 @@
             <div class="table-capacity {% if assigned_count > cap %}warning{% endif %}">
                 {{ assigned_count }}/{{ cap }}
             </div>
+        </div>
+        {% endfor %}
+
+        {# Venue Fixtures #}
+        {% for f in fixtures %}
+        {% set ffd = fixture_floor_data[f.id] %}
+        {% set ft = fixture_types.get(f.fixture_type, {}) %}
+        {% set icon = ft.get('icon', '') %}
+        <div class="venue-fixture-card fixture-cat-{{ ft.get('category', 'other') }}"
+             data-fixture-id="{{ f.id }}"
+             style="left: {{ f.x_position or 0 }}px; top: {{ f.y_position or 0 }}px; width: {{ ffd.w }}px; height: {{ ffd.h }}px;">
+            <div class="fixture-icon">
+                {% if icon == 'dance' %}&#x1F3B6;{% elif icon == 'stage' %}&#x1F3A4;{% elif icon == 'dj' %}&#x1F3A7;{% elif icon == 'bar' %}&#x1F378;{% elif icon == 'buffet' %}&#x1F37D;{% elif icon == 'cake' %}&#x1F382;{% elif icon == 'gift' %}&#x1F381;{% elif icon == 'photo' %}&#x1F4F7;{% elif icon == 'book' %}&#x1F4D6;{% elif icon == 'entrance' %}&#x1F6AA;{% elif icon == 'exit' %}&#x1F6AA;{% elif icon == 'restroom' %}&#x1F6BB;{% elif icon == 'accessible' %}&#x267F;{% else %}&#x25A0;{% endif %}
+            </div>
+            <div class="fixture-label">{{ f.label or ft.get('label', f.fixture_type) }}</div>
         </div>
         {% endfor %}
     </div>
@@ -424,14 +518,14 @@
 </div>
 
 {# Drag-and-drop JavaScript for floor plan #}
-{% if tables %}
+{% if tables or fixtures %}
 <script>
 (function() {
     var floor = document.getElementById('floor-plan');
     if (!floor) return;
     var dragging = null, offsetX = 0, offsetY = 0;
 
-    floor.querySelectorAll('.seating-table-card').forEach(function(card) {
+    function initDrag(card) {
         card.dataset.prevX = parseInt(card.style.left) || 0;
         card.dataset.prevY = parseInt(card.style.top) || 0;
         card.addEventListener('mousedown', function(e) {
@@ -442,7 +536,10 @@
             card.style.zIndex = 100;
             e.preventDefault();
         });
-    });
+    }
+
+    floor.querySelectorAll('.seating-table-card').forEach(initDrag);
+    floor.querySelectorAll('.venue-fixture-card').forEach(initDrag);
 
     document.addEventListener('mousemove', function(e) {
         if (!dragging) return;
@@ -459,15 +556,21 @@
         if (!dragging) return;
         dragging.style.zIndex = '';
         var card = dragging;
-        var tableId = card.dataset.tableId;
         var x = parseInt(card.style.left);
         var y = parseInt(card.style.top);
         var prevX = card.dataset.prevX;
         var prevY = card.dataset.prevY;
-        fetch('{{ url_for("seating_update_position", wedding_id=wedding.id) }}', {
+        var isFixture = !!card.dataset.fixtureId;
+        var url = isFixture
+            ? '{{ url_for("fixture_update_position", wedding_id=wedding.id) }}'
+            : '{{ url_for("seating_update_position", wedding_id=wedding.id) }}';
+        var body = isFixture
+            ? {fixture_id: parseInt(card.dataset.fixtureId), x: x, y: y}
+            : {table_id: parseInt(card.dataset.tableId), x: x, y: y};
+        fetch(url, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({table_id: parseInt(tableId), x: x, y: y})
+            body: JSON.stringify(body)
         }).then(function(resp) {
             if (!resp.ok) throw new Error('Save failed');
             card.dataset.prevX = x;
@@ -475,7 +578,7 @@
         }).catch(function() {
             card.style.left = (prevX || 0) + 'px';
             card.style.top = (prevY || 0) + 'px';
-            alert('Could not save table position. Please try again.');
+            alert('Could not save position. Please try again.');
         });
         dragging = null;
     });

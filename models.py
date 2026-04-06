@@ -265,6 +265,7 @@ class Reception(db.Model):
     timeline_items = db.relationship('ReceptionTimelineItem', backref='reception', lazy=True, cascade='all, delete-orphan')
     menu_items = db.relationship('MenuItem', backref='reception', lazy=True, cascade='all, delete-orphan')
     seating_tables = db.relationship('SeatingTable', backref='reception', lazy=True, cascade='all, delete-orphan')
+    venue_fixtures = db.relationship('VenueFixture', backref='reception', lazy=True, cascade='all, delete-orphan')
 
 class ReceptionTimelineItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -300,6 +301,138 @@ class SeatingTable(db.Model):
 
     # Relationship
     assigned_guests = db.relationship('Guest', backref='seating_table', lazy=True)
+
+
+class VenueFixture(db.Model):
+    """Non-table elements on the floor plan: dance floor, stage, bar, catering, etc."""
+    id = db.Column(db.Integer, primary_key=True)
+    reception_id = db.Column(db.Integer, db.ForeignKey('reception.id'), nullable=False)
+    fixture_type = db.Column(db.String(50), nullable=False)  # key into VENUE_FIXTURE_TYPES
+    label = db.Column(db.String(200))  # custom label override
+    width_inches = db.Column(db.Integer, nullable=False)   # real-world width
+    height_inches = db.Column(db.Integer, nullable=False)  # real-world depth
+    x_position = db.Column(db.Float, default=0)
+    y_position = db.Column(db.Float, default=0)
+    notes = db.Column(db.Text)
+
+
+# Venue fixture presets with typical real-world dimensions (inches)
+VENUE_FIXTURE_TYPES = {
+    'dance_floor_12': {
+        'label': "12' Dance Floor",
+        'category': 'entertainment',
+        'width': 144, 'height': 144,
+        'icon': 'dance',
+    },
+    'dance_floor_15': {
+        'label': "15' Dance Floor",
+        'category': 'entertainment',
+        'width': 180, 'height': 180,
+        'icon': 'dance',
+    },
+    'dance_floor_18': {
+        'label': "18' Dance Floor",
+        'category': 'entertainment',
+        'width': 216, 'height': 216,
+        'icon': 'dance',
+    },
+    'stage_8x4': {
+        'label': "8'×4' Stage / Riser",
+        'category': 'entertainment',
+        'width': 96, 'height': 48,
+        'icon': 'stage',
+    },
+    'stage_12x8': {
+        'label': "12'×8' Stage",
+        'category': 'entertainment',
+        'width': 144, 'height': 96,
+        'icon': 'stage',
+    },
+    'dj_booth': {
+        'label': 'DJ Booth',
+        'category': 'entertainment',
+        'width': 72, 'height': 36,
+        'icon': 'dj',
+    },
+    'band_area': {
+        'label': 'Band / Live Music Area',
+        'category': 'entertainment',
+        'width': 144, 'height': 96,
+        'icon': 'stage',
+    },
+    'bar_8ft': {
+        'label': "8' Bar",
+        'category': 'food_drink',
+        'width': 96, 'height': 30,
+        'icon': 'bar',
+    },
+    'bar_12ft': {
+        'label': "12' Bar",
+        'category': 'food_drink',
+        'width': 144, 'height': 30,
+        'icon': 'bar',
+    },
+    'buffet_8ft': {
+        'label': "8' Buffet / Catering Table",
+        'category': 'food_drink',
+        'width': 96, 'height': 30,
+        'icon': 'buffet',
+    },
+    'buffet_12ft': {
+        'label': "12' Buffet / Catering Table",
+        'category': 'food_drink',
+        'width': 144, 'height': 30,
+        'icon': 'buffet',
+    },
+    'dessert_table': {
+        'label': 'Dessert / Cake Table',
+        'category': 'food_drink',
+        'width': 60, 'height': 30,
+        'icon': 'cake',
+    },
+    'gift_table': {
+        'label': 'Gift Table',
+        'category': 'other',
+        'width': 72, 'height': 30,
+        'icon': 'gift',
+    },
+    'photo_booth': {
+        'label': 'Photo Booth',
+        'category': 'entertainment',
+        'width': 96, 'height': 72,
+        'icon': 'photo',
+    },
+    'guest_book_table': {
+        'label': 'Guest Book / Sign-In Table',
+        'category': 'other',
+        'width': 48, 'height': 24,
+        'icon': 'book',
+    },
+    'entrance': {
+        'label': 'Entrance / Doorway',
+        'category': 'access',
+        'width': 72, 'height': 12,
+        'icon': 'entrance',
+    },
+    'exit': {
+        'label': 'Exit / Emergency Exit',
+        'category': 'access',
+        'width': 72, 'height': 12,
+        'icon': 'exit',
+    },
+    'restrooms': {
+        'label': 'Restrooms',
+        'category': 'access',
+        'width': 48, 'height': 48,
+        'icon': 'restroom',
+    },
+    'wheelchair_ramp': {
+        'label': 'Wheelchair Ramp / Accessible Entry',
+        'category': 'access',
+        'width': 60, 'height': 36,
+        'icon': 'accessible',
+    },
+}
 
 
 class SeatingPreference(db.Model):
