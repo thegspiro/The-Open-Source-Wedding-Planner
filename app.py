@@ -4437,20 +4437,34 @@ def export_vendors_csv(wedding_id):
     response.headers['Content-Disposition'] = f'attachment; filename=vendors_{wedding_id}.csv'
     return response
 
+def _render_or_pdf(template, filename, **context):
+    """Render a template as HTML, or as a PDF download if ?format=pdf is in the query string."""
+    html = render_template(template, **context)
+    if request.args.get('format') == 'pdf':
+        from weasyprint import HTML
+        pdf = HTML(string=html).write_pdf()
+        response = make_response(pdf)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        return response
+    return html
+
 @app.route('/wedding/<int:wedding_id>/print/timeline')
 @login_required
 def print_timeline(wedding_id):
     """Printable day-of timeline."""
     wedding = get_wedding_or_403(wedding_id)
     items = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
-    return render_template('print/timeline.html', wedding=wedding, items=items)
+    return _render_or_pdf('print/timeline.html', f'timeline_{wedding_id}.pdf',
+                          wedding=wedding, items=items)
 
 @app.route('/wedding/<int:wedding_id>/print/vendor-contacts')
 @login_required
 def print_vendor_contacts(wedding_id):
     """Printable vendor contact sheet."""
     wedding = get_wedding_or_403(wedding_id)
-    return render_template('print/vendor_contacts.html', wedding=wedding, vendors=wedding.vendors)
+    return _render_or_pdf('print/vendor_contacts.html', f'vendor_contacts_{wedding_id}.pdf',
+                          wedding=wedding, vendors=wedding.vendors)
 
 @app.route('/wedding/<int:wedding_id>/print/shot-list')
 @login_required
@@ -4458,15 +4472,16 @@ def print_shot_list(wedding_id):
     """Printable photography shot list."""
     wedding = get_wedding_or_403(wedding_id)
     shots = sorted(wedding.photo_shots, key=lambda x: (x.category or '', x.priority or ''))
-    return render_template('print/shot_list.html', wedding=wedding, shots=shots)
+    return _render_or_pdf('print/shot_list.html', f'shot_list_{wedding_id}.pdf',
+                          wedding=wedding, shots=shots)
 
 @app.route('/wedding/<int:wedding_id>/print/emergency-contacts')
 @login_required
 def print_emergency_contacts(wedding_id):
     """Printable emergency contact card."""
     wedding = get_wedding_or_403(wedding_id)
-    return render_template('print/emergency_contacts.html', wedding=wedding,
-                         vendors=wedding.vendors, participants=wedding.participants)
+    return _render_or_pdf('print/emergency_contacts.html', f'emergency_contacts_{wedding_id}.pdf',
+                          wedding=wedding, vendors=wedding.vendors, participants=wedding.participants)
 
 @app.route('/wedding/<int:wedding_id>/print/seating')
 @login_required
@@ -4474,7 +4489,8 @@ def print_seating(wedding_id):
     """Printable seating chart."""
     wedding = get_wedding_or_403(wedding_id)
     tables = wedding.reception.seating_tables if wedding.reception else []
-    return render_template('print/seating.html', wedding=wedding, tables=tables)
+    return _render_or_pdf('print/seating.html', f'seating_{wedding_id}.pdf',
+                          wedding=wedding, tables=tables)
 
 @app.route('/wedding/<int:wedding_id>/export/mailing-labels')
 @login_required
@@ -5799,7 +5815,8 @@ def inventory_bin_assign(wedding_id, bin_id):
 def inventory_bin_print(wedding_id, bin_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     bin = InventoryBin.query.get_or_404(bin_id)
-    return render_template('inventory/bin_print.html', wedding=wedding, bin=bin)
+    return _render_or_pdf('inventory/bin_print.html', f'bin_{bin.label}_{wedding_id}.pdf',
+                          wedding=wedding, bin=bin)
 
 
 @app.route('/wedding/<int:wedding_id>/inventory/print')
@@ -5808,7 +5825,8 @@ def inventory_print_all(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
     unassigned = InventoryItem.query.filter_by(wedding_id=wedding_id, bin_id=None).all()
-    return render_template('inventory/print_all.html', wedding=wedding, bins=bins, unassigned=unassigned)
+    return _render_or_pdf('inventory/print_all.html', f'inventory_{wedding_id}.pdf',
+                          wedding=wedding, bins=bins, unassigned=unassigned)
 
 
 @app.route('/wedding/<int:wedding_id>/inventory/labels')
@@ -5816,7 +5834,8 @@ def inventory_print_all(wedding_id):
 def inventory_labels_print(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
-    return render_template('inventory/labels_print.html', wedding=wedding, bins=bins)
+    return _render_or_pdf('inventory/labels_print.html', f'labels_{wedding_id}.pdf',
+                          wedding=wedding, bins=bins)
 
 
 @app.route('/wedding/<int:wedding_id>/inventory/export')

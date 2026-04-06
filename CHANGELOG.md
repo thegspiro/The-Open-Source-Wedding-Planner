@@ -4,6 +4,21 @@ All notable changes to the Wedding Organizer are documented in this file.
 
 ---
 
+## [2.7.0] - 2026-04-06 — Server-Side PDF Generation
+
+### Added
+- **WeasyPrint PDF generation** for all 8 print-ready pages (timeline, vendor contacts, shot list, emergency contacts, seating chart, inventory bins, inventory all, inventory labels)
+- **"Download PDF" button** on all print pages alongside existing "Print" button
+- **`?format=pdf` query parameter** on all print routes - append to any print URL to get a PDF download
+- WeasyPrint system dependencies in Dockerfile (libpango, libcairo, libharfbuzz, libgdk-pixbuf)
+
+### Changed
+- Updated `requirements.txt` with `weasyprint==62.3`
+- Updated Dockerfile to install system libraries needed for PDF rendering
+- All print routes now use `_render_or_pdf()` helper for consistent HTML/PDF output
+
+---
+
 ## [2.6.0] - 2026-04-06 — Comprehensive Import/Export System
 
 ### Added
