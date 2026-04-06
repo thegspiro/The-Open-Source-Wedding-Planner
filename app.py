@@ -2521,6 +2521,16 @@ def itinerary_edit_participant(wedding_id, participant_id):
         participant.person_id = person_id if person_id else None
         bp_id = request.form.get('bridal_party_id', type=int)
         participant.bridal_party_id = bp_id if bp_id else None
+
+        # Validate name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('itinerary/edit_participant.html', wedding=wedding,
+                                   participant=participant, people=wedding.people,
+                                   bridal_party=wedding.bridal_party)
+        participant.name_pronunciation = pron_value or None
+
         db.session.commit()
         flash('Participant updated!', 'success')
         return redirect(url_for('itinerary_participants', wedding_id=wedding_id))
