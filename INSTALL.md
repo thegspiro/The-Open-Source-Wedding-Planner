@@ -223,6 +223,9 @@ git pull
 
 # Rebuild and restart
 docker-compose up -d --build
+
+# Apply any database schema changes
+docker exec -it wedding-organizer flask db upgrade
 ```
 
 ### Local
@@ -230,10 +233,14 @@ docker-compose up -d --build
 ```bash
 git pull
 pip install -r requirements.txt
+
+# Apply any database schema changes
+flask db upgrade
+
 # Restart the application
 ```
 
-> **Note:** The database schema updates automatically on startup. Always back up your database before updating.
+> **Note:** New tables are created automatically on startup via `db.create_all()`, but changes to existing tables (new columns, type changes) require running `flask db upgrade`. Always back up your database before updating.
 
 ---
 

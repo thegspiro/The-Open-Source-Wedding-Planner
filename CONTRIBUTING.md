@@ -56,6 +56,7 @@ wedding-organizer/
 ├── templates/          # Jinja2 templates (100+ files)
 │   ├── base.html       # Base layout and navigation
 │   └── .../            # Module-specific templates
+├── migrations/         # Flask-Migrate (Alembic) migration files
 ├── scripts/            # Utility scripts (backup, etc.)
 ├── docs/               # Documentation
 └── instance/           # SQLite database (auto-created)
@@ -72,16 +73,39 @@ wedding-organizer/
 
 ### Database Changes
 
-The application uses SQLite via SQLAlchemy. If you add new columns to models:
+The application uses SQLite via SQLAlchemy with **Flask-Migrate** (Alembic) for schema migrations. If you add or modify columns in models:
 
 1. Add the column to the model in `models.py`
-2. Document the migration SQL in your PR description:
-   ```sql
-   ALTER TABLE table_name ADD COLUMN column_name TYPE DEFAULT value;
+2. Generate a migration:
+   ```bash
+   flask db migrate -m "Add column_name to table_name"
    ```
-3. Test with both a fresh database and an existing one
+3. Review the generated migration file in `migrations/versions/` to ensure it is correct
+4. Apply the migration:
+   ```bash
+   flask db upgrade
+   ```
+5. Include the generated migration file in your PR
+6. Test with both a fresh database and an existing one
 
-> **Note:** There is no automated migration system (like Alembic) yet. Existing databases need manual `ALTER TABLE` statements. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#new-columns-not-appearing-after-code-update).
+> **Note:** The app still calls `db.create_all()` on startup for dev convenience (so fresh databases work without running migrations), but existing databases should be upgraded with `flask db upgrade`. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#new-columns-not-appearing-after-code-update) if you encounter schema issues.
+
+### Migrations Workflow
+
+The project uses [Flask-Migrate](https://flask-migrate.readthedocs.io/) (an Alembic wrapper) to manage database schema changes. Migration files live in `migrations/versions/`.
+
+| Command | Purpose |
+|---------|---------|
+| `flask db migrate -m "description"` | Auto-generate a migration from model changes |
+| `flask db upgrade` | Apply all pending migrations to the database |
+| `flask db downgrade` | Revert the most recent migration |
+| `flask db current` | Show the current migration revision |
+| `flask db history` | List all migration revisions |
+
+**Tips:**
+- Always review the auto-generated migration before committing -- Alembic does not detect every change (e.g., renaming columns requires manual edits to the migration).
+- Each PR that changes `models.py` should include the corresponding migration file.
+- Do not modify or squash existing migration files that have already been merged -- create new migrations instead.
 
 ### Testing Changes
 
@@ -119,13 +143,13 @@ Test the following when applicable:
 
 - Keep PRs focused - one feature or fix per PR
 - Include a clear description of what changed and why
-- If adding database columns, include the `ALTER TABLE` migration SQL
+- If adding database columns, include the generated Flask-Migrate migration file
 - Test on both fresh and existing databases
 - Update documentation if relevant (README, QUICKSTART, TROUBLESHOOTING)
 
 ## Areas Where Help is Needed
 
-- **Database migrations** - Implementing Alembic/Flask-Migrate
+- **Database migrations** - Improving and extending Flask-Migrate usage
 - **Platform templates** - Unraid Community App template, Helm chart
 - **Testing** - Adding unit and integration tests
 - **Accessibility** - Improving ARIA labels and keyboard navigation

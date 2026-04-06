@@ -12,16 +12,17 @@ Common issues, edge cases, and their solutions.
 
 **Cause:** SQLAlchemy's `db.create_all()` creates new tables but does **not** add columns to existing tables. If a model gains a new field (e.g., `social_groups` on Guest, `table_role` on SeatingTable), existing databases won't have the column.
 
-**Fix:** Run the migration SQL manually or delete the database to recreate:
+**Fix (recommended):** Run Flask-Migrate to apply pending schema changes:
 
-```sql
--- Option A: Add missing columns manually
-ALTER TABLE guest ADD COLUMN social_groups TEXT;
-ALTER TABLE guest ADD COLUMN household_group VARCHAR(100);
-ALTER TABLE seating_table ADD COLUMN table_size VARCHAR(50);
-ALTER TABLE seating_table ADD COLUMN table_role VARCHAR(20) DEFAULT 'guest';
-ALTER TABLE seating_table ADD COLUMN x_position INTEGER DEFAULT 0;
-ALTER TABLE seating_table ADD COLUMN y_position INTEGER DEFAULT 0;
+```bash
+# Option A: Apply migrations (preserves all data)
+flask db upgrade
+```
+
+If you are running in Docker, execute the command inside the container:
+
+```bash
+docker exec -it wedding-organizer flask db upgrade
 ```
 
 ```bash
@@ -29,6 +30,8 @@ ALTER TABLE seating_table ADD COLUMN y_position INTEGER DEFAULT 0;
 rm instance/wedding_organizer.db
 docker-compose restart
 ```
+
+> **Legacy note:** Before Flask-Migrate was available, missing columns had to be added with manual `ALTER TABLE` statements. This is no longer necessary -- `flask db upgrade` handles schema changes automatically.
 
 ### Database locked errors
 
