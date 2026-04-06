@@ -4,6 +4,19 @@ All notable changes to the Wedding Organizer are documented in this file.
 
 ---
 
+## [2.8.0] - 2026-04-06 — Beautiful Personalized Print Templates
+
+### Changed
+- **Redesigned all 5 print templates** (timeline, seating chart, emergency contacts, vendor contacts, shot list) with elegant wedding-appropriate styling
+- **Wedding branding integration** - print templates now use the couple's custom colors (primary, secondary, accent), fonts, and monogram from Wedding Branding settings
+- **Elegant typography** - switched from generic Georgia to Palatino/Optima font stack with proper letter-spacing and hierarchy
+- **Decorative elements** - ornamental dividers, accent-colored borders, monogram display in headers
+- **Contextual design** - seating chart styled as guest-facing display ("Please Find Your Seat"), shot list as a working photographer checklist, emergency contacts as a quick-reference card layout
+- **Smart defaults** - templates look beautiful even without branding configured (warm gold/champagne palette)
+- **Consistent footer** - simplified footers show couple names and date without "Printed from" branding
+
+---
+
 ## [2.7.0] - 2026-04-06 — Server-Side PDF Generation
 
 ### Added

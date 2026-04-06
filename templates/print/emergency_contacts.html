@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Emergency Contacts - {{ wedding.couple_names }}</title>
     <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,53 +20,80 @@
         }
 
         body {
-            font-family: Georgia, 'Times New Roman', serif;
-            color: #333;
+            font-family: var(--body-font);
+            color: #3a3a3a;
             line-height: 1.5;
             padding: 20px 40px;
-        }
-
-        .print-header {
-            text-align: center;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
-        }
-
-        .print-header h1 {
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-
-        .print-header .wedding-date {
-            font-size: 14px;
-            color: #666;
+            background: #fff;
         }
 
         .print-btn {
             display: inline-block;
             padding: 8px 20px;
-            background: #333;
+            background: var(--primary);
             color: #fff;
             border: none;
             cursor: pointer;
             font-size: 14px;
             margin-bottom: 20px;
-            font-family: Arial, sans-serif;
+            font-family: var(--body-font);
+            border-radius: 4px;
         }
 
         .print-btn:hover {
-            background: #555;
+            opacity: 0.85;
+        }
+
+        .print-header {
+            text-align: center;
+            padding: 20px 20px 20px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--secondary);
+        }
+
+        .print-header::before {
+            content: '';
+            display: block;
+            width: 50px;
+            height: 2px;
+            background: var(--accent);
+            margin: 0 auto 12px;
+        }
+
+        .monogram {
+            font-family: var(--heading-font);
+            font-size: 30px;
+            color: var(--primary);
+            letter-spacing: 4px;
+            margin-bottom: 6px;
+        }
+
+        .print-header h1 {
+            font-family: var(--heading-font);
+            font-size: 22px;
+            font-weight: normal;
+            color: var(--primary);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .print-header .wedding-date {
+            font-size: 12px;
+            color: #999;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         .section-title {
-            font-size: 16px;
+            font-family: var(--heading-font);
+            font-size: 14px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            border-bottom: 1px solid #999;
-            padding-bottom: 5px;
-            margin-bottom: 15px;
-            margin-top: 25px;
+            letter-spacing: 2px;
+            color: var(--primary);
+            border-bottom: 1px solid var(--secondary);
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+            margin-top: 22px;
         }
 
         .section-title:first-of-type {
@@ -69,43 +104,54 @@
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         .contact-card {
-            border: 1px solid #ccc;
+            border: 1px solid var(--secondary);
+            border-left: 3px solid var(--accent);
             padding: 10px 14px;
             page-break-inside: avoid;
             width: calc(50% - 6px);
+            border-radius: 0 3px 3px 0;
         }
 
         .contact-card .contact-role {
-            font-size: 10px;
+            font-size: 9px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #888;
+            letter-spacing: 1px;
+            color: var(--accent);
+            font-weight: 600;
             margin-bottom: 2px;
         }
 
         .contact-card .contact-name {
+            font-family: var(--heading-font);
             font-size: 14px;
             font-weight: bold;
+            color: var(--primary);
             margin-bottom: 4px;
         }
 
         .contact-card .contact-detail {
-            font-size: 12px;
-            color: #555;
+            font-size: 11px;
+            color: #666;
             margin-bottom: 2px;
+        }
+
+        .contact-card .contact-detail strong {
+            color: #555;
+            font-weight: 600;
         }
 
         .footer-note {
             text-align: center;
             font-size: 10px;
-            color: #999;
+            color: #ccc;
             margin-top: 30px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
+            padding-top: 12px;
+            border-top: 1px solid var(--secondary);
+            letter-spacing: 0.5px;
         }
 
         @page {
@@ -124,7 +170,7 @@
             }
 
             .print-header h1 {
-                font-size: 20px;
+                font-size: 18px;
             }
 
             .contact-grid {
@@ -139,10 +185,14 @@
 </head>
 <body>
     <button class="print-btn" onclick="window.print()">Print</button>
-    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px; background:#2563eb;">Download PDF</a>
+    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px;">Download PDF</a>
 
     <div class="print-header">
-        <h1>Emergency Contacts - {{ wedding.couple_names }}</h1>
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Emergency Contacts</h1>
+        <div style="font-family: var(--heading-font); font-size: 14px; color: #777; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
         {% if wedding.date %}
         <div class="wedding-date">{{ wedding.date.strftime('%A, %B %d, %Y') }}</div>
         {% endif %}
@@ -155,10 +205,10 @@
             <div class="contact-role">Couple</div>
             <div class="contact-name">{{ wedding.couple_names }}</div>
             {% if wedding.email %}
-            <div class="contact-detail">Email: {{ wedding.email }}</div>
+            <div class="contact-detail"><strong>Email:</strong> {{ wedding.email }}</div>
             {% endif %}
             {% if wedding.phone %}
-            <div class="contact-detail">Phone: {{ wedding.phone }}</div>
+            <div class="contact-detail"><strong>Phone:</strong> {{ wedding.phone }}</div>
             {% endif %}
         </div>
     </div>
@@ -175,16 +225,16 @@
             <div class="contact-role">Wedding Planner</div>
             <div class="contact-name">{{ vendor.business_name }}</div>
             {% if vendor.contact_name %}
-            <div class="contact-detail">Contact: {{ vendor.contact_name }}</div>
+            <div class="contact-detail"><strong>Contact:</strong> {{ vendor.contact_name }}</div>
             {% endif %}
             {% if vendor.phone %}
-            <div class="contact-detail">Phone: {{ vendor.phone }}</div>
+            <div class="contact-detail"><strong>Phone:</strong> {{ vendor.phone }}</div>
             {% endif %}
             {% if vendor.email %}
-            <div class="contact-detail">Email: {{ vendor.email }}</div>
+            <div class="contact-detail"><strong>Email:</strong> {{ vendor.email }}</div>
             {% endif %}
             {% if vendor.backup_contact %}
-            <div class="contact-detail">Backup: {{ vendor.backup_contact }}{% if vendor.backup_phone %} ({{ vendor.backup_phone }}){% endif %}</div>
+            <div class="contact-detail"><strong>Backup:</strong> {{ vendor.backup_contact }}{% if vendor.backup_phone %} ({{ vendor.backup_phone }}){% endif %}</div>
             {% endif %}
         </div>
         {% endfor %}
@@ -193,16 +243,16 @@
             <div class="contact-role">Venue</div>
             <div class="contact-name">{{ vendor.business_name }}</div>
             {% if vendor.contact_name %}
-            <div class="contact-detail">Contact: {{ vendor.contact_name }}</div>
+            <div class="contact-detail"><strong>Contact:</strong> {{ vendor.contact_name }}</div>
             {% endif %}
             {% if vendor.phone %}
-            <div class="contact-detail">Phone: {{ vendor.phone }}</div>
+            <div class="contact-detail"><strong>Phone:</strong> {{ vendor.phone }}</div>
             {% endif %}
             {% if vendor.email %}
-            <div class="contact-detail">Email: {{ vendor.email }}</div>
+            <div class="contact-detail"><strong>Email:</strong> {{ vendor.email }}</div>
             {% endif %}
             {% if vendor.backup_contact %}
-            <div class="contact-detail">Backup: {{ vendor.backup_contact }}{% if vendor.backup_phone %} ({{ vendor.backup_phone }}){% endif %}</div>
+            <div class="contact-detail"><strong>Backup:</strong> {{ vendor.backup_contact }}{% if vendor.backup_phone %} ({{ vendor.backup_phone }}){% endif %}</div>
             {% endif %}
         </div>
         {% endfor %}
@@ -227,16 +277,16 @@
             <div class="contact-role">{{ vendor.category|replace('_', ' ')|title if vendor.category else 'Vendor' }}</div>
             <div class="contact-name">{{ vendor.business_name }}</div>
             {% if vendor.contact_name %}
-            <div class="contact-detail">Contact: {{ vendor.contact_name }}</div>
+            <div class="contact-detail"><strong>Contact:</strong> {{ vendor.contact_name }}</div>
             {% endif %}
             {% if vendor.phone %}
-            <div class="contact-detail">Phone: {{ vendor.phone }}</div>
+            <div class="contact-detail"><strong>Phone:</strong> {{ vendor.phone }}</div>
             {% endif %}
             {% if vendor.email %}
-            <div class="contact-detail">Email: {{ vendor.email }}</div>
+            <div class="contact-detail"><strong>Email:</strong> {{ vendor.email }}</div>
             {% endif %}
             {% if vendor.backup_contact %}
-            <div class="contact-detail">Backup: {{ vendor.backup_contact }}{% if vendor.backup_phone %} ({{ vendor.backup_phone }}){% endif %}</div>
+            <div class="contact-detail"><strong>Backup:</strong> {{ vendor.backup_contact }}{% if vendor.backup_phone %} ({{ vendor.backup_phone }}){% endif %}</div>
             {% endif %}
         </div>
         {% endfor %}
@@ -252,10 +302,10 @@
             <div class="contact-role">{{ participant.role_category|replace('_', ' ')|title if participant.role_category else participant.role|default('Participant', true) }}</div>
             <div class="contact-name">{{ participant.name }}</div>
             {% if participant.phone %}
-            <div class="contact-detail">Phone: {{ participant.phone }}</div>
+            <div class="contact-detail"><strong>Phone:</strong> {{ participant.phone }}</div>
             {% endif %}
             {% if participant.email %}
-            <div class="contact-detail">Email: {{ participant.email }}</div>
+            <div class="contact-detail"><strong>Email:</strong> {{ participant.email }}</div>
             {% endif %}
         </div>
         {% endfor %}
@@ -263,7 +313,8 @@
     {% endif %}
 
     <div class="footer-note">
-        Printed from Wedding Organizer &mdash; {{ wedding.couple_names }}
+        {{ wedding.couple_names }}
+        {% if wedding.date %} &middot; {{ wedding.date.strftime('%B %d, %Y') }}{% endif %}
     </div>
 </body>
 </html>

@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photography Shot List - {{ wedding.couple_names }}</title>
     <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,43 +20,68 @@
         }
 
         body {
-            font-family: Georgia, 'Times New Roman', serif;
-            color: #333;
+            font-family: var(--body-font);
+            color: #3a3a3a;
             line-height: 1.5;
             padding: 20px 40px;
-        }
-
-        .print-header {
-            text-align: center;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
-        }
-
-        .print-header h1 {
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-
-        .print-header .wedding-date {
-            font-size: 14px;
-            color: #666;
+            background: #fff;
         }
 
         .print-btn {
             display: inline-block;
             padding: 8px 20px;
-            background: #333;
+            background: var(--primary);
             color: #fff;
             border: none;
             cursor: pointer;
             font-size: 14px;
             margin-bottom: 20px;
-            font-family: Arial, sans-serif;
+            font-family: var(--body-font);
+            border-radius: 4px;
         }
 
         .print-btn:hover {
-            background: #555;
+            opacity: 0.85;
+        }
+
+        .print-header {
+            text-align: center;
+            padding: 25px 20px 20px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--secondary);
+        }
+
+        .print-header::before {
+            content: '';
+            display: block;
+            width: 50px;
+            height: 2px;
+            background: var(--accent);
+            margin: 0 auto 12px;
+        }
+
+        .monogram {
+            font-family: var(--heading-font);
+            font-size: 30px;
+            color: var(--primary);
+            letter-spacing: 4px;
+            margin-bottom: 6px;
+        }
+
+        .print-header h1 {
+            font-family: var(--heading-font);
+            font-size: 24px;
+            font-weight: normal;
+            color: var(--primary);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .print-header .wedding-date {
+            font-size: 12px;
+            color: #999;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         .category-section {
@@ -57,9 +90,14 @@
         }
 
         .category-section h2 {
-            font-size: 18px;
-            border-bottom: 1px solid #999;
-            padding-bottom: 5px;
+            font-family: var(--heading-font);
+            font-size: 16px;
+            font-weight: normal;
+            color: var(--primary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--secondary);
+            padding-bottom: 6px;
             margin-bottom: 10px;
         }
 
@@ -69,33 +107,39 @@
             margin-bottom: 10px;
         }
 
-        .shot-table th,
+        .shot-table th {
+            background: var(--primary);
+            color: #fff;
+            font-weight: 600;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 10px;
+            text-align: left;
+            border: none;
+        }
+
         .shot-table td {
-            border: 1px solid #ccc;
-            padding: 6px 10px;
+            border-bottom: 1px solid #e8e2da;
+            padding: 7px 10px;
             text-align: left;
             vertical-align: top;
             font-size: 12px;
         }
 
-        .shot-table th {
-            background: #f0f0f0;
-            font-weight: bold;
-            font-size: 11px;
-            text-transform: uppercase;
-        }
-
-        .shot-table tr:nth-child(even) {
-            background: #fafafa;
+        .shot-table tr:nth-child(even) td {
+            background: rgba(212, 197, 178, 0.08);
         }
 
         .priority-must {
-            font-weight: bold;
-            color: #c0392b;
+            font-weight: 600;
+            color: #b03a2e;
+            font-size: 11px;
         }
 
         .priority-nice {
-            color: #7f8c8d;
+            color: #999;
+            font-size: 11px;
         }
 
         .checkbox-cell {
@@ -104,17 +148,26 @@
         }
 
         .checkbox-cell input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary);
         }
 
         .footer-note {
             text-align: center;
             font-size: 10px;
-            color: #999;
+            color: #ccc;
             margin-top: 30px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
+            padding-top: 12px;
+            border-top: 1px solid var(--secondary);
+            letter-spacing: 0.5px;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            padding: 40px 20px;
         }
 
         @page {
@@ -135,7 +188,7 @@
             .shot-table th,
             .shot-table td {
                 font-size: 11px;
-                padding: 4px 8px;
+                padding: 5px 8px;
             }
 
             .shot-table thead {
@@ -154,10 +207,14 @@
 </head>
 <body>
     <button class="print-btn" onclick="window.print()">Print</button>
-    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px; background:#2563eb;">Download PDF</a>
+    <a class="print-btn" href="?format=pdf" style="text-decoration:none; margin-left:8px;">Download PDF</a>
 
     <div class="print-header">
-        <h1>Photography Shot List - {{ wedding.couple_names }}</h1>
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Photography Shot List</h1>
+        <div style="font-family: var(--heading-font); font-size: 14px; color: #777; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
         {% if wedding.date %}
         <div class="wedding-date">{{ wedding.date.strftime('%A, %B %d, %Y') }}</div>
         {% endif %}
@@ -169,7 +226,7 @@
         'ceremony': 'Ceremony',
         'portraits': 'Portraits',
         'reception': 'Reception',
-        'detail': 'Detail'
+        'detail': 'Detail Shots'
     } %}
 
     {% for category in categories %}
@@ -183,7 +240,7 @@
                     <th>Description</th>
                     <th>People</th>
                     <th>Priority</th>
-                    <th class="checkbox-cell">Captured</th>
+                    <th class="checkbox-cell">Done</th>
                 </tr>
             </thead>
             <tbody>
@@ -212,11 +269,12 @@
     {% endfor %}
 
     {% if not shots %}
-    <p>No shots in the shot list.</p>
+    <p class="empty-message">No shots in the shot list.</p>
     {% endif %}
 
     <div class="footer-note">
-        Printed from Wedding Organizer &mdash; {{ wedding.couple_names }}
+        {{ wedding.couple_names }}
+        {% if wedding.date %} &middot; {{ wedding.date.strftime('%B %d, %Y') }}{% endif %}
     </div>
 </body>
 </html>
