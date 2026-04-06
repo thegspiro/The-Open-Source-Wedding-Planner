@@ -218,7 +218,19 @@
                 <div class="venue-detail-value">~{{ ceremony.duration_minutes }} minutes</div>
             </div>
             {% endif %}
+            {% if ceremony.venue_load_in_time %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Vendor Load-In</div>
+                <div class="venue-detail-value">{{ ceremony.venue_load_in_time.strftime('%I:%M %p') }}</div>
+            </div>
+            {% endif %}
         </div>
+        {% if ceremony.venue_rules %}
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dotted #e8e2da;">
+            <div class="venue-detail-label">Venue Rules &amp; Restrictions</div>
+            <div class="venue-detail-value" style="white-space: pre-line;">{{ ceremony.venue_rules }}</div>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 
@@ -271,7 +283,30 @@
                 <div class="venue-detail-value">{{ reception.expected_guest_count }}</div>
             </div>
             {% endif %}
+            {% if reception.venue_load_in_time %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Vendor Load-In</div>
+                <div class="venue-detail-value">{{ reception.venue_load_in_time.strftime('%I:%M %p') }}</div>
+            </div>
+            {% endif %}
         </div>
+        {% if reception.venue_rules %}
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dotted #e8e2da;">
+            <div class="venue-detail-label">Venue Rules &amp; Restrictions</div>
+            <div class="venue-detail-value" style="white-space: pre-line;">{{ reception.venue_rules }}</div>
+        </div>
+        {% endif %}
+        {% if reception.after_party_venue %}
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dotted #e8e2da;">
+            <div class="venue-detail-label">After-Party</div>
+            <div class="venue-detail-value">
+                {{ reception.after_party_venue }}
+                {% if reception.after_party_address %}<br>{{ reception.after_party_address }}{% endif %}
+                {% if reception.after_party_start_time %}<br>Starts at {{ reception.after_party_start_time.strftime('%I:%M %p') }}{% endif %}
+                {% if reception.after_party_notes %}<br><span style="color: #888; font-style: italic;">{{ reception.after_party_notes }}</span>{% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 

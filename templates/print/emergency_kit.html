@@ -177,6 +177,18 @@
         {% endfor %}
     </div>
 
+    {% if custom_kit_items %}
+    <h2 class="category-title">Your Custom Items</h2>
+    <div class="kit-grid">
+        {% for item in custom_kit_items %}
+        <div class="kit-item">
+            <input type="checkbox" class="kit-checkbox" {% if item.packed %}checked{% endif %}>
+            <span class="kit-label">{{ item.item_name }}{% if item.notes %} <span style="color: #999; font-size: 11px;">({{ item.notes }})</span>{% endif %}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="note-box">
         Pack this kit the day before and assign someone (coordinator, maid of honor, best man) to keep it accessible throughout the day. Place a second mini-kit at the reception venue.
     </div>

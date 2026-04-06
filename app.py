@@ -4688,8 +4688,9 @@ def print_reception_script(wedding_id):
 def print_emergency_kit(wedding_id):
     """Printable emergency kit supplies checklist."""
     wedding = get_wedding_or_403(wedding_id)
+    custom_kit_items = sorted(wedding.emergency_kit_items, key=lambda x: (x.category or '', x.item_name)) if wedding.emergency_kit_items else []
     return _render_or_pdf('print/emergency_kit.html', f'emergency_kit_{wedding_id}.pdf',
-                          wedding=wedding)
+                          wedding=wedding, custom_kit_items=custom_kit_items)
 
 @app.route('/wedding/<int:wedding_id>/print/rehearsal')
 @login_required

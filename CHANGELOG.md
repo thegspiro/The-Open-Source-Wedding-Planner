@@ -4,6 +4,33 @@ All notable changes to the Wedding Organizer are documented in this file.
 
 ---
 
+## [2.10.0] - 2026-04-06 — Enhanced Data Capture & Template Integration
+
+### Added
+
+#### New Model Fields
+- **Wedding**: `phone` field for couple's primary contact number
+- **Person**: `name_pronunciation`, `getting_ready_location`, `getting_ready_address`, `getting_ready_time` fields
+- **Ceremony**: `venue_rules` (text), `venue_load_in_time` for vendor load-in scheduling
+- **CeremonyTimelineItem**: `music` field for per-item music cues during ceremony
+- **Reception**: `venue_rules`, `venue_load_in_time`, `after_party_venue`, `after_party_address`, `after_party_start_time`, `after_party_notes`
+- **ReceptionTimelineItem**: `announcement_script` for MC/DJ speaking notes
+- **BridalPartyMember**: `name_pronunciation` for correct introductions
+- **Vendor**: `arrival_time`, `overtime_rate` for day-of coordination
+- **WeddingParticipant**: `name_pronunciation`
+- **EmergencyKitItem**: new model for user-customizable emergency kit items with category, packed status, and notes
+
+#### Template Updates
+- **Ceremony Program**: displays per-item music cues (♩ symbol) in ceremony order
+- **Bridal Party**: shows name pronunciation guides next to member names
+- **Emergency Kit Checklist**: integrates user's custom EmergencyKitItem records alongside the static checklist
+- **Venue Information**: shows venue rules, vendor load-in times, and after-party details
+- **Vendor Contacts**: includes arrival time and overtime rate columns
+- **Reception Run Sheet**: displays announcement scripts inline with timeline events
+- **Personal Timeline**: shows getting-ready location and time in personal note
+
+---
+
 ## [2.9.0] - 2026-04-06 — Complete Wedding Day Document Suite & Print Center
 
 ### Added

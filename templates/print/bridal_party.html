@@ -161,7 +161,7 @@
         {% for member in members|sort(attribute='processional_order') %}
         <div class="member-card">
             <div class="member-role">{{ member.role or 'Attendant' }}</div>
-            <div class="member-name">{{ member.name }}</div>
+            <div class="member-name">{{ member.name }}{% if member.name_pronunciation %} <span style="font-size: 11px; color: #999; font-style: italic; font-family: var(--body-font);">({{ member.name_pronunciation }})</span>{% endif %}</div>
             {% if member.phone %}
             <div class="member-detail"><strong>Phone:</strong> {{ member.phone }}</div>
             {% endif %}

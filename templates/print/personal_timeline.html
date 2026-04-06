@@ -334,6 +334,9 @@
     <div class="personal-note">
         <strong>{{ participant.name }}</strong> &mdash; this is your personal timeline for the day.
         {% if participant.phone %} Your contact: {{ participant.phone }}.{% endif %}
+        {% if participant.person and participant.person.getting_ready_location %}
+        <br><strong>Getting Ready:</strong> {{ participant.person.getting_ready_location }}{% if participant.person.getting_ready_address %} &mdash; {{ participant.person.getting_ready_address }}{% endif %}{% if participant.person.getting_ready_time %} at {{ participant.person.getting_ready_time.strftime('%I:%M %p') }}{% endif %}
+        {% endif %}
         {% if participant.notes %}<br>{{ participant.notes }}{% endif %}
     </div>
 

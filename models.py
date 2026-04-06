@@ -44,6 +44,7 @@ class Wedding(db.Model):
     couple_names = db.Column(db.String(200), nullable=False)  # Display name for the wedding
     wedding_date = db.Column(db.DateTime, nullable=False)
     email = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(50))  # Primary phone for the couple (emergency contacts)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Onboarding
@@ -91,10 +92,16 @@ class Person(db.Model):
     name = db.Column(db.String(200), nullable=False)
     title = db.Column(db.String(100))  # bride, groom, partner, spouse, or custom
     preferred_pronouns = db.Column(db.String(50))  # optional: they/them, she/her, he/him, etc.
-    
+    name_pronunciation = db.Column(db.String(200))  # phonetic guide for DJ/MC announcements
+
     # Side naming (for organizational purposes)
     side_label = db.Column(db.String(100))  # e.g., "Jamie's side", "Alex's family", etc.
-    
+
+    # Getting Ready
+    getting_ready_location = db.Column(db.String(200))  # where this person is getting ready
+    getting_ready_address = db.Column(db.Text)
+    getting_ready_time = db.Column(db.Time)  # when they start getting ready
+
     # Contact
     email = db.Column(db.String(120))
     phone = db.Column(db.String(50))
@@ -137,12 +144,14 @@ class Ceremony(db.Model):
     venue_address = db.Column(db.Text)
     venue_contact = db.Column(db.String(120))
     venue_phone = db.Column(db.String(50))
-    
+    venue_rules = db.Column(db.Text)  # noise curfews, candle restrictions, confetti policies, etc.
+    venue_load_in_time = db.Column(db.Time)  # when vendors can start setting up
+
     # Timing
     ceremony_date = db.Column(db.DateTime)
     start_time = db.Column(db.Time)
     duration_minutes = db.Column(db.Integer)
-    
+
     # Officiant
     officiant_name = db.Column(db.String(200))
     officiant_contact = db.Column(db.String(120))
@@ -181,6 +190,7 @@ class CeremonyTimelineItem(db.Model):
     duration_seconds = db.Column(db.Integer)  # precise to the second
     description = db.Column(db.Text)
     participants = db.Column(db.Text)  # JSON list of people involved
+    music = db.Column(db.String(200))  # song for this moment (e.g., per-person processional music)
 
 class CeremonyReading(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -205,7 +215,9 @@ class Reception(db.Model):
     venue_contact = db.Column(db.String(120))
     venue_phone = db.Column(db.String(50))
     venue_capacity = db.Column(db.Integer)
-    
+    venue_rules = db.Column(db.Text)  # noise curfews, candle restrictions, last call time, etc.
+    venue_load_in_time = db.Column(db.Time)  # when vendors can start setting up
+
     # Timing
     reception_date = db.Column(db.DateTime)
     start_time = db.Column(db.Time)
@@ -242,7 +254,13 @@ class Reception(db.Model):
 
     # Guest Count
     expected_guest_count = db.Column(db.Integer)
-    
+
+    # After-Party
+    after_party_venue = db.Column(db.String(200))
+    after_party_address = db.Column(db.Text)
+    after_party_start_time = db.Column(db.Time)
+    after_party_notes = db.Column(db.Text)
+
     # Relationships
     timeline_items = db.relationship('ReceptionTimelineItem', backref='reception', lazy=True, cascade='all, delete-orphan')
     menu_items = db.relationship('MenuItem', backref='reception', lazy=True, cascade='all, delete-orphan')
@@ -256,6 +274,7 @@ class ReceptionTimelineItem(db.Model):
     scheduled_time = db.Column(db.Time)
     duration_seconds = db.Column(db.Integer)
     description = db.Column(db.Text)
+    announcement_script = db.Column(db.Text)  # MC/DJ script text to read aloud for this moment
 
 class MenuItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -415,11 +434,12 @@ class BridalPartyMember(db.Model):
     person_id = db.Column(db.Integer, db.ForeignKey('person.id'))  # Optional: which person's side
     
     name = db.Column(db.String(200), nullable=False)
+    name_pronunciation = db.Column(db.String(200))  # phonetic guide for DJ/MC announcements
     role = db.Column(db.String(100))  # Custom role: maid of honor, best man, attendant, etc.
     side = db.Column(db.String(100))  # Flexible: can be person name, "both", "shared", etc.
     email = db.Column(db.String(120))
     phone = db.Column(db.String(50))
-    
+
     # Attire Measurements
     dress_size = db.Column(db.String(20))
     suit_size = db.Column(db.String(20))
@@ -559,9 +579,11 @@ class Vendor(db.Model):
     # Service Details
     service_date = db.Column(db.Date)
     service_time = db.Column(db.Time)
+    arrival_time = db.Column(db.Time)  # when vendor arrives (may differ from service_time)
     service_location = db.Column(db.String(200))
     setup_instructions = db.Column(db.Text)  # day-of setup requirements
     meals_needed = db.Column(db.Integer, default=0)  # vendor meals to provide
+    overtime_rate = db.Column(db.String(100))  # hourly rate if event runs over contracted time
     rating = db.Column(db.Integer)  # 1-5 star rating
     review_notes = db.Column(db.Text)  # post-wedding review
     notes = db.Column(db.Text)
@@ -812,6 +834,7 @@ class WeddingParticipant(db.Model):
     wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
 
     name = db.Column(db.String(200), nullable=False)
+    name_pronunciation = db.Column(db.String(200))  # phonetic guide for DJ/MC announcements
     role = db.Column(db.String(100))  # bride, groom, mother_of_bride, best_man, photographer, coordinator, etc.
     role_category = db.Column(db.String(50))  # couple, family, wedding_party, vendor, handler
     phone = db.Column(db.String(50))
@@ -1197,3 +1220,19 @@ INVITATION_WORDING_TEMPLATES = {
         'text': '[Name] and [Name]\njoyfully invite you\nto share in the celebration of their marriage\n[Date]\nat [Time]\n[Venue Name]\n[Address]\nReception to follow'
     }
 }
+
+# ============================================
+# EMERGENCY KIT CUSTOMIZATION
+# ============================================
+
+class EmergencyKitItem(db.Model):
+    """Custom emergency kit item - users can add/remove supplies from the checklist."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    item_name = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(50))  # fashion, health, beauty, tools, food, documents
+    packed = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('emergency_kit_items', lazy=True, cascade='all, delete-orphan'))

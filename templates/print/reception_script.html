@@ -175,7 +175,12 @@
                     &mdash;
                     {% endif %}
                 </td>
-                <td class="event-name">{{ item.item_name }}</td>
+                <td>
+                    <span class="event-name">{{ item.item_name }}</span>
+                    {% if item.announcement_script %}
+                    <div style="margin-top: 4px; padding: 6px 10px; background: rgba(212, 197, 178, 0.1); border-left: 2px solid var(--accent); font-size: 11px; color: #555; font-style: italic; white-space: pre-line;">{{ item.announcement_script }}</div>
+                    {% endif %}
+                </td>
                 <td style="color: #666;">{{ item.description or '' }}</td>
                 <td style="text-align: center;"><input type="checkbox" class="cue-checkbox"></td>
             </tr>

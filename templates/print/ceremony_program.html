@@ -292,6 +292,9 @@
                 {% if item.participants %}
                 <br><span class="item-detail">{{ item.participants }}</span>
                 {% endif %}
+                {% if item.music %}
+                <br><span class="item-detail" style="color: var(--accent);">&#9835; {{ item.music }}</span>
+                {% endif %}
                 {% if item.duration_seconds %}
                 <span class="item-duration">({{ (item.duration_seconds / 60)|round|int }} min)</span>
                 {% endif %}
