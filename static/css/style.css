@@ -1631,6 +1631,30 @@ footer p { margin: 0; }
     border: 1px solid #e8dcc4;
 }
 
+/* RSVP Status Tags */
+.rsvp-tag {
+    font-size: 0.62rem;
+    padding: 1px 5px;
+    border-radius: var(--radius-xl);
+    margin-left: 3px;
+    white-space: nowrap;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.rsvp-accepted {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+.rsvp-pending, .rsvp-invited {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+.rsvp-declined {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+}
+
 /* Social Group Tags */
 .social-tag {
     font-size: 0.62rem;

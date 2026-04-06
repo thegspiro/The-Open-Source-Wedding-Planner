@@ -38,6 +38,12 @@
         <div class="stat-num {% if stats.capacity_surplus < 0 %}budget-over{% endif %}">{{ stats.capacity_surplus }}</div>
         <div>Spare Seats</div>
     </div>
+    {% if stats.pending_rsvp_assigned > 0 %}
+    <div class="stat-box">
+        <div class="stat-num budget-over">{{ stats.pending_rsvp_assigned }}</div>
+        <div>Awaiting RSVP</div>
+    </div>
+    {% endif %}
 </div>
 
 {# Constraint Violations #}
@@ -223,6 +229,7 @@
                 <li>
                     <span class="guest-info">
                         {{ guest.name }}
+                        {% if guest.rsvp_status != 'accepted' %}<span class="rsvp-tag rsvp-{{ guest.rsvp_status or 'pending' }}">{{ guest.rsvp_status or 'pending' }}</span>{% endif %}
                         {% if guest.social_groups %}{% for tag in guest.social_groups.split(',') %}<span class="social-tag">{{ tag.strip() }}</span>{% endfor %}{% endif %}
                         {% if guest.dietary_restrictions %}<span class="dietary-tag">{{ guest.dietary_restrictions }}</span>{% endif %}
                         {% if guest.meal_choice %}<span class="meal-tag">{{ guest.meal_choice }}</span>{% endif %}
@@ -295,6 +302,7 @@
         <thead>
             <tr>
                 <th>Guest</th>
+                <th>RSVP</th>
                 <th>Type</th>
                 <th>Side</th>
                 <th>Household</th>
@@ -307,6 +315,7 @@
             {% for guest in unassigned_guests %}
             <tr>
                 <td>{{ guest.name }}{% if guest.is_plus_one %} <small>(+1 of {{ guest.plus_one_of }})</small>{% endif %}</td>
+                <td><span class="rsvp-tag rsvp-{{ guest.rsvp_status or 'pending' }}">{{ guest.rsvp_status or 'pending' }}</span></td>
                 <td>{{ guest.guest_type or '-' }}</td>
                 <td>{{ guest.side or '-' }}</td>
                 <td>{{ guest.household_group or '-' }}</td>

@@ -4033,17 +4033,21 @@ def seating_chart(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     reception = wedding.reception
     tables = reception.seating_tables if reception else []
-    all_attending = [g for g in wedding.guests if g.rsvp_status == 'accepted']
-    unassigned = [g for g in all_attending if not g.table_id]
+    all_guests = wedding.guests
+    all_attending = [g for g in all_guests if g.rsvp_status == 'accepted']
+    # Unassigned includes all guests without a table (regardless of RSVP status)
+    unassigned = [g for g in all_guests if not g.table_id and g.rsvp_status != 'declined']
+    # Count guests awaiting RSVP who are assigned to tables
+    pending_assigned = [g for g in all_guests if g.table_id and g.rsvp_status != 'accepted']
     preferences = SeatingPreference.query.filter_by(wedding_id=wedding_id).all()
 
     # Build stats
     total_capacity = sum(t.capacity for t in tables)
     total_attending = len(all_attending)
-    total_assigned = total_attending - len(unassigned)
+    total_assigned = len([g for g in all_guests if g.table_id])
 
     # Check for constraint violations (using dict lookup instead of nested loop)
-    guest_table_map = {g.id: g.table_id for g in all_attending}
+    guest_table_map = {g.id: g.table_id for g in all_guests}
     violations = []
     for pref in preferences:
         guest_table = guest_table_map.get(pref.guest_id)
@@ -4054,11 +4058,17 @@ def seating_chart(wedding_id):
             elif pref.preference_type == 'apart' and guest_table == other_table:
                 violations.append(f'{pref.guest.name} and {pref.other_guest.name} should sit apart but are at the same table')
 
+    # Flag guests assigned to tables who haven't accepted RSVP
+    if pending_assigned:
+        for g in pending_assigned:
+            violations.append(f'{g.name} is assigned to a table but RSVP status is "{g.rsvp_status or "pending"}"')
+
     stats = {
         'total_capacity': total_capacity,
         'total_attending': total_attending,
         'total_assigned': total_assigned,
         'total_unassigned': len(unassigned),
+        'pending_rsvp_assigned': len(pending_assigned),
         'capacity_surplus': total_capacity - total_attending,
     }
 
@@ -4223,17 +4233,19 @@ def seating_assign(wedding_id):
     guest_id = request.form.get('guest_id', type=int)
     table_id = request.form.get('table_id', type=int)
     guest = Guest.query.get_or_404(guest_id)
-    if table_id and guest.rsvp_status != 'accepted':
-        flash(f'{guest.name} has not accepted their RSVP (status: {guest.rsvp_status or "pending"}). Cannot assign to a table.', 'warning')
-        return redirect(url_for('seating_chart', wedding_id=wedding_id))
     guest.table_id = table_id if table_id else None
     db.session.commit()
     msg = f'{guest.name} assigned!'
     category = 'success'
     if table_id:
+        warnings = []
         table = SeatingTable.query.get(table_id)
         if table and len(table.assigned_guests) > table.capacity:
-            msg += f' Warning: table is now over capacity ({len(table.assigned_guests)}/{table.capacity}).'
+            warnings.append(f'table is now over capacity ({len(table.assigned_guests)}/{table.capacity})')
+        if guest.rsvp_status != 'accepted':
+            warnings.append(f'RSVP status is "{guest.rsvp_status or "pending"}"')
+        if warnings:
+            msg += ' Note: ' + '; '.join(warnings) + '.'
             category = 'warning'
     flash(msg, category)
     return redirect(url_for('seating_chart', wedding_id=wedding_id))
@@ -4255,20 +4267,19 @@ def seating_bulk_assign(wedding_id):
     table_id = request.form.get('table_id', type=int)
     guest_ids = request.form.getlist('guest_ids')
     assigned = 0
-    skipped = 0
+    pending_count = 0
     for gid in guest_ids:
         guest = Guest.query.get(int(gid))
         if guest:
-            if guest.rsvp_status != 'accepted':
-                skipped += 1
-                continue
             guest.table_id = table_id
             assigned += 1
+            if guest.rsvp_status != 'accepted':
+                pending_count += 1
     db.session.commit()
     msg = f'{assigned} guests assigned!'
-    if skipped:
-        msg += f' ({skipped} skipped — RSVP not accepted.)'
-    flash(msg, 'success' if skipped == 0 else 'warning')
+    if pending_count:
+        msg += f' ({pending_count} have not yet accepted their RSVP.)'
+    flash(msg, 'success' if pending_count == 0 else 'warning')
     return redirect(url_for('seating_chart', wedding_id=wedding_id))
 
 
