@@ -53,6 +53,16 @@ def too_many_requests(e):
     flash(str(e.description) if hasattr(e, 'description') else 'Too many requests.', 'error')
     return redirect(request.referrer or url_for('index'))
 
+# Health check endpoint for monitoring and container orchestration
+@app.route('/health')
+def health_check():
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        return jsonify({'status': 'healthy', 'database': 'connected'}), 200
+    except Exception as e:
+        return jsonify({'status': 'unhealthy', 'database': str(e)}), 503
+
+
 # Initialize database and seed traditional elements
 with app.app_context():
     db.create_all()
