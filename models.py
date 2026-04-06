@@ -297,6 +297,7 @@ class SeatingTable(db.Model):
     table_role = db.Column(db.String(50))  # head, sweetheart, kings, guest, kids, vip
     x_position = db.Column(db.Float, default=0)  # for visual floor plan
     y_position = db.Column(db.Float, default=0)  # for visual floor plan
+    rotation = db.Column(db.Integer, default=0)   # degrees (0, 90, 180, 270)
     notes = db.Column(db.Text)
 
     # Relationship

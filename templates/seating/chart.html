@@ -78,6 +78,17 @@
 </div>
 {% endif %}
 
+{# Dietary Balance Warnings #}
+{% if dietary_warnings %}
+<div class="budget-warnings" style="margin-bottom: 1.5rem; border-color: #c9d4a0; background: #f8faf0;">
+    <h3>Dietary Balance Issues ({{ dietary_warnings|length }})</h3>
+    <p class="form-help" style="margin-top: 0;">These tables have a high concentration of the same dietary restriction. Consider distributing guests with special dietary needs more evenly.</p>
+    {% for warning in dietary_warnings %}
+    <div class="budget-warning" style="color: #5d6b1f;">{{ warning }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
 {# Lonely Guest Warnings #}
 {% if lonely_guests %}
 <div class="budget-warnings" style="margin-bottom: 1.5rem; border-color: #c9d1d9; background: #f6f8fa;">
@@ -273,7 +284,13 @@
 
 {# Visual Floor Plan #}
 <div class="module-section">
-    <h2>Floor Plan <small class="form-help">(drag tables to reposition)</small></h2>
+    <h2>Floor Plan <small class="form-help">(drag to reposition, scroll to zoom)</small></h2>
+    <div class="floor-controls">
+        <button class="btn-secondary btn-tiny" id="zoom-in" title="Zoom In">&#x2795;</button>
+        <button class="btn-secondary btn-tiny" id="zoom-out" title="Zoom Out">&#x2796;</button>
+        <button class="btn-secondary btn-tiny" id="zoom-reset" title="Reset Zoom">Reset</button>
+        <span class="form-help" id="zoom-level" style="margin-left:0.5rem;">100%</span>
+    </div>
 
     {# Legend #}
     {% if tables or fixtures %}
@@ -338,6 +355,9 @@
             <div class="table-capacity {% if assigned_count > cap %}warning{% endif %}">
                 {{ assigned_count }}/{{ cap }}
             </div>
+            {% if shape in ('rectangular', 'serpentine', 'oval') %}
+            <button class="rotate-btn" data-table-id="{{ table.id }}" title="Rotate 90°">&#x21BB;</button>
+            {% endif %}
         </div>
         {% endfor %}
 
@@ -411,8 +431,52 @@
             {% endif %}
 
             <div class="table-detail-actions">
-                <form method="POST" action="{{ url_for('seating_table_delete', wedding_id=wedding.id, table_id=table.id) }}" class="form-inline">
-                    <button type="submit" class="btn-danger btn-tiny" onclick="return confirm('Delete this table? Guests will be unassigned.')">Delete Table</button>
+                <button class="btn-secondary btn-tiny" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">Edit</button>
+                <div class="table-edit-form" style="display:none;">
+                    <form method="POST" action="{{ url_for('seating_table_edit', wedding_id=wedding.id, table_id=table.id) }}">
+                        <div class="form-row" style="gap:0.5rem; margin-top:0.5rem;">
+                            <div class="form-group" style="flex:1;">
+                                <label>Name</label>
+                                <input type="text" name="table_name" value="{{ table.table_name or '' }}" placeholder="Custom name">
+                            </div>
+                            <div class="form-group" style="flex:0 0 70px;">
+                                <label>Seats</label>
+                                <input type="number" name="capacity" value="{{ table.capacity }}" min="1" max="30">
+                            </div>
+                        </div>
+                        <div class="form-row" style="gap:0.5rem;">
+                            <div class="form-group" style="flex:1;">
+                                <label>Shape</label>
+                                <select name="table_shape">
+                                    {% for s in ['round','rectangular','square','oval','serpentine'] %}
+                                    <option value="{{ s }}" {% if table.table_shape == s %}selected{% endif %}>{{ s|title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex:1;">
+                                <label>Role</label>
+                                <select name="table_role">
+                                    {% for key, label in table_roles.items() %}
+                                    <option value="{{ key }}" {% if table.table_role == key %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Size Preset</label>
+                            <select name="table_size">
+                                <option value="">Custom</option>
+                                {% for key, ref in table_size_ref.items() %}
+                                <option value="{{ key }}" {% if table.table_size == key %}selected{% endif %}>{{ ref.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <input type="hidden" name="notes" value="{{ table.notes or '' }}">
+                        <button type="submit" class="btn-primary btn-tiny" style="margin-top:0.25rem;">Save</button>
+                    </form>
+                </div>
+                <form method="POST" action="{{ url_for('seating_table_delete', wedding_id=wedding.id, table_id=table.id) }}" class="form-inline" style="display:inline;">
+                    <button type="submit" class="btn-danger btn-tiny" onclick="return confirm('Delete this table? Guests will be unassigned.')">Delete</button>
                 </form>
             </div>
         </div>
@@ -425,6 +489,36 @@
 <div class="module-section">
     <h2>Unassigned Guests ({{ unassigned_guests|length }})</h2>
     {% if unassigned_guests %}
+
+    {# Search and filter controls #}
+    <div class="guest-filter-bar" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; margin-bottom:1rem;">
+        <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <input type="text" id="guest-search" placeholder="Search by name..." style="width:100%;">
+        </div>
+        <div class="form-group" style="margin:0;">
+            <select id="guest-filter-side">
+                <option value="">All Sides</option>
+                {% set sides = unassigned_guests|map(attribute='side')|select|unique|sort %}
+                {% for s in sides %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+            <select id="guest-filter-rsvp">
+                <option value="">All RSVP</option>
+                <option value="accepted">Accepted</option>
+                <option value="pending">Pending</option>
+                <option value="declined">Declined</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+            <select id="guest-filter-dietary">
+                <option value="">All Dietary</option>
+                <option value="has-dietary">Has Restrictions</option>
+                <option value="no-dietary">No Restrictions</option>
+            </select>
+        </div>
+        <span class="form-help" id="guest-filter-count"></span>
+    </div>
 
     {% if tables %}
     <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
@@ -460,7 +554,7 @@
     </div>
     {% endif %}
 
-    <table class="data-table">
+    <table class="data-table" id="unassigned-table">
         <thead>
             <tr>
                 <th>Guest</th>
@@ -476,7 +570,7 @@
         </thead>
         <tbody>
             {% for guest in unassigned_guests %}
-            <tr>
+            <tr data-name="{{ guest.name|lower }}" data-side="{{ guest.side or '' }}" data-rsvp="{{ guest.rsvp_status or 'pending' }}" data-dietary="{{ 'has-dietary' if guest.dietary_restrictions else 'no-dietary' }}">
                 <td>{{ guest.name }}{% if guest.is_plus_one %} <small>(+1 of {{ guest.plus_one_of }})</small>{% endif %}</td>
                 <td><span class="rsvp-tag rsvp-{{ guest.rsvp_status or 'pending' }}">{{ guest.rsvp_status or 'pending' }}</span></td>
                 <td>{{ guest.guest_type or '-' }}</td>
@@ -517,44 +611,75 @@
     <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
 </div>
 
-{# Drag-and-drop JavaScript for floor plan #}
+{# ====== JavaScript ====== #}
+
+{# Toast notification for save feedback #}
+<div id="save-toast" class="save-toast">Saved</div>
+
+{# Floor plan: drag-and-drop, touch support, zoom, rotation #}
 {% if tables or fixtures %}
 <script>
 (function() {
     var floor = document.getElementById('floor-plan');
     if (!floor) return;
-    var dragging = null, offsetX = 0, offsetY = 0;
+    var dragging = null, offsetX = 0, offsetY = 0, hasMoved = false;
+    var toast = document.getElementById('save-toast');
+    var zoomLevel = 1;
+
+    function showToast(msg) {
+        toast.textContent = msg || 'Saved';
+        toast.classList.add('show');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(function() { toast.classList.remove('show'); }, 1500);
+    }
+
+    function getPointer(e) {
+        if (e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        return { x: e.clientX, y: e.clientY };
+    }
 
     function initDrag(card) {
         card.dataset.prevX = parseInt(card.style.left) || 0;
         card.dataset.prevY = parseInt(card.style.top) || 0;
-        card.addEventListener('mousedown', function(e) {
+
+        function startDrag(e) {
+            if (e.target.classList.contains('rotate-btn')) return;
             dragging = card;
+            hasMoved = false;
+            var p = getPointer(e);
             var rect = card.getBoundingClientRect();
-            offsetX = e.clientX - rect.left;
-            offsetY = e.clientY - rect.top;
+            offsetX = p.x - rect.left;
+            offsetY = p.y - rect.top;
             card.style.zIndex = 100;
             e.preventDefault();
-        });
+        }
+        card.addEventListener('mousedown', startDrag);
+        card.addEventListener('touchstart', startDrag, { passive: false });
     }
 
     floor.querySelectorAll('.seating-table-card').forEach(initDrag);
     floor.querySelectorAll('.venue-fixture-card').forEach(initDrag);
 
-    document.addEventListener('mousemove', function(e) {
+    function onMove(e) {
         if (!dragging) return;
+        hasMoved = true;
+        var p = getPointer(e);
         var floorRect = floor.getBoundingClientRect();
-        var x = e.clientX - floorRect.left - offsetX;
-        var y = e.clientY - floorRect.top - offsetY;
-        x = Math.max(0, Math.min(x, floor.offsetWidth - dragging.offsetWidth));
-        y = Math.max(0, Math.min(y, floor.offsetHeight - dragging.offsetHeight));
-        dragging.style.left = x + 'px';
-        dragging.style.top = y + 'px';
-    });
+        var x = (p.x - floorRect.left - offsetX) / zoomLevel;
+        var y = (p.y - floorRect.top - offsetY) / zoomLevel;
+        x = Math.max(0, Math.min(x, floor.scrollWidth / zoomLevel - dragging.offsetWidth));
+        y = Math.max(0, Math.min(y, floor.scrollHeight / zoomLevel - dragging.offsetHeight));
+        dragging.style.left = Math.round(x) + 'px';
+        dragging.style.top = Math.round(y) + 'px';
+        e.preventDefault();
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: false });
 
-    document.addEventListener('mouseup', function() {
+    function onEnd() {
         if (!dragging) return;
         dragging.style.zIndex = '';
+        if (!hasMoved) { dragging = null; return; }
         var card = dragging;
         var x = parseInt(card.style.left);
         var y = parseInt(card.style.top);
@@ -575,14 +700,101 @@
             if (!resp.ok) throw new Error('Save failed');
             card.dataset.prevX = x;
             card.dataset.prevY = y;
+            showToast('Position saved');
         }).catch(function() {
             card.style.left = (prevX || 0) + 'px';
             card.style.top = (prevY || 0) + 'px';
-            alert('Could not save position. Please try again.');
+            showToast('Save failed!');
         });
         dragging = null;
+    }
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+
+    // Zoom controls
+    var zoomLabel = document.getElementById('zoom-level');
+    function setZoom(level) {
+        zoomLevel = Math.max(0.25, Math.min(2, level));
+        floor.style.transform = 'scale(' + zoomLevel + ')';
+        floor.style.transformOrigin = 'top left';
+        if (zoomLabel) zoomLabel.textContent = Math.round(zoomLevel * 100) + '%';
+    }
+    var zoomIn = document.getElementById('zoom-in');
+    var zoomOut = document.getElementById('zoom-out');
+    var zoomReset = document.getElementById('zoom-reset');
+    if (zoomIn) zoomIn.addEventListener('click', function() { setZoom(zoomLevel + 0.1); });
+    if (zoomOut) zoomOut.addEventListener('click', function() { setZoom(zoomLevel - 0.1); });
+    if (zoomReset) zoomReset.addEventListener('click', function() { setZoom(1); });
+
+    // Mouse wheel zoom on floor plan
+    floor.parentElement.addEventListener('wheel', function(e) {
+        if (!e.ctrlKey && !e.metaKey) return;
+        e.preventDefault();
+        setZoom(zoomLevel + (e.deltaY < 0 ? 0.1 : -0.1));
+    }, { passive: false });
+
+    // Rotation buttons
+    floor.querySelectorAll('.rotate-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var tableId = btn.dataset.tableId;
+            fetch('/wedding/{{ wedding.id }}/seating-chart/table/' + tableId + '/rotate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            }).then(function(resp) {
+                if (!resp.ok) throw new Error('Rotate failed');
+                return resp.json();
+            }).then(function(data) {
+                showToast('Rotated to ' + data.rotation + '°');
+                setTimeout(function() { location.reload(); }, 500);
+            }).catch(function() {
+                showToast('Rotate failed!');
+            });
+        });
     });
 })();
 </script>
 {% endif %}
+
+{# Guest search/filter JavaScript #}
+<script>
+(function() {
+    var search = document.getElementById('guest-search');
+    var filterSide = document.getElementById('guest-filter-side');
+    var filterRsvp = document.getElementById('guest-filter-rsvp');
+    var filterDietary = document.getElementById('guest-filter-dietary');
+    var countLabel = document.getElementById('guest-filter-count');
+    var table = document.getElementById('unassigned-table');
+    if (!table) return;
+    var rows = table.querySelectorAll('tbody tr');
+
+    function applyFilters() {
+        var q = (search ? search.value.toLowerCase() : '');
+        var side = filterSide ? filterSide.value : '';
+        var rsvp = filterRsvp ? filterRsvp.value : '';
+        var dietary = filterDietary ? filterDietary.value : '';
+        var shown = 0;
+        rows.forEach(function(row) {
+            var show = true;
+            if (q && row.dataset.name.indexOf(q) === -1) show = false;
+            if (side && row.dataset.side !== side) show = false;
+            if (rsvp && row.dataset.rsvp !== rsvp) show = false;
+            if (dietary && row.dataset.dietary !== dietary) show = false;
+            row.style.display = show ? '' : 'none';
+            if (show) shown++;
+        });
+        if (countLabel) {
+            if (q || side || rsvp || dietary) {
+                countLabel.textContent = shown + ' of ' + rows.length + ' shown';
+            } else {
+                countLabel.textContent = '';
+            }
+        }
+    }
+    if (search) search.addEventListener('input', applyFilters);
+    if (filterSide) filterSide.addEventListener('change', applyFilters);
+    if (filterRsvp) filterRsvp.addEventListener('change', applyFilters);
+    if (filterDietary) filterDietary.addEventListener('change', applyFilters);
+})();
+</script>
 {% endblock %}

@@ -4201,11 +4201,31 @@ def compute_table_floor_data(tables, scale=1.4):
                         y = PAD + th + CHAIR_GAP
                         chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': len(chairs) < assigned_count})
 
+        # Apply rotation (swap dimensions and rotate chair positions)
+        rotation = getattr(table, 'rotation', 0) or 0
+        if rotation in (90, 270):
+            # Swap table dimensions and SVG bounds
+            tw, th = th, tw
+            svg_w = tw + PAD * 2
+            svg_h = th + PAD * 2
+            new_cx = svg_w / 2
+            new_cy = svg_h / 2
+            # Rotate each chair around the center
+            cos_a = math.cos(math.radians(rotation))
+            sin_a = math.sin(math.radians(rotation))
+            for chair in chairs:
+                dx = chair['x'] - cx
+                dy = chair['y'] - cy
+                chair['x'] = round(new_cx + dx * cos_a - dy * sin_a, 1)
+                chair['y'] = round(new_cy + dx * sin_a + dy * cos_a, 1)
+            cx, cy = new_cx, new_cy
+
         result[table.id] = {
             'tw': tw, 'th': th,
             'svg_w': svg_w, 'svg_h': svg_h,
             'cx': cx, 'cy': cy,
             'chairs': chairs,
+            'rotation': rotation,
         }
     return result
 
@@ -4374,12 +4394,33 @@ def seating_chart(wedding_id):
                     f'{o1["name"]} and {o2["name"]} have only {real_inches}" clearance — wheelchairs need at least 36"'
                 )
 
+    # Dietary balance warnings — flag tables where >60% of guests share a restriction
+    dietary_warnings = []
+    for table in tables:
+        guests = table.assigned_guests
+        if len(guests) < 3:
+            continue
+        restriction_counts = {}
+        for g in guests:
+            if g.dietary_restrictions:
+                for r in g.dietary_restrictions.split(','):
+                    r = r.strip().lower()
+                    if r:
+                        restriction_counts[r] = restriction_counts.get(r, 0) + 1
+        for restriction, count in restriction_counts.items():
+            if count >= len(guests) * 0.6 and count >= 3:
+                tname = table.table_name or f'Table {table.table_number}'
+                dietary_warnings.append(
+                    f'{tname}: {count}/{len(guests)} guests have "{restriction}" — consider spreading dietary needs across tables'
+                )
+
     return render_template('seating/chart.html', wedding=wedding, tables=tables,
                          fixtures=fixtures,
                          unassigned_guests=unassigned, preferences=preferences,
                          violations=violations, lonely_guests=lonely_guests, stats=stats,
                          proximity_warnings=proximity_warnings,
                          accessibility_warnings=accessibility_warnings,
+                         dietary_warnings=dietary_warnings,
                          canvas_w=round(canvas_w), canvas_h=round(canvas_h),
                          table_size_ref=TABLE_SIZE_REFERENCE, table_roles=TABLE_ROLES,
                          table_floor_data=table_floor_data,
@@ -4639,6 +4680,17 @@ def seating_update_position(wedding_id):
     table.y_position = y
     db.session.commit()
     return jsonify({'status': 'ok'})
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/table/<int:table_id>/rotate', methods=['POST'])
+@login_required
+def seating_table_rotate(wedding_id, table_id):
+    """AJAX endpoint to rotate a table by 90 degrees."""
+    table = SeatingTable.query.get_or_404(table_id)
+    current = table.rotation or 0
+    table.rotation = (current + 90) % 360
+    db.session.commit()
+    return jsonify({'status': 'ok', 'rotation': table.rotation})
 
 
 # --- Venue Fixtures (dance floor, bar, stage, etc.) ---
