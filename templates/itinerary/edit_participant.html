@@ -30,6 +30,12 @@
         </div>
 
         <div class="form-group">
+            <label for="name_pronunciation">Name Pronunciation</label>
+            <input type="text" id="name_pronunciation" name="name_pronunciation" value="{{ participant.name_pronunciation or '' }}" placeholder="e.g., AH-lee-sha" maxlength="200">
+            <p class="form-help">Phonetic guide for DJ/MC announcements</p>
+        </div>
+
+        <div class="form-group">
             <label for="phone">Phone</label>
             <input type="tel" id="phone" name="phone" value="{{ participant.phone or '' }}">
         </div>
