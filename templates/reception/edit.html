@@ -33,6 +33,12 @@
             <input type="number" name="venue_capacity" value="{{ reception.venue_capacity or '' }}" min="1" placeholder="e.g., 200">
         </div>
 
+        <div class="form-group">
+            <label>Venue Load-In Time</label>
+            <input type="time" name="venue_load_in_time" value="{{ reception.venue_load_in_time.strftime('%H:%M') if reception.venue_load_in_time else '' }}">
+            <p class="form-help">When vendors can start setting up at the venue</p>
+        </div>
+
         <h2>Timing</h2>
         <div class="form-row">
             <div class="form-group">
@@ -147,6 +153,20 @@
         <div class="form-group">
             <label>Expected Guest Count</label>
             <input type="number" name="expected_guest_count" value="{{ reception.expected_guest_count or '' }}" min="1" placeholder="e.g., 150">
+        </div>
+
+        <h2>After-Party</h2>
+        <div class="form-group">
+            <label>After-Party Venue</label>
+            <input type="text" name="after_party_venue" value="{{ reception.after_party_venue or '' }}" placeholder="e.g., The Rooftop Bar" maxlength="200">
+        </div>
+        <div class="form-group">
+            <label>After-Party Address</label>
+            <textarea name="after_party_address" rows="2" placeholder="Full address of after-party location">{{ reception.after_party_address or '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label>After-Party Start Time</label>
+            <input type="time" name="after_party_start_time" value="{{ reception.after_party_start_time.strftime('%H:%M') if reception.after_party_start_time else '' }}">
         </div>
 
         <div class="form-actions">
