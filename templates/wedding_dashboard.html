@@ -199,6 +199,15 @@
         <p class="stat-label">Outfits Tracked</p>
         <a href="{{ url_for('attire_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">View Attire</a>
     </div>
+
+    <div class="dashboard-card">
+        <div class="card-icon">🧰</div>
+        <h3>Emergency Kit</h3>
+        {% set ek_packed = wedding.emergency_kit_items|selectattr('packed')|list|length %}
+        <div class="stat-large">{{ ek_packed }}/{{ wedding.emergency_kit_items|length }}</div>
+        <p class="stat-label">Items Packed</p>
+        <a href="{{ url_for('emergency_kit_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">Manage Kit</a>
+    </div>
 </div>
 
 <!-- Export & Collaboration -->

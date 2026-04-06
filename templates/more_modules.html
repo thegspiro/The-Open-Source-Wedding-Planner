@@ -157,6 +157,9 @@
     <a href="{{ url_for('contingency_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">🛡️</div><h3>Contingency Plans</h3><p class="stat-label">Backup plans &amp; emergencies</p>
     </a>
+    <a href="{{ url_for('emergency_kit_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🧰</div><h3>Emergency Kit</h3><p class="stat-label">Day-of supplies checklist</p>
+    </a>
     <a href="{{ url_for('tips_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">💵</div><h3>Tipping Tracker</h3><p class="stat-label">Vendor tips &amp; envelopes</p>
     </a>

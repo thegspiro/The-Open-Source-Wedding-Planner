@@ -34,7 +34,7 @@ import time as time_module
 import json
 import math
 from functools import wraps
-from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission
+from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission, validate_time_string, validate_name_pronunciation, validate_text_field
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -1237,6 +1237,34 @@ def person_edit(wedding_id, person_id):
         person.side_label = request.form.get('side_label')
         person.email = request.form.get('email')
         person.phone = request.form.get('phone')
+
+        # Validate and save name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('people/edit.html', wedding=wedding, person=person)
+        person.name_pronunciation = pron_value or None
+
+        # Validate and save getting ready fields
+        getting_ready_time_str = request.form.get('getting_ready_time')
+        if getting_ready_time_str:
+            parsed_time = validate_time_string(getting_ready_time_str)
+            if parsed_time is None:
+                flash('Invalid getting ready time format. Use HH:MM.', 'danger')
+                return render_template('people/edit.html', wedding=wedding, person=person)
+            person.getting_ready_time = parsed_time
+        else:
+            person.getting_ready_time = None
+
+        addr_valid, addr_value, addr_err = validate_text_field(
+            request.form.get('getting_ready_address'), max_length=1000, field_name='Getting ready address')
+        if not addr_valid:
+            flash(addr_err, 'danger')
+            return render_template('people/edit.html', wedding=wedding, person=person)
+        person.getting_ready_address = addr_value or None
+
+        person.getting_ready_location = sanitize_string(request.form.get('getting_ready_location', ''), max_length=200) or None
+
         db.session.commit()
         flash('Person updated!', 'success')
         return redirect(url_for('people_view', wedding_id=wedding_id))
@@ -1283,6 +1311,18 @@ def ceremony_edit(wedding_id):
         ceremony.has_unity_ceremony = request.form.get('has_unity_ceremony') == 'on'
         ceremony.unity_ceremony_type = request.form.get('unity_ceremony_type')
         ceremony.has_special_readings = request.form.get('has_special_readings') == 'on'
+
+        # Validate and save venue load-in time
+        load_in_str = request.form.get('venue_load_in_time')
+        if load_in_str:
+            parsed_time = validate_time_string(load_in_str)
+            if parsed_time is None:
+                flash('Invalid venue load-in time format. Use HH:MM.', 'danger')
+                return render_template('ceremony/edit.html', wedding=wedding, ceremony=ceremony)
+            ceremony.venue_load_in_time = parsed_time
+        else:
+            ceremony.venue_load_in_time = None
+
         db.session.commit()
         flash('Ceremony details updated!', 'success')
         return redirect(url_for('ceremony_view', wedding_id=wedding_id))
@@ -1353,6 +1393,43 @@ def reception_edit(wedding_id):
         reception.kids_sitter_name = request.form.get('kids_sitter_name')
         reception.kids_sitter_phone = request.form.get('kids_sitter_phone')
         reception.expected_guest_count = request.form.get('expected_guest_count', type=int)
+
+        # Validate and save venue load-in time
+        load_in_str = request.form.get('venue_load_in_time')
+        if load_in_str:
+            parsed_time = validate_time_string(load_in_str)
+            if parsed_time is None:
+                flash('Invalid venue load-in time format. Use HH:MM.', 'danger')
+                return render_template('reception/edit.html', wedding=wedding, reception=reception)
+            reception.venue_load_in_time = parsed_time
+        else:
+            reception.venue_load_in_time = None
+
+        # Validate and save after-party fields
+        ap_time_str = request.form.get('after_party_start_time')
+        if ap_time_str:
+            parsed_time = validate_time_string(ap_time_str)
+            if parsed_time is None:
+                flash('Invalid after-party start time format. Use HH:MM.', 'danger')
+                return render_template('reception/edit.html', wedding=wedding, reception=reception)
+            reception.after_party_start_time = parsed_time
+        else:
+            reception.after_party_start_time = None
+
+        venue_valid, venue_value, venue_err = validate_text_field(
+            request.form.get('after_party_venue'), max_length=200, field_name='After-party venue')
+        if not venue_valid:
+            flash(venue_err, 'danger')
+            return render_template('reception/edit.html', wedding=wedding, reception=reception)
+        reception.after_party_venue = venue_value or None
+
+        addr_valid, addr_value, addr_err = validate_text_field(
+            request.form.get('after_party_address'), max_length=1000, field_name='After-party address')
+        if not addr_valid:
+            flash(addr_err, 'danger')
+            return render_template('reception/edit.html', wedding=wedding, reception=reception)
+        reception.after_party_address = addr_value or None
+
         db.session.commit()
         flash('Reception details updated!', 'success')
         return redirect(url_for('reception_view', wedding_id=wedding_id))
@@ -1476,6 +1553,12 @@ def bridal_party_view(wedding_id):
 def bridal_party_add(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
+        # Validate name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('bridal_party/add.html', wedding=wedding)
+
         member = BridalPartyMember(
             wedding_id=wedding_id,
             name=request.form.get('name'),
@@ -1483,7 +1566,8 @@ def bridal_party_add(wedding_id):
             side=request.form.get('side'),
             email=request.form.get('email'),
             phone=request.form.get('phone'),
-            processional_order=request.form.get('processional_order', type=int)
+            processional_order=request.form.get('processional_order', type=int),
+            name_pronunciation=pron_value or None
         )
         db.session.add(member)
         db.session.commit()
@@ -1514,6 +1598,14 @@ def bridal_party_edit(wedding_id, member_id):
         member.has_plus_one = request.form.get('has_plus_one') == 'on'
         member.plus_one_name = request.form.get('plus_one_name')
         member.responsibilities = request.form.get('responsibilities')
+
+        # Validate name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('bridal_party/edit.html', wedding=wedding, member=member)
+        member.name_pronunciation = pron_value or None
+
         db.session.commit()
         flash('Wedding party member updated!', 'success')
         return redirect(url_for('bridal_party_view', wedding_id=wedding_id))
@@ -1789,13 +1881,40 @@ def vendor_edit(wedding_id, vendor_id):
         vendor.cancellation_policy = request.form.get('cancellation_policy')
         vendor.contract_notes = request.form.get('contract_notes')
         vendor.backup_contact = request.form.get('backup_contact')
-        vendor.backup_phone = request.form.get('backup_phone')
+
+        # Validate backup phone
+        backup_phone_val = request.form.get('backup_phone', '').strip()
+        if backup_phone_val and not validate_phone(backup_phone_val):
+            flash('Invalid backup phone number format.', 'danger')
+            return render_template('vendors/edit.html', wedding=wedding, vendor=vendor)
+        vendor.backup_phone = backup_phone_val or None
+
         if request.form.get('final_payment_date'):
             vendor.final_payment_date = datetime.strptime(request.form.get('final_payment_date'), '%Y-%m-%d').date()
         if request.form.get('service_date'):
             vendor.service_date = datetime.strptime(request.form.get('service_date'), '%Y-%m-%d').date()
         if request.form.get('service_time'):
             vendor.service_time = datetime.strptime(request.form.get('service_time'), '%H:%M').time()
+
+        # Validate and save arrival time
+        arrival_str = request.form.get('arrival_time')
+        if arrival_str:
+            parsed_time = validate_time_string(arrival_str)
+            if parsed_time is None:
+                flash('Invalid arrival time format. Use HH:MM.', 'danger')
+                return render_template('vendors/edit.html', wedding=wedding, vendor=vendor)
+            vendor.arrival_time = parsed_time
+        else:
+            vendor.arrival_time = None
+
+        # Validate overtime rate
+        ot_valid, ot_value, ot_err = validate_text_field(
+            request.form.get('overtime_rate'), max_length=100, field_name='Overtime rate')
+        if not ot_valid:
+            flash(ot_err, 'danger')
+            return render_template('vendors/edit.html', wedding=wedding, vendor=vendor)
+        vendor.overtime_rate = ot_value or None
+
         vendor.service_location = request.form.get('service_location')
         vendor.setup_instructions = request.form.get('setup_instructions')
         vendor.meals_needed = request.form.get('meals_needed', type=int)
@@ -2354,6 +2473,13 @@ def itinerary_participants(wedding_id):
 def itinerary_add_participant(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
+        # Validate name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('itinerary/add_participant.html', wedding=wedding,
+                                   people=wedding.people, bridal_party=wedding.bridal_party)
+
         participant = WeddingParticipant(
             wedding_id=wedding_id,
             name=request.form.get('name'),
@@ -2361,7 +2487,8 @@ def itinerary_add_participant(wedding_id):
             role_category=request.form.get('role_category'),
             phone=request.form.get('phone'),
             email=request.form.get('email'),
-            notes=request.form.get('notes')
+            notes=request.form.get('notes'),
+            name_pronunciation=pron_value or None
         )
         # Link to existing Person if selected
         person_id = request.form.get('person_id', type=int)
@@ -4571,7 +4698,7 @@ def _render_or_pdf(template, filename, **context):
     if request.args.get('format') == 'pdf':
         from weasyprint import HTML, CSS
         pdf = HTML(string=html).write_pdf(
-            stylesheets=[CSS(string='@media print { .print-btn { display: none !important; } }')],
+            stylesheets=[CSS(string='@media print { .print-btn, .share-form-inline { display: none !important; } }')],
             presentational_hints=True
         )
         response = make_response(pdf)
