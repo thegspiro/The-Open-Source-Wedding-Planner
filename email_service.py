@@ -1,6 +1,7 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 from datetime import datetime
 from html import escape
 import os
@@ -143,4 +144,54 @@ def send_guest_email(to_email, guest_name, couple_names, wedding_date,
         return True
     except Exception as e:
         print(f"Error sending guest email: {e}")
+        return False
+
+
+def send_pdf_email(to_email, subject, body_text, pdf_bytes, pdf_filename, from_email=None):
+    """Send an email with a PDF attachment.
+
+    Args:
+        to_email: Recipient email address.
+        subject: Email subject line.
+        body_text: Plain-text body of the email.
+        pdf_bytes: The PDF file content as bytes.
+        pdf_filename: Filename for the PDF attachment.
+        from_email: Optional sender address (defaults to FROM_EMAIL env var).
+
+    Returns:
+        True on success, False on failure.
+    """
+    smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+    smtp_port = int(os.environ.get('SMTP_PORT', 587))
+    smtp_user = os.environ.get('SMTP_USER')
+    smtp_password = os.environ.get('SMTP_PASSWORD')
+    if from_email is None:
+        from_email = os.environ.get('FROM_EMAIL', smtp_user)
+
+    if not smtp_user or not smtp_password:
+        print(f"Email not configured. Would send PDF '{pdf_filename}' to {to_email}")
+        return False
+
+    try:
+        msg = MIMEMultipart('mixed')
+        msg['Subject'] = subject
+        msg['From'] = from_email
+        msg['To'] = to_email
+
+        # Attach plain-text body
+        msg.attach(MIMEText(body_text, 'plain'))
+
+        # Attach PDF
+        pdf_part = MIMEApplication(pdf_bytes, _subtype='pdf')
+        pdf_part.add_header('Content-Disposition', 'attachment', filename=pdf_filename)
+        msg.attach(pdf_part)
+
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+        print(f"PDF email sent to {to_email}: {pdf_filename}")
+        return True
+    except Exception as e:
+        print(f"Error sending PDF email: {e}")
         return False

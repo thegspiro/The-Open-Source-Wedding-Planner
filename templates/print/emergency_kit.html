@@ -113,7 +113,11 @@
 
         @media print {
             * { color-adjust: exact; -webkit-print-color-adjust: exact; }
-            .print-btn { display: none !important; }
+            .print-btn { display: none !important;
+            }
+
+            .share-form-inline {
+                display: none !important; }
             .skip-link { display: none !important; }
             body { padding: 0; font-size: 12px; }
             .print-header h1 { font-size: 20px; }
@@ -124,6 +128,7 @@
     <a href="#main-content" class="skip-link">Skip to content</a>
     <button class="print-btn" onclick="window.print()">Print</button>
     <a class="print-btn" href="?format=pdf" role="button" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+    {% set share_document_type = 'emergency_kit' %}{% include 'print/_share_button.html' %}
 
     <main id="main-content">
     <div class="print-header">

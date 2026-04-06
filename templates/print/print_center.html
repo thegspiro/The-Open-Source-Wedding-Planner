@@ -5,153 +5,264 @@
 <div class="container" style="max-width: 900px; margin: 0 auto; padding: 30px 20px;">
     <div style="text-align: center; margin-bottom: 30px;">
         <h1 style="font-size: 28px; margin-bottom: 5px;">Print Center</h1>
-        <p style="color: #888; font-size: 14px;">All your wedding documents in one place &mdash; print or download as PDF</p>
+        <p style="color: #888; font-size: 14px;">All your wedding documents in one place &mdash; print, download as PDF, or share via email</p>
     </div>
 
     <!-- Day-Of Essentials -->
-    <h2 style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
+    <h2 class="pc-section-heading" style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
         Day-Of Essentials
     </h2>
-    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px;">
-        <a href="{{ url_for('print_timeline', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#128197;</div>
-            <div class="pc-title">Day-Of Timeline</div>
-            <div class="pc-desc">Complete master schedule of events with times, locations, and who's involved</div>
-        </a>
-        <a href="{{ url_for('print_personal_timelines', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px); border-color: #c9a96e;">
-            <div class="pc-icon">&#128100;</div>
-            <div class="pc-title">Personal Timelines</div>
-            <div class="pc-desc">Individual timelines for each person: bride, groom, wedding party, vendors</div>
-        </a>
-        <a href="{{ url_for('print_emergency_contacts', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#128222;</div>
-            <div class="pc-title">Emergency Contacts</div>
-            <div class="pc-desc">Key contacts for the couple, planner, venue, vendors, and participants</div>
-        </a>
-        <a href="{{ url_for('print_emergency_kit', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#127890;</div>
-            <div class="pc-title">Emergency Kit Checklist</div>
-            <div class="pc-desc">Supplies packing list: sewing kit, stain remover, pain relievers, etc.</div>
-        </a>
-        <a href="{{ url_for('print_contingency_plans', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#9730;</div>
-            <div class="pc-title">Backup Plans</div>
-            <div class="pc-desc">Weather backup, vendor alternatives, and emergency protocols</div>
-        </a>
-        <a href="{{ url_for('print_tips_tracker', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#128176;</div>
-            <div class="pc-title">Tips &amp; Payments</div>
-            <div class="pc-desc">Who to tip, amounts, envelope status, and payment tracking</div>
-        </a>
-        <a href="{{ url_for('print_venue_info', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#127960;</div>
-            <div class="pc-title">Venue Information</div>
-            <div class="pc-desc">Addresses, contacts, timing, parking, and capacity for all venues</div>
-        </a>
+    <div class="pc-grid">
+        <div class="print-card">
+            <a href="{{ url_for('print_timeline', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128197;</div>
+                <div class="pc-title">Day-Of Timeline</div>
+                <div class="pc-desc">Complete master schedule of events with times, locations, and who's involved</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('timeline', 'Day-Of Timeline')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_personal_timelines', wedding_id=wedding.id) }}" class="pc-link" style="border-color: #c9a96e;">
+                <div class="pc-icon">&#128100;</div>
+                <div class="pc-title">Personal Timelines</div>
+                <div class="pc-desc">Individual timelines for each person: bride, groom, wedding party, vendors</div>
+            </a>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_emergency_contacts', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128222;</div>
+                <div class="pc-title">Emergency Contacts</div>
+                <div class="pc-desc">Key contacts for the couple, planner, venue, vendors, and participants</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('emergency_contacts', 'Emergency Contacts')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_emergency_kit', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#127890;</div>
+                <div class="pc-title">Emergency Kit Checklist</div>
+                <div class="pc-desc">Supplies packing list: sewing kit, stain remover, pain relievers, etc.</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('emergency_kit', 'Emergency Kit Checklist')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_contingency_plans', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#9730;</div>
+                <div class="pc-title">Backup Plans</div>
+                <div class="pc-desc">Weather backup, vendor alternatives, and emergency protocols</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('contingency_plans', 'Backup Plans')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_tips_tracker', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128176;</div>
+                <div class="pc-title">Tips &amp; Payments</div>
+                <div class="pc-desc">Who to tip, amounts, envelope status, and payment tracking</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('tips_tracker', 'Tips &amp; Payments')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_venue_info', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#127960;</div>
+                <div class="pc-title">Venue Information</div>
+                <div class="pc-desc">Addresses, contacts, timing, parking, and capacity for all venues</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('venue_info', 'Venue Information')">Share</button>
+        </div>
     </div>
 
     <!-- Ceremony & Reception -->
-    <h2 style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
+    <h2 class="pc-section-heading" style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
         Ceremony &amp; Reception
     </h2>
-    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px;">
-        <a href="{{ url_for('print_ceremony_program', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#128220;</div>
-            <div class="pc-title">Ceremony Program</div>
-            <div class="pc-desc">Processional order, readings, music, officiant details, and vows</div>
-        </a>
-        <a href="{{ url_for('print_reception_script', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#127908;</div>
-            <div class="pc-title">Reception Run Sheet</div>
-            <div class="pc-desc">MC/DJ script with timeline, toasts, key songs, and announcements</div>
-        </a>
-        <a href="{{ url_for('print_music_cue_sheet', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#127926;</div>
-            <div class="pc-title">Music Cue Sheet</div>
-            <div class="pc-desc">Complete playlist by moment: ceremony, dances, dinner, do-not-play</div>
-        </a>
-        <a href="{{ url_for('print_seating', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#128186;</div>
-            <div class="pc-title">Seating Chart</div>
-            <div class="pc-desc">Table assignments with guest names for display at reception</div>
-        </a>
-        <a href="{{ url_for('print_decor_setup', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#127804;</div>
-            <div class="pc-title">Decor &amp; Setup Plan</div>
-            <div class="pc-desc">Florals, centerpieces, lighting, and setup instructions</div>
-        </a>
-        <a href="{{ url_for('print_rehearsal', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#127917;</div>
-            <div class="pc-title">Rehearsal Schedule</div>
-            <div class="pc-desc">Rehearsal dinner details, ceremony walkthrough, and processional order</div>
-        </a>
+    <div class="pc-grid">
+        <div class="print-card">
+            <a href="{{ url_for('print_ceremony_program', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128220;</div>
+                <div class="pc-title">Ceremony Program</div>
+                <div class="pc-desc">Processional order, readings, music, officiant details, and vows</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('ceremony_program', 'Ceremony Program')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_reception_script', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#127908;</div>
+                <div class="pc-title">Reception Run Sheet</div>
+                <div class="pc-desc">MC/DJ script with timeline, toasts, key songs, and announcements</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('reception_script', 'Reception Run Sheet')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_music_cue_sheet', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#127926;</div>
+                <div class="pc-title">Music Cue Sheet</div>
+                <div class="pc-desc">Complete playlist by moment: ceremony, dances, dinner, do-not-play</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('music_cue_sheet', 'Music Cue Sheet')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_seating', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128186;</div>
+                <div class="pc-title">Seating Chart</div>
+                <div class="pc-desc">Table assignments with guest names for display at reception</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('seating', 'Seating Chart')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_decor_setup', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#127804;</div>
+                <div class="pc-title">Decor &amp; Setup Plan</div>
+                <div class="pc-desc">Florals, centerpieces, lighting, and setup instructions</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('decor_setup', 'Decor &amp; Setup Plan')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_rehearsal', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#127917;</div>
+                <div class="pc-title">Rehearsal Schedule</div>
+                <div class="pc-desc">Rehearsal dinner details, ceremony walkthrough, and processional order</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('rehearsal', 'Rehearsal Schedule')">Share</button>
+        </div>
     </div>
 
     <!-- People & Vendors -->
-    <h2 style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
+    <h2 class="pc-section-heading" style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
         People &amp; Vendors
     </h2>
-    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px;">
-        <a href="{{ url_for('print_guest_list', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#128101;</div>
-            <div class="pc-title">Guest List</div>
-            <div class="pc-desc">Full guest list with RSVP status, meal choices, dietary needs, and tables</div>
-        </a>
-        <a href="{{ url_for('print_bridal_party_info', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#128143;</div>
-            <div class="pc-title">Wedding Party</div>
-            <div class="pc-desc">Names, roles, contact info, processional order, and responsibilities</div>
-        </a>
-        <a href="{{ url_for('print_vendor_contacts', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#128188;</div>
-            <div class="pc-title">Vendor Contacts</div>
-            <div class="pc-desc">Complete vendor reference with service times, backup contacts</div>
-        </a>
-        <a href="{{ url_for('print_hair_makeup', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#128132;</div>
-            <div class="pc-title">Hair &amp; Makeup Schedule</div>
-            <div class="pc-desc">Getting-ready timeline with stylist contacts and style notes</div>
-        </a>
-        <a href="{{ url_for('print_shot_list', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#128247;</div>
-            <div class="pc-title">Photography Shot List</div>
-            <div class="pc-desc">Categorized checklist of must-have and nice-to-have photos</div>
-        </a>
-        <a href="{{ url_for('print_transportation', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#128663;</div>
-            <div class="pc-title">Transportation &amp; Hotels</div>
-            <div class="pc-desc">Hotel blocks, shuttles, parking, and booking codes</div>
-        </a>
+    <div class="pc-grid">
+        <div class="print-card">
+            <a href="{{ url_for('print_guest_list', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128101;</div>
+                <div class="pc-title">Guest List</div>
+                <div class="pc-desc">Full guest list with RSVP status, meal choices, dietary needs, and tables</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('guest_list', 'Guest List')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_bridal_party_info', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128143;</div>
+                <div class="pc-title">Wedding Party</div>
+                <div class="pc-desc">Names, roles, contact info, processional order, and responsibilities</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('bridal_party', 'Wedding Party')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_vendor_contacts', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128188;</div>
+                <div class="pc-title">Vendor Contacts</div>
+                <div class="pc-desc">Complete vendor reference with service times, backup contacts</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('vendor_contacts', 'Vendor Contacts')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_hair_makeup', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128132;</div>
+                <div class="pc-title">Hair &amp; Makeup Schedule</div>
+                <div class="pc-desc">Getting-ready timeline with stylist contacts and style notes</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('hair_makeup', 'Hair &amp; Makeup Schedule')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_shot_list', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128247;</div>
+                <div class="pc-title">Photography Shot List</div>
+                <div class="pc-desc">Categorized checklist of must-have and nice-to-have photos</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('shot_list', 'Photography Shot List')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_transportation', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128663;</div>
+                <div class="pc-title">Transportation &amp; Hotels</div>
+                <div class="pc-desc">Hotel blocks, shuttles, parking, and booking codes</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('transportation', 'Transportation &amp; Hotels')">Share</button>
+        </div>
     </div>
 
     <!-- Financial -->
-    <h2 style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
+    <h2 class="pc-section-heading" style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
         Financial
     </h2>
-    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px;">
-        <a href="{{ url_for('print_budget_summary', wedding_id=wedding.id) }}" class="print-card" style="width: calc(33.333% - 8px);">
-            <div class="pc-icon">&#128200;</div>
-            <div class="pc-title">Budget Summary</div>
-            <div class="pc-desc">Spending by category, estimated vs actual, payment status</div>
-        </a>
+    <div class="pc-grid">
+        <div class="print-card">
+            <a href="{{ url_for('print_budget_summary', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128200;</div>
+                <div class="pc-title">Budget Summary</div>
+                <div class="pc-desc">Spending by category, estimated vs actual, payment status</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('budget_summary', 'Budget Summary')">Share</button>
+        </div>
+    </div>
+</div>
+
+<!-- Share Modal -->
+<div id="shareModal" class="share-modal-overlay" style="display:none;">
+    <div class="share-modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0; font-size:18px;" id="shareModalTitle">Share Document</h3>
+            <button type="button" onclick="closeShareModal()" style="background:none; border:none; font-size:22px; cursor:pointer; color:#999; padding:4px 8px;">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('print_share', wedding_id=wedding.id) }}">
+            <input type="hidden" name="document_type" id="shareDocType" value="">
+            <div style="margin-bottom:12px;">
+                <label for="shareEmail" style="display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:#555;">Recipient Email *</label>
+                <input type="email" name="recipient_email" id="shareEmail" required
+                       style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:4px; font-size:14px;"
+                       placeholder="e.g. planner@example.com">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label for="shareName" style="display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:#555;">Recipient Name (optional)</label>
+                <input type="text" name="recipient_name" id="shareName"
+                       style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:4px; font-size:14px;"
+                       placeholder="e.g. Sarah">
+            </div>
+            <div style="margin-bottom:16px;">
+                <label for="shareMessage" style="display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:#555;">Message (optional)</label>
+                <textarea name="message" id="shareMessage" rows="3"
+                          style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:4px; font-size:14px; resize:vertical;"
+                          placeholder="Add a personal note..."></textarea>
+            </div>
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <button type="button" onclick="closeShareModal()" class="share-modal-cancel">Cancel</button>
+                <button type="submit" class="share-modal-send">Send PDF</button>
+            </div>
+        </form>
     </div>
 </div>
 
 <style>
+    .pc-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 30px;
+    }
     .print-card {
-        display: block;
+        display: flex;
+        flex-direction: column;
+        width: calc(33.333% - 8px);
         border: 1px solid #e0ddd8;
         border-radius: 8px;
-        padding: 16px;
         text-decoration: none;
         color: inherit;
         transition: all 0.2s;
         background: #fff;
+        min-height: 44px;
+        box-sizing: border-box;
+        position: relative;
     }
     .print-card:hover {
         border-color: #c9a96e;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         transform: translateY(-1px);
+    }
+    .pc-link {
+        display: block;
+        padding: 16px;
+        text-decoration: none;
+        color: inherit;
+        flex: 1;
     }
     .pc-icon {
         font-size: 24px;
@@ -167,6 +278,119 @@
         font-size: 12px;
         color: #999;
         line-height: 1.4;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+    }
+    .share-btn {
+        display: block;
+        width: calc(100% - 32px);
+        margin: 0 16px 12px;
+        padding: 6px 0;
+        background: none;
+        border: 1px solid #c9a96e;
+        border-radius: 4px;
+        color: #c9a96e;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .share-btn:hover {
+        background: #c9a96e;
+        color: #fff;
+    }
+    .share-btn:focus-visible {
+        outline: 2px solid #c9a96e;
+        outline-offset: 2px;
+    }
+
+    /* Modal styles */
+    .share-modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .share-modal {
+        background: #fff;
+        border-radius: 10px;
+        padding: 24px;
+        width: 90%;
+        max-width: 440px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    }
+    .share-modal-cancel {
+        padding: 8px 18px;
+        border: 1px solid #ddd;
+        background: #fff;
+        border-radius: 4px;
+        font-size: 14px;
+        cursor: pointer;
+        color: #666;
+    }
+    .share-modal-cancel:hover { background: #f5f5f5; }
+    .share-modal-send {
+        padding: 8px 18px;
+        border: none;
+        background: #c9a96e;
+        color: #fff;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .share-modal-send:hover { background: #b8944f; }
+
+    @media (max-width: 768px) {
+        .print-card {
+            width: calc(50% - 6px);
+        }
+        .pc-section-heading {
+            font-size: 14px;
+            letter-spacing: 1.5px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .print-card {
+            width: 100%;
+        }
+        .pc-grid {
+            gap: 10px;
+        }
+        .pc-section-heading {
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
     }
 </style>
+
+<script>
+function openShareModal(docType, docTitle) {
+    document.getElementById('shareDocType').value = docType;
+    document.getElementById('shareModalTitle').textContent = 'Share: ' + docTitle;
+    document.getElementById('shareEmail').value = '';
+    document.getElementById('shareName').value = '';
+    document.getElementById('shareMessage').value = '';
+    document.getElementById('shareModal').style.display = 'flex';
+    document.getElementById('shareEmail').focus();
+}
+
+function closeShareModal() {
+    document.getElementById('shareModal').style.display = 'none';
+}
+
+// Close on overlay click
+document.getElementById('shareModal').addEventListener('click', function(e) {
+    if (e.target === this) closeShareModal();
+});
+
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeShareModal();
+});
+</script>
 {% endblock %}

@@ -15,7 +15,7 @@
     {% if participants %}
 
     <!-- Print All button -->
-    <div style="text-align: center; margin-bottom: 25px;">
+    <div class="pt-actions" style="margin-bottom: 25px;">
         <a href="{{ url_for('print_all_personal_timelines', wedding_id=wedding.id) }}" class="btn-primary" style="display: inline-block; padding: 10px 24px; background: #8B7355; color: #fff; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 600;">Print All Timelines</a>
         <a href="{{ url_for('print_all_personal_timelines', wedding_id=wedding.id) }}?format=pdf" class="btn-primary" style="display: inline-block; padding: 10px 24px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 600; margin-left: 8px;">Download All as PDF</a>
     </div>
@@ -29,7 +29,7 @@
     <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #e8e2da; padding-bottom: 6px; margin-bottom: 12px; margin-top: 20px; color: #8B7355;">
         {{ cat_label }}
     </h2>
-    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+    <div class="pt-grid">
         {% for p in cat_participants|sort(attribute='name') %}
         <a href="{{ url_for('print_personal_timeline', wedding_id=wedding.id, participant_id=p.id) }}" class="pt-card">
             <div class="pt-name">{{ p.name }}</div>
@@ -49,7 +49,7 @@
     <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #e8e2da; padding-bottom: 6px; margin-bottom: 12px; margin-top: 20px; color: #8B7355;">
         Other
     </h2>
-    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+    <div class="pt-grid">
         {% for p in uncategorized|sort(attribute='name') %}
         <a href="{{ url_for('print_personal_timeline', wedding_id=wedding.id, participant_id=p.id) }}" class="pt-card">
             <div class="pt-name">{{ p.name }}</div>
@@ -71,6 +71,12 @@
 </div>
 
 <style>
+    .pt-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
     .pt-card {
         display: block;
         width: calc(33.333% - 7px);
@@ -81,6 +87,8 @@
         color: inherit;
         transition: all 0.2s;
         background: #fff;
+        min-height: 44px;
+        box-sizing: border-box;
     }
     .pt-card:hover {
         border-color: #c9a96e;
@@ -103,6 +111,42 @@
     .pt-meta {
         font-size: 11px;
         color: #bbb;
+    }
+    .pt-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+    }
+    .pt-actions a {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    @media (max-width: 768px) {
+        .pt-card {
+            width: calc(50% - 5px);
+        }
+    }
+
+    @media (max-width: 480px) {
+        .pt-card {
+            width: 100%;
+            padding: 12px 14px;
+        }
+        .pt-grid {
+            gap: 8px;
+        }
+        .pt-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .pt-actions a {
+            text-align: center;
+            justify-content: center;
+            margin-left: 0 !important;
+        }
     }
 </style>
 {% endblock %}
