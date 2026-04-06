@@ -1456,13 +1456,12 @@ footer p { margin: 0; }
    ============================================ */
 .seating-floor {
     position: relative;
-    min-height: 600px;
     background: linear-gradient(135deg, #faf7f2, #f5efe8);
     border: 2px dashed var(--color-border);
     border-radius: var(--radius-lg);
     padding: 1rem;
     margin-bottom: 2rem;
-    overflow: hidden;
+    overflow: auto;
 }
 .seating-table-card {
     position: absolute;

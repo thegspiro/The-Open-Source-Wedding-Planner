@@ -4029,6 +4029,67 @@ def guest_group_remove_guest(wedding_id, group_id, guest_id):
     return redirect(url_for('guest_groups_view', wedding_id=wedding_id))
 
 
+def compute_table_pixel_size(table, scale=1.4):
+    """Return (width_px, height_px) for a table at the given scale."""
+    ref = TABLE_SIZE_REFERENCE.get(table.table_size)
+    shape = table.table_shape or 'round'
+    cap = table.capacity
+    if ref:
+        if shape in ('round', 'oval'):
+            tw = ref.get('diameter', 60) * scale
+            th = tw if shape == 'round' else tw * 0.67
+        elif shape == 'rectangular':
+            tw = ref.get('length', 72) * scale
+            th = ref.get('width', 30) * scale
+        elif shape == 'square':
+            tw = ref.get('side', 48) * scale
+            th = tw
+        else:
+            tw = ref.get('length', 96) * scale
+            th = ref.get('width', 30) * scale
+    else:
+        if shape in ('round', 'oval'):
+            diameter = 24 + cap * 5
+            tw = diameter * scale
+            th = tw if shape == 'round' else tw * 0.67
+        elif shape in ('rectangular', 'serpentine'):
+            tw = (48 + max(0, cap - 4) * 12) * scale
+            th = 30 * scale
+        elif shape == 'square':
+            side = 24 + cap * 6
+            tw = side * scale
+            th = tw
+        else:
+            diameter = 24 + cap * 5
+            tw = diameter * scale
+            th = tw
+    return (round(tw), round(th))
+
+
+# Real-world spacing constants (inches)
+CHAIR_PUSHBACK_INCHES = 24   # space from table edge to back of pushed-out chair
+AISLE_CLEARANCE_INCHES = 42  # comfortable aisle between chair backs
+
+
+def compute_grid_position(index, table, scale=1.4, cols=4, offset_x=50, offset_y=50):
+    """Compute (x, y) position for a table in a grid layout with proper spacing.
+
+    Spacing accounts for table size + chair pushback + aisle clearance
+    so tables don't overlap on the canvas.
+    """
+    tw, th = compute_table_pixel_size(table, scale)
+    # Edge-to-edge clearance in pixels
+    clearance = (CHAIR_PUSHBACK_INCHES * 2 + AISLE_CLEARANCE_INCHES) * scale
+    # Cell size = table + surrounding clearance
+    cell_w = tw + clearance
+    cell_h = th + clearance
+    col = index % cols
+    row = index // cols
+    x = offset_x + col * cell_w
+    y = offset_y + row * cell_h
+    return (round(x), round(y))
+
+
 def compute_table_floor_data(tables, scale=1.4):
     """Compute SVG floor plan rendering data for a list of tables.
 
@@ -4237,9 +4298,51 @@ def seating_chart(wedding_id):
 
     table_floor_data = compute_table_floor_data(tables)
 
+    # Compute canvas size to fit all tables with padding
+    canvas_w = 900  # minimum width
+    canvas_h = 600  # minimum height
+    for table in tables:
+        fd = table_floor_data[table.id]
+        right = (table.x_position or 0) + fd['svg_w'] + 20
+        bottom = (table.y_position or 0) + fd['svg_h'] + 40
+        canvas_w = max(canvas_w, right)
+        canvas_h = max(canvas_h, bottom)
+
+    # Detect tables that are too close together (overlapping clearance zones)
+    import math
+    min_clearance_px = (CHAIR_PUSHBACK_INCHES * 2 + 24) * 1.4  # bare minimum: chairs + 24" passage
+    proximity_warnings = []
+    for i, t1 in enumerate(tables):
+        fd1 = table_floor_data[t1.id]
+        t1_cx = (t1.x_position or 0) + fd1['svg_w'] / 2
+        t1_cy = (t1.y_position or 0) + fd1['svg_h'] / 2
+        t1_rw = fd1['tw'] / 2
+        t1_rh = fd1['th'] / 2
+        for t2 in tables[i+1:]:
+            fd2 = table_floor_data[t2.id]
+            t2_cx = (t2.x_position or 0) + fd2['svg_w'] / 2
+            t2_cy = (t2.y_position or 0) + fd2['svg_h'] / 2
+            t2_rw = fd2['tw'] / 2
+            t2_rh = fd2['th'] / 2
+            dx = abs(t1_cx - t2_cx)
+            dy = abs(t1_cy - t2_cy)
+            # Edge-to-edge distance (approximate using axis-aligned bounding)
+            edge_dx = max(0, dx - t1_rw - t2_rw)
+            edge_dy = max(0, dy - t1_rh - t2_rh)
+            edge_dist = math.sqrt(edge_dx**2 + edge_dy**2)
+            if edge_dist < min_clearance_px:
+                t1_name = t1.table_name or f'Table {t1.table_number}'
+                t2_name = t2.table_name or f'Table {t2.table_number}'
+                real_inches = round(edge_dist / 1.4)
+                proximity_warnings.append(
+                    f'{t1_name} and {t2_name} are too close ({real_inches}" apart — need at least 84" for chairs + aisle)'
+                )
+
     return render_template('seating/chart.html', wedding=wedding, tables=tables,
                          unassigned_guests=unassigned, preferences=preferences,
                          violations=violations, lonely_guests=lonely_guests, stats=stats,
+                         proximity_warnings=proximity_warnings,
+                         canvas_w=round(canvas_w), canvas_h=round(canvas_h),
                          table_size_ref=TABLE_SIZE_REFERENCE, table_roles=TABLE_ROLES,
                          table_floor_data=table_floor_data)
 
@@ -4278,10 +4381,12 @@ def seating_table_add(wedding_id):
         table_shape=shape,
         table_size=size,
         table_role=request.form.get('table_role', 'guest'),
-        x_position=50 + (existing_count % 4) * 220,
-        y_position=50 + (existing_count // 4) * 200,
         notes=request.form.get('notes', '')
     )
+    # Compute proper grid position based on table dimensions
+    pos_x, pos_y = compute_grid_position(existing_count, table)
+    table.x_position = pos_x
+    table.y_position = pos_y
     db.session.add(table)
     db.session.commit()
     log_activity(wedding_id, 'added', 'table', f'Table {table_number}')
@@ -4336,6 +4441,13 @@ def seating_tables_bulk_add(wedding_id):
     ref = TABLE_SIZE_REFERENCE.get(preset, TABLE_SIZE_REFERENCE['round_60'])
 
     added = 0
+    grid_index = 0  # tracks position in the guest table grid
+    # Compute clearance for the selected table type
+    clearance_px = (CHAIR_PUSHBACK_INCHES * 2 + AISLE_CLEARANCE_INCHES) * 1.4
+
+    # Determine where guest tables start (below head table if present)
+    guest_start_y = 50
+
     # Optionally add head table first
     if include_head:
         existing += 1
@@ -4345,17 +4457,27 @@ def seating_tables_bulk_add(wedding_id):
             table_name='Head Table',
             capacity=request.form.get('head_capacity', 8, type=int),
             table_shape='rectangular',
-            table_size='banquet_8ft',
+            table_size='head_16ft',
             table_role='head',
-            x_position=350,
-            y_position=30,
         )
+        head_tw, head_th = compute_table_pixel_size(head)
+        head.x_position = 50
+        head.y_position = 30
+        guest_start_y = 30 + head_th + clearance_px
         db.session.add(head)
         added += 1
 
-    # Add guest tables in a grid layout
+    # Add guest tables in a grid layout with proper spacing
+    # Build a temporary table object to compute its pixel size
+    sample = SeatingTable(table_shape=ref['shape'], table_size=preset, capacity=ref['capacity'])
+    sample_tw, sample_th = compute_table_pixel_size(sample)
+    cell_w = sample_tw + clearance_px
+    cell_h = sample_th + clearance_px
+
     for i in range(count):
         existing += 1
+        col = i % 4
+        row = i // 4
         table = SeatingTable(
             reception_id=reception.id,
             table_number=str(existing),
@@ -4364,13 +4486,14 @@ def seating_tables_bulk_add(wedding_id):
             table_shape=ref['shape'],
             table_size=preset,
             table_role='guest',
-            x_position=50 + (i % 4) * 220,
-            y_position=180 + (i // 4) * 200,
+            x_position=round(50 + col * cell_w),
+            y_position=round(guest_start_y + row * cell_h),
         )
         db.session.add(table)
         added += 1
+        grid_index = i
 
-    # Optionally add kids table
+    # Optionally add kids table (placed after the last guest table)
     if include_kids:
         existing += 1
         kids = SeatingTable(
@@ -4381,9 +4504,12 @@ def seating_tables_bulk_add(wedding_id):
             table_shape='round',
             table_size='round_60',
             table_role='kids',
-            x_position=50 + (count % 4) * 220,
-            y_position=180 + (count // 4) * 200,
         )
+        next_i = grid_index + 1
+        kids_col = next_i % 4
+        kids_row = next_i // 4
+        kids.x_position = round(50 + kids_col * cell_w)
+        kids.y_position = round(guest_start_y + kids_row * cell_h)
         db.session.add(kids)
         added += 1
 

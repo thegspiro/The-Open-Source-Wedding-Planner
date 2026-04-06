@@ -56,6 +56,17 @@
 </div>
 {% endif %}
 
+{# Proximity Warnings #}
+{% if proximity_warnings %}
+<div class="budget-warnings" style="margin-bottom: 1.5rem; border-color: #f0c8a0; background: #fef8f0;">
+    <h3>Table Spacing Issues ({{ proximity_warnings|length }})</h3>
+    <p class="form-help" style="margin-top: 0;">These tables are too close for comfortable seating. Guests need room to push back chairs and walk between tables. Drag them apart on the floor plan or adjust positions.</p>
+    {% for warning in proximity_warnings %}
+    <div class="budget-warning" style="color: #8a6520;">{{ warning }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
 {# Lonely Guest Warnings #}
 {% if lonely_guests %}
 <div class="budget-warnings" style="margin-bottom: 1.5rem; border-color: #c9d1d9; background: #f6f8fa;">
@@ -205,7 +216,7 @@
     {% endif %}
 
     {% if tables %}
-    <div class="seating-floor" id="floor-plan">
+    <div class="seating-floor" id="floor-plan" style="min-width: {{ canvas_w }}px; min-height: {{ canvas_h }}px;">
         {% for table in tables %}
         {% set fd = table_floor_data[table.id] %}
         {% set assigned_count = table.assigned_guests|length %}
