@@ -4441,8 +4441,11 @@ def _render_or_pdf(template, filename, **context):
     """Render a template as HTML, or as a PDF download if ?format=pdf is in the query string."""
     html = render_template(template, **context)
     if request.args.get('format') == 'pdf':
-        from weasyprint import HTML
-        pdf = HTML(string=html).write_pdf()
+        from weasyprint import HTML, CSS
+        pdf = HTML(string=html).write_pdf(
+            stylesheets=[CSS(string='@media print { .print-btn { display: none !important; } }')],
+            presentational_hints=True
+        )
         response = make_response(pdf)
         response.headers['Content-Type'] = 'application/pdf'
         response.headers['Content-Disposition'] = f'attachment; filename={filename}'

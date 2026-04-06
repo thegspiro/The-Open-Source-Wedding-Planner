@@ -117,9 +117,14 @@
             border-top: 1px solid #ddd;
         }
 
+        @page {
+            size: letter;
+            margin: 0.6in 0.5in;
+        }
+
         @media print {
             .print-btn {
-                display: none;
+                display: none !important;
             }
 
             body {
@@ -131,6 +136,10 @@
             .shot-table td {
                 font-size: 11px;
                 padding: 4px 8px;
+            }
+
+            .shot-table thead {
+                display: table-header-group;
             }
 
             .print-header h1 {

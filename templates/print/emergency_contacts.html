@@ -66,8 +66,8 @@
         }
 
         .contact-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+            display: flex;
+            flex-wrap: wrap;
             gap: 12px;
             margin-bottom: 20px;
         }
@@ -76,6 +76,7 @@
             border: 1px solid #ccc;
             padding: 10px 14px;
             page-break-inside: avoid;
+            width: calc(50% - 6px);
         }
 
         .contact-card .contact-role {
@@ -107,9 +108,14 @@
             border-top: 1px solid #ddd;
         }
 
+        @page {
+            size: letter;
+            margin: 0.6in 0.5in;
+        }
+
         @media print {
             .print-btn {
-                display: none;
+                display: none !important;
             }
 
             body {

@@ -86,9 +86,14 @@
             border-top: 1px solid #ddd;
         }
 
+        @page {
+            size: letter landscape;
+            margin: 0.5in;
+        }
+
         @media print {
             .print-btn {
-                display: none;
+                display: none !important;
             }
 
             body {
@@ -100,6 +105,10 @@
             .vendor-table td {
                 font-size: 10px;
                 padding: 4px 6px;
+            }
+
+            .vendor-table thead {
+                display: table-header-group;
             }
 
             .print-header h1 {
