@@ -4,6 +4,31 @@ All notable changes to the Wedding Organizer are documented in this file.
 
 ---
 
+## [2.5.0] - 2026-04-06 — Installation Docs, Deployment Guides & Infrastructure
+
+### Added
+- **`.env.example`** - Environment configuration reference with all supported variables and examples for Gmail, Outlook, SendGrid, and Amazon SES
+- **`INSTALL.md`** - Comprehensive installation guide covering Docker, local development, production deployment, database backups, and updating
+- **`docs/DEPLOYMENT-GUIDES.md`** - Platform-specific deployment guides for Unraid (3 methods), Proxmox (LXC, VM, bare metal), Synology NAS, Kubernetes (full manifests), Raspberry Pi, VPS (DigitalOcean/Linode/Hetzner), TrueNAS Scale, and Docker Swarm
+- **`docs/REVERSE-PROXY.md`** - Ready-to-use reverse proxy configurations for Nginx + Let's Encrypt, Traefik (automatic SSL), Caddy (simplest SSL), and Cloudflare Tunnel
+- **`scripts/backup.sh`** - Automated database backup and restore script with rotation (keeps last 30 backups), cron-ready
+- **`CONTRIBUTING.md`** - Developer guide with local setup, project structure, code style, database migration guidance, and PR process
+- **`/health` endpoint** - Returns application and database health status (200 healthy / 503 unhealthy) for monitoring and container orchestration
+- **`HEALTHCHECK` in Dockerfile** - Container health monitoring that polls `/health` every 30 seconds
+- **Multi-architecture Docker build instructions** - Documentation for building images for amd64, arm64, and armv7 using Docker Buildx
+- **Startup SECRET_KEY warning** - Application logs a warning with fix instructions when running with a default insecure secret key
+
+### Changed
+- **`docker-compose.yml`** - Added optional `.env` file support (`required: false` for backwards compatibility), SECRET_KEY now reads from environment with fallback
+- **`app.py`** - Activated `python-dotenv` (`load_dotenv()`) so `.env` files work for both Docker and local development
+- **`README.md`** - Updated Quick Start with git clone and `.env` setup, reorganized documentation section with links to all new guides, added backup instructions
+- **`QUICKSTART.md`** - Updated email section to use `.env` instead of editing `docker-compose.yml`, added setup instructions for Outlook, SendGrid, and Amazon SES, updated help links
+- **`TROUBLESHOOTING.md`** - Added sections for health check usage, SECRET_KEY warning resolution, and backup/restore documentation
+- **`docs/WIKI.md`** - Updated project structure to include new files and directories
+- **`.gitignore`** - Added `backups/` directory
+
+---
+
 ## [2.4.0] - 2026-03-04 — Social Group Tagging for Smarter Seating
 
 ### Added
