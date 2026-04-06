@@ -17,6 +17,9 @@ from models import (
     TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES,
     INVENTORY_CATEGORIES, INVENTORY_AREAS
 )
+from dotenv import load_dotenv
+load_dotenv()
+
 import random
 from datetime import datetime, timedelta, date
 import os
@@ -35,6 +38,14 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///wedding_organizer.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+if app.config['SECRET_KEY'] in ('dev-secret-key-change-in-production', 'your-secret-key-change-in-production', 'change-me-to-a-random-secret-key'):
+    import logging
+    logging.warning(
+        '*** WARNING: Using default SECRET_KEY. This is insecure for production! ***\n'
+        '    Generate a key:  python3 -c "import secrets; print(secrets.token_hex(32))"\n'
+        '    Then set it:     Copy .env.example to .env and update SECRET_KEY'
+    )
 
 db.init_app(app)
 

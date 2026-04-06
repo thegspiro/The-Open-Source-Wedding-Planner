@@ -212,6 +212,72 @@ docker-compose up -d --build
 docker-compose logs -f
 ```
 
+### Checking application health
+
+The application exposes a `/health` endpoint for monitoring:
+
+```bash
+# Check health from the host
+curl http://localhost:5000/health
+
+# Check Docker's built-in health status
+docker inspect --format='{{.State.Health.Status}}' wedding-organizer
+```
+
+**Healthy response:** `{"status": "healthy", "database": "connected"}`
+**Unhealthy response:** `{"status": "unhealthy", "database": "...error..."}` (HTTP 503)
+
+### SECRET_KEY warning in logs
+
+**Symptom:** Logs show `WARNING: Using default SECRET_KEY. This is insecure for production!`
+
+**Cause:** You're running with the default secret key, which is insecure.
+
+**Fix:**
+```bash
+# Generate a secure key
+python3 -c "import secrets; print(secrets.token_hex(32))"
+
+# Copy .env.example and set the key
+cp .env.example .env
+# Edit .env and paste your generated key as SECRET_KEY=...
+
+# Restart
+docker-compose restart
+```
+
+---
+
+## Backups & Data Recovery
+
+### Creating and restoring backups
+
+A backup script is included at `scripts/backup.sh`:
+
+```bash
+# Make executable (first time only)
+chmod +x scripts/backup.sh
+
+# Create a backup
+./scripts/backup.sh
+
+# Restore from the latest backup
+./scripts/backup.sh --restore latest
+
+# Restore from a specific file
+./scripts/backup.sh --restore backups/wedding_organizer_20260101_020000.db
+```
+
+### Automating daily backups
+
+```bash
+# Add to crontab for daily backups at 2 AM
+crontab -e
+0 2 * * * /path/to/the-open-source-wedding-planner/scripts/backup.sh
+```
+
+The script keeps the last 30 backups and automatically cleans up older ones.
+
 ---
 
 ## Performance Notes

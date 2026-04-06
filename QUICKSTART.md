@@ -4,9 +4,17 @@
 
 ### Step 1: Start the Application
 ```bash
-cd wedding-organizer
+git clone https://github.com/thegspiro/the-open-source-wedding-planner.git
+cd the-open-source-wedding-planner
+
+# Configure (recommended)
+cp .env.example .env
+# Edit .env and set a secure SECRET_KEY
+
 docker-compose up -d
 ```
+
+> **Tip:** Generate a secret key with: `python3 -c "import secrets; print(secrets.token_hex(32))"`
 
 ### Step 2: Access the Application
 Open: **http://localhost:5000**
