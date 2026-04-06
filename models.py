@@ -339,13 +339,27 @@ SUGGESTED_GROUP_TYPES = [
 
 # Table size reference data (inches)
 TABLE_SIZE_REFERENCE = {
+    # Round tables
     'round_48': {'shape': 'round', 'label': '48" Round', 'capacity': 6, 'diameter': 48},
     'round_60': {'shape': 'round', 'label': '60" Round (5ft)', 'capacity': 8, 'diameter': 60},
     'round_72': {'shape': 'round', 'label': '72" Round (6ft)', 'capacity': 10, 'diameter': 72},
     'round_84': {'shape': 'round', 'label': '84" Round (7ft)', 'capacity': 12, 'diameter': 84},
+    # Standard banquet tables (30" wide, chairs on long sides)
+    'banquet_4ft': {'shape': 'rectangular', 'label': '4ft Banquet', 'capacity': 4, 'length': 48, 'width': 30},
     'banquet_6ft': {'shape': 'rectangular', 'label': '6ft Banquet', 'capacity': 6, 'length': 72, 'width': 30},
     'banquet_8ft': {'shape': 'rectangular', 'label': '8ft Banquet', 'capacity': 8, 'length': 96, 'width': 30},
+    # Long / farm / harvest tables
+    'farm_10ft': {'shape': 'rectangular', 'label': '10ft Farm Table', 'capacity': 10, 'length': 120, 'width': 36},
+    'farm_12ft': {'shape': 'rectangular', 'label': '12ft Farm Table', 'capacity': 12, 'length': 144, 'width': 36},
+    'farm_16ft': {'shape': 'rectangular', 'label': '16ft Harvest Table', 'capacity': 16, 'length': 192, 'width': 36},
+    # King's tables (wider, for bridal party)
     'kings_8ft': {'shape': 'rectangular', 'label': "8ft King's Table", 'capacity': 10, 'length': 96, 'width': 42},
+    'kings_12ft': {'shape': 'rectangular', 'label': "12ft King's Table", 'capacity': 14, 'length': 144, 'width': 42},
+    # Head table (one-sided seating, longer)
+    'head_12ft': {'shape': 'rectangular', 'label': '12ft Head Table', 'capacity': 6, 'length': 144, 'width': 30, 'one_sided': True},
+    'head_16ft': {'shape': 'rectangular', 'label': '16ft Head Table', 'capacity': 8, 'length': 192, 'width': 30, 'one_sided': True},
+    'head_24ft': {'shape': 'rectangular', 'label': '24ft Head Table', 'capacity': 12, 'length': 288, 'width': 30, 'one_sided': True},
+    # Other shapes
     'square_48': {'shape': 'square', 'label': '48" Square', 'capacity': 4, 'side': 48},
     'sweetheart': {'shape': 'round', 'label': 'Sweetheart (couple)', 'capacity': 2, 'diameter': 36},
 }

@@ -4087,6 +4087,8 @@ def compute_table_floor_data(tables, scale=1.4):
         cy = svg_h / 2
 
         chairs = []
+        one_sided = ref.get('one_sided', False) if ref else False
+
         if shape in ('round', 'oval'):
             rx = tw / 2 + CHAIR_GAP
             ry = th / 2 + CHAIR_GAP
@@ -4095,24 +4097,48 @@ def compute_table_floor_data(tables, scale=1.4):
                 x = round(cx + rx * math.cos(angle), 1)
                 y = round(cy + ry * math.sin(angle), 1)
                 chairs.append({'x': x, 'y': y, 'filled': i < assigned_count})
-        else:
-            perimeter = 2 * (tw + th)
+        elif shape == 'square':
+            # Square: distribute evenly around all 4 sides
+            perimeter = 4 * tw
             spacing = perimeter / cap if cap > 0 else perimeter
             for i in range(cap):
                 dist = spacing * i + spacing / 2
                 if dist < tw:
-                    x = PAD + dist
-                    y = PAD - CHAIR_GAP
-                elif dist < tw + th:
-                    x = PAD + tw + CHAIR_GAP
-                    y = PAD + (dist - tw)
-                elif dist < 2 * tw + th:
-                    x = PAD + tw - (dist - tw - th)
-                    y = PAD + th + CHAIR_GAP
+                    x, y = PAD + dist, PAD - CHAIR_GAP
+                elif dist < 2 * tw:
+                    x, y = PAD + tw + CHAIR_GAP, PAD + (dist - tw)
+                elif dist < 3 * tw:
+                    x, y = PAD + tw - (dist - 2 * tw), PAD + tw + CHAIR_GAP
                 else:
-                    x = PAD - CHAIR_GAP
-                    y = PAD + th - (dist - 2 * tw - th)
+                    x, y = PAD - CHAIR_GAP, PAD + tw - (dist - 3 * tw)
                 chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': i < assigned_count})
+        else:
+            # Rectangular/serpentine: chairs along long sides only
+            if one_sided:
+                # Head table: all chairs on one side (front, facing audience)
+                spacing = tw / cap if cap > 0 else tw
+                for i in range(cap):
+                    x = PAD + spacing * i + spacing / 2
+                    y = PAD + th + CHAIR_GAP
+                    chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': i < assigned_count})
+            else:
+                # Standard banquet: split chairs between top and bottom long sides
+                top_count = cap // 2
+                bottom_count = cap - top_count
+                # Top side (left to right)
+                if top_count > 0:
+                    spacing = tw / top_count
+                    for i in range(top_count):
+                        x = PAD + spacing * i + spacing / 2
+                        y = PAD - CHAIR_GAP
+                        chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': len(chairs) < assigned_count})
+                # Bottom side (left to right)
+                if bottom_count > 0:
+                    spacing = tw / bottom_count
+                    for i in range(bottom_count):
+                        x = PAD + spacing * i + spacing / 2
+                        y = PAD + th + CHAIR_GAP
+                        chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': len(chairs) < assigned_count})
 
         result[table.id] = {
             'tw': tw, 'th': th,
