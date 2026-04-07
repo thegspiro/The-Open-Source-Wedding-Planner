@@ -441,3 +441,89 @@ PLANNING_MILESTONE_TASKS = [
     ('Delegate day-of responsibilities', 'Assign tasks to your wedding party and coordinator.', 'ceremony', 'high', 0),
     ('Rehearsal and rehearsal dinner', 'Walk through the ceremony and enjoy dinner with your wedding party.', 'ceremony', 'high', 0),
 ]
+
+# ============================================
+# CEREMONY ELEMENT TASKS
+# Maps traditional element names to auto-generated tasks
+# Each task: (title, description, category, priority, months_before)
+# ============================================
+
+CEREMONY_ELEMENT_TASKS = {
+    'Unity Candle': [
+        ('Purchase unity candle set', 'Buy a pillar candle and two taper candles. Consider colors that match your wedding palette.', 'ceremony', 'medium', 2),
+        ('Confirm venue allows open flames', 'Check with your venue coordinator about their policy on open flames and candles during the ceremony.', 'ceremony', 'high', 3),
+        ('Coordinate unity candle with officiant', 'Discuss the timing and placement of the unity candle ceremony with your officiant.', 'ceremony', 'medium', 2),
+        ('Assign candle lighters', 'Decide who will light the individual taper candles (traditionally mothers of the couple).', 'ceremony', 'low', 1),
+    ],
+    'Sand Ceremony': [
+        ('Purchase sand ceremony set', 'Buy two colors of sand and a unity vessel. Choose colors that match your wedding palette.', 'ceremony', 'medium', 2),
+        ('Practice sand pouring', 'Do a test run to get comfortable with the pouring technique and timing.', 'ceremony', 'low', 1),
+        ('Set up sand ceremony table', 'Arrange for a small table at the ceremony venue for the sand vessels.', 'ceremony', 'medium', 1),
+    ],
+    'Handfasting': [
+        ('Choose handfasting cord or ribbon', 'Select cord, ribbon, or rope — often in your wedding colors. Consider material and length.', 'ceremony', 'medium', 2),
+        ('Coordinate handfasting with officiant', 'Walk through the wrapping technique and blessing wording with your officiant.', 'ceremony', 'medium', 2),
+        ('Practice handfasting ceremony', 'Rehearse the hand positioning and cord wrapping to feel comfortable on the day.', 'ceremony', 'low', 1),
+    ],
+    'Breaking the Glass': [
+        ('Get glass and cloth napkin for breaking ceremony', 'Purchase a thin wine glass and a sturdy cloth napkin to wrap it in.', 'ceremony', 'low', 1),
+        ('Coordinate glass breaking with officiant', 'Confirm placement and timing — typically the final moment of the ceremony.', 'ceremony', 'medium', 2),
+    ],
+    'Rose Ceremony': [
+        ('Purchase roses for rose ceremony', 'Buy two roses (color of your choice) for the exchange during the ceremony.', 'ceremony', 'low', 1),
+        ('Write personal promises for rose exchange', 'Draft what you will say when presenting the rose to your partner.', 'ceremony', 'medium', 2),
+    ],
+    'Tea Ceremony': [
+        ('Purchase tea ceremony set', 'Buy a traditional tea set and special tea for the ceremony.', 'ceremony', 'medium', 3),
+        ('Coordinate with family elders', 'Confirm which family members will participate and the seating order.', 'ceremony', 'high', 2),
+        ('Prepare red envelopes', 'Prepare red envelopes for elder participants to give to the couple.', 'ceremony', 'medium', 1),
+        ('Practice tea ceremony', 'Rehearse the kneeling, serving, and receiving with your partner.', 'ceremony', 'low', 1),
+    ],
+    'Jumping the Broom': [
+        ('Purchase or make a decorated broom', 'Get a broom and decorate it with ribbons, flowers, or fabric in your wedding colors.', 'ceremony', 'medium', 2),
+        ('Coordinate broom placement with venue', 'Arrange for the broom to be placed at the ceremony site at the right moment.', 'ceremony', 'low', 1),
+    ],
+    'Lasso Ceremony': [
+        ('Purchase or make wedding lasso', 'Buy a lasso (rope, rosary, or floral garland) — often gifted by sponsors.', 'ceremony', 'medium', 2),
+        ('Select lasso sponsors', 'Choose the sponsors (padrinos) who will place the lasso around you during the ceremony.', 'ceremony', 'medium', 3),
+        ('Coordinate lasso ceremony with officiant', 'Discuss placement timing and the blessing that accompanies the lasso.', 'ceremony', 'medium', 2),
+    ],
+    'First Dance': [
+        ('Choose your first dance song', 'Pick a song that is meaningful to you as a couple.', 'reception', 'medium', 3),
+        ('Book dance lessons if desired', 'Consider a few dance lessons to feel confident on the dance floor.', 'reception', 'low', 3),
+        ('Coordinate first dance with DJ/band', 'Share your song choice and any special requests with your DJ or band.', 'reception', 'medium', 1),
+    ],
+    'Parent Dances': [
+        ('Choose parent dance songs', 'Select songs for dances with parents or special family members.', 'reception', 'medium', 2),
+        ('Confirm parent dance participants', 'Confirm who will participate and let them know the song choices.', 'reception', 'medium', 1),
+    ],
+    'Cake Cutting': [
+        ('Order wedding cake', 'Schedule tastings and order your wedding cake.', 'reception', 'high', 4),
+        ('Get cake cutting set', 'Purchase or rent a cake knife and server set.', 'reception', 'low', 1),
+        ('Coordinate cake delivery with venue', 'Confirm timing and setup details for cake delivery on the wedding day.', 'reception', 'medium', 1),
+    ],
+    'Bouquet Toss': [
+        ('Get tossing bouquet', 'Order a smaller, separate bouquet for tossing (to preserve your main bouquet).', 'reception', 'low', 1),
+        ('Coordinate timing with DJ/MC', 'Let your DJ or MC know when you want the bouquet toss in the reception schedule.', 'reception', 'low', 1),
+    ],
+    'Garter Toss': [
+        ('Purchase wedding garter', 'Buy a garter — many couples get two: one to toss and one to keep.', 'reception', 'low', 2),
+    ],
+    'Honor Attendant Toast': [
+        ('Confirm toast speakers', 'Confirm who will give toasts and let them know the expected timing.', 'reception', 'medium', 2),
+        ('Coordinate microphone and timing with DJ', 'Ensure your DJ has a mic ready and knows when toasts happen in the schedule.', 'reception', 'low', 1),
+    ],
+    'Money Dance': [
+        ('Prepare pins and collection materials', 'Get pins or a collection bag for the money dance.', 'reception', 'low', 1),
+        ('Assign helpers for money dance', 'Designate wedding party members to help collect and manage money during the dance.', 'reception', 'low', 1),
+    ],
+    'Grand Entrance': [
+        ('Plan entrance order and music', 'Decide the order of the wedding party entrance and choose upbeat music.', 'reception', 'medium', 1),
+        ('Coordinate entrance with DJ/MC', 'Give your DJ the list of names, order, and pronunciation guide.', 'reception', 'medium', 1),
+    ],
+    'Hora Dance': [
+        ('Confirm sturdy chairs for hora', 'Make sure the venue has two sturdy chairs that can support being lifted.', 'reception', 'medium', 1),
+        ('Coordinate hora with DJ/band', 'Ensure the band or DJ has the right music and knows when to start.', 'reception', 'low', 1),
+        ('Brief chair lifters', 'Identify 8+ strong guests who will lift the chairs and let them know ahead of time.', 'reception', 'medium', 1),
+    ],
+}
