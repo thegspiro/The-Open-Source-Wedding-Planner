@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Social Media & Hashtag - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Social Media & Hashtag</h1>
+</div>
+
+<p class="form-help">Set your wedding hashtag, unplugged ceremony preferences, and photo sharing policy. These can be displayed on your wedding signage.</p>
+
+<div class="form-container">
+    <form method="POST">
+        <!-- Hashtag Section -->
+        <h2 style="font-family: var(--font-heading); margin: 1rem 0;">Wedding Hashtag</h2>
+        <div class="form-group">
+            <label>Wedding Hashtag</label>
+            <input type="text" name="wedding_hashtag" value="{{ settings.wedding_hashtag or '' if settings else '' }}" placeholder="e.g., #JamieAndAlexForever">
+            <small class="form-help">Tip: Combine names, date, or a pun. Check Instagram/Twitter to make sure it's unique!</small>
+        </div>
+        <div class="form-group">
+            <label>Backup Hashtag Ideas</label>
+            <textarea name="backup_hashtags" rows="2" placeholder="Other options you considered...">{{ settings.backup_hashtags or '' if settings else '' }}</textarea>
+        </div>
+
+        <!-- Unplugged Ceremony -->
+        <h2 style="font-family: var(--font-heading); margin: 2rem 0 1rem;">Unplugged Ceremony</h2>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="unplugged_ceremony" {% if settings and settings.unplugged_ceremony %}checked{% endif %}>
+                Request an unplugged ceremony (guests put phones away)
+            </label>
+        </div>
+        <div class="form-group">
+            <label>Unplugged Ceremony Message</label>
+            <textarea name="unplugged_message" rows="3" placeholder="Custom wording for your sign or officiant announcement...">{{ settings.unplugged_message or '' if settings else '' }}</textarea>
+        </div>
+
+        {% if unplugged_templates %}
+        <div class="module-section" style="margin: 1rem 0;">
+            <h3>Sample Wording Templates</h3>
+            {% for style, text in unplugged_templates %}
+            <div style="padding: 0.75rem; margin-bottom: 0.5rem; background: var(--color-card-bg); border-radius: 8px; border: 1px solid var(--color-border);">
+                <strong>{{ style|title }}:</strong>
+                <p style="margin: 0.25rem 0 0; font-style: italic; color: var(--color-text-muted);">{{ text }}</p>
+                <button type="button" class="btn-small btn-secondary" style="margin-top: 0.5rem;" onclick="document.querySelector('textarea[name=unplugged_message]').value = '{{ text|replace("'", "\\'") }}'">Use This</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Social Sharing Policy -->
+        <h2 style="font-family: var(--font-heading); margin: 2rem 0 1rem;">Social Media Sharing Policy</h2>
+        <div class="form-group">
+            <label>Sharing Policy</label>
+            <select name="social_sharing_policy">
+                {% for value, label in sharing_policies %}
+                <option value="{{ value }}" {% if settings and settings.social_sharing_policy == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Custom Message (optional)</label>
+            <textarea name="sharing_policy_message" rows="2" placeholder="Additional instructions for guests about social media...">{{ settings.sharing_policy_message or '' if settings else '' }}</textarea>
+        </div>
+
+        <!-- Photo Sharing -->
+        <h2 style="font-family: var(--font-heading); margin: 2rem 0 1rem;">Guest Photo Sharing</h2>
+        <div class="form-group">
+            <label>Photo Sharing App</label>
+            <input type="text" name="photo_sharing_app" value="{{ settings.photo_sharing_app or '' if settings else '' }}" placeholder="e.g., Wedding Share, The Guest, WedPics">
+            <small class="form-help">We recommend <a href="https://hub.docker.com/r/cirx08/wedding_share" target="_blank">Wedding Share</a> -- a free, self-hosted photo sharing app you can run alongside this planner via Docker.</small>
+        </div>
+        <div class="form-group">
+            <label>Photo Sharing URL / QR Link</label>
+            <input type="text" name="photo_sharing_url" value="{{ settings.photo_sharing_url or '' if settings else '' }}" placeholder="URL for guests to upload photos">
+        </div>
+        <div class="form-group">
+            <label>Photo Sharing Notes</label>
+            <textarea name="photo_sharing_notes" rows="2" placeholder="Instructions for guests, QR code placement, etc.">{{ settings.photo_sharing_notes or '' if settings else '' }}</textarea>
+        </div>
+
+        <!-- General Notes -->
+        <div class="form-group">
+            <label>Additional Notes</label>
+            <textarea name="notes" rows="2">{{ settings.notes or '' if settings else '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Settings</button>
+            <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

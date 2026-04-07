@@ -55,6 +55,7 @@
 <div class="tabs" id="budget-tabs">
     <button class="tab-btn active" onclick="switchTab(event, 'expenses-tab')">Expenses</button>
     <button class="tab-btn" onclick="switchTab(event, 'limits-tab')">Category Limits {% if limit_warnings %}<span class="tab-count" style="background: var(--color-danger-bg); color: var(--color-danger);">{{ limit_warnings|length }}</span>{% endif %}</button>
+    <button class="tab-btn" onclick="switchTab(event, 'hidden-tab')">Hidden Costs {% if hidden_cost_suggestions|length > 5 %}<span class="tab-count" style="background: var(--color-warning-bg, #fff8e1); color: var(--color-warning, #f57c00);">{{ hidden_cost_suggestions|length }}</span>{% endif %}</button>
     <button class="tab-btn" onclick="switchTab(event, 'templates-tab')">Templates</button>
     <button class="tab-btn" onclick="switchTab(event, 'settings-tab')">Budget Settings</button>
 </div>
@@ -284,6 +285,42 @@
             <button type="submit" class="btn-primary btn-small" style="margin-bottom: 0;">Set</button>
         </form>
     </div>
+</div>
+
+<!-- Tab: Hidden Costs -->
+<div class="tab-panel" id="hidden-tab" data-print-title="Hidden Cost Reminders">
+    <p class="form-help" style="margin-bottom: 1.25rem;">These are costs that couples commonly forget to budget for. Click "Add to Budget" to add any item as an expense line.</p>
+    {% if hidden_cost_suggestions %}
+    <table class="data-table">
+        <thead>
+            <tr><th>Hidden Cost</th><th>Category</th><th>Why It Matters</th><th>Typical Cost</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for item in hidden_cost_suggestions %}
+            <tr>
+                <td><strong>{{ item.name }}</strong></td>
+                <td><span class="category-badge">{{ item.category }}</span></td>
+                <td><small>{{ item.description }}</small></td>
+                <td>${{ "{:,.0f}".format(item.typical_cost) }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('budget_add_hidden_cost', wedding_id=wedding.id) }}" class="form-inline">
+                        <input type="hidden" name="item_name" value="{{ item.name }}">
+                        <input type="hidden" name="category" value="{{ item.category }}">
+                        <input type="hidden" name="estimated_cost" value="{{ item.typical_cost }}">
+                        <input type="hidden" name="description" value="{{ item.description }}">
+                        <button type="submit" class="btn-primary btn-small">Add to Budget</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <h2>All Covered!</h2>
+        <p>You've already budgeted for all the commonly forgotten costs. Great planning!</p>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Tab: Templates -->

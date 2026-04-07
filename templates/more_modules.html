@@ -22,6 +22,9 @@
     <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">📅</div><h3>Day-Of Timeline</h3><p class="stat-label">Master wedding day schedule</p>
     </a>
+    <a href="{{ url_for('timeline_analysis', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🔍</div><h3>Timeline Analysis</h3><p class="stat-label">Buffer warnings &amp; gap detection</p>
+    </a>
     <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">🗓️</div><h3>Individual Itineraries</h3><p class="stat-label">Per-person schedules &amp; handler view</p>
     </a>
@@ -75,6 +78,9 @@
     </a>
     <a href="{{ url_for('hair_makeup_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">💇</div><h3>Hair &amp; Makeup</h3><p class="stat-label">Beauty appointments</p>
+    </a>
+    <a href="{{ url_for('social_media_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">#️⃣</div><h3>Social Media &amp; Hashtag</h3><p class="stat-label">Hashtag, unplugged policy &amp; photo sharing</p>
     </a>
 </div>
 
@@ -159,6 +165,9 @@
     </a>
     <a href="{{ url_for('contingency_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">🛡️</div><h3>Contingency Plans</h3><p class="stat-label">Backup plans &amp; emergencies</p>
+    </a>
+    <a href="{{ url_for('accessibility_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">♿</div><h3>Accessibility</h3><p class="stat-label">Guest accommodations &amp; access</p>
     </a>
     <a href="{{ url_for('day_of_contacts_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">📞</div><h3>Day-of Contacts &amp; Tasks</h3><p class="stat-label">Contact sheet &amp; task delegation</p>

@@ -15,11 +15,14 @@ from models import (
     InventoryItem, InventoryBin, EmergencyKitItem,
     PreWeddingEvent, SignageItem, DayOfContact, DayOfTask,
     PackingListItem, NameChangeTask, CustomRsvpQuestion, CustomRsvpAnswer,
+    AccessibilityItem, SocialMediaSettings,
     BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES,
     TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES, VenueFixture, VENUE_FIXTURE_TYPES,
     INVENTORY_CATEGORIES, INVENTORY_AREAS,
     PRE_WEDDING_EVENT_TYPES, DEFAULT_SIGNAGE_ITEMS, DEFAULT_DAY_OF_TASKS,
-    DEFAULT_PACKING_LIST, DEFAULT_NAME_CHANGE_TASKS
+    DEFAULT_PACKING_LIST, DEFAULT_NAME_CHANGE_TASKS,
+    HIDDEN_COST_REMINDERS, DEFAULT_ACCESSIBILITY_CHECKLIST,
+    UNPLUGGED_CEREMONY_TEMPLATES, SOCIAL_SHARING_POLICIES
 )
 from flask_migrate import Migrate
 from dotenv import load_dotenv
@@ -1935,10 +1938,25 @@ def budget_view(wedding_id):
                 'over': spent - cl.limit_amount
             })
 
+    # Hidden cost reminders - check which ones aren't budgeted
+    existing_categories = set(e.category.lower() for e in expenses)
+    existing_items = set(e.item_name.lower() for e in expenses)
+    hidden_cost_suggestions = []
+    for name, category, description, typical_cost in HIDDEN_COST_REMINDERS:
+        # Only suggest if not already in budget
+        if name.lower() not in existing_items and not any(name.lower() in item for item in existing_items):
+            hidden_cost_suggestions.append({
+                'name': name,
+                'category': category,
+                'description': description,
+                'typical_cost': typical_cost
+            })
+
     return render_template('budget/view.html', wedding=wedding, budget=budget,
                          expenses=expenses, stats=stats, module_costs=module_costs,
                          category_limits=category_limits, category_spending=category_spending,
-                         limit_warnings=limit_warnings)
+                         limit_warnings=limit_warnings,
+                         hidden_cost_suggestions=hidden_cost_suggestions)
 
 @app.route('/wedding/<int:wedding_id>/budget/update', methods=['POST'])
 @login_required
@@ -7906,6 +7924,236 @@ def custom_rsvp_questions_delete(wedding_id, question_id):
     db.session.commit()
     flash('Question removed.', 'success')
     return redirect(url_for('custom_rsvp_questions_view', wedding_id=wedding_id))
+
+
+# ============================================
+# HIDDEN COST QUICK-ADD TO BUDGET
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/budget/add-hidden-cost', methods=['POST'])
+@login_required
+def budget_add_hidden_cost(wedding_id):
+    """Quick-add a hidden cost suggestion to the budget."""
+    wedding = get_wedding_or_403(wedding_id)
+    if not wedding.budget:
+        budget = Budget(wedding_id=wedding_id, total_budget=0)
+        db.session.add(budget)
+        db.session.commit()
+    expense = BudgetExpense(
+        budget_id=wedding.budget.id,
+        category=request.form.get('category'),
+        item_name=request.form.get('item_name'),
+        estimated_cost=request.form.get('estimated_cost', type=float),
+        payment_status='unpaid',
+        notes=request.form.get('description')
+    )
+    db.session.add(expense)
+    db.session.commit()
+    flash(f'Added "{expense.item_name}" to your budget!', 'success')
+    return redirect(url_for('budget_view', wedding_id=wedding_id))
+
+
+# ============================================
+# GUEST ACCESSIBILITY PLANNER
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/accessibility')
+@login_required
+def accessibility_view(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    items = AccessibilityItem.query.filter_by(wedding_id=wedding.id).all()
+    categories = {}
+    for item in items:
+        cat = item.category or 'other'
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append(item)
+    total = len(items)
+    arranged = sum(1 for i in items if i.status in ('arranged', 'confirmed'))
+    return render_template('accessibility/view.html', wedding=wedding, items=items,
+                         categories=categories, total=total, arranged=arranged)
+
+@app.route('/wedding/<int:wedding_id>/accessibility/add', methods=['GET', 'POST'])
+@login_required
+def accessibility_add(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    if request.method == 'POST':
+        item = AccessibilityItem(
+            wedding_id=wedding.id,
+            item_name=request.form.get('item_name'),
+            category=request.form.get('category'),
+            assigned_to=request.form.get('assigned_to'),
+            cost=request.form.get('cost', type=float),
+            vendor=request.form.get('vendor'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash('Accessibility item added!', 'success')
+        return redirect(url_for('accessibility_view', wedding_id=wedding_id))
+    return render_template('accessibility/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/accessibility/<int:item_id>/toggle', methods=['POST'])
+@login_required
+def accessibility_toggle(wedding_id, item_id):
+    wedding = get_wedding_or_403(wedding_id)
+    item = AccessibilityItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    status_cycle = ['needed', 'arranged', 'confirmed']
+    try:
+        idx = status_cycle.index(item.status)
+        item.status = status_cycle[(idx + 1) % len(status_cycle)]
+    except ValueError:
+        item.status = 'needed'
+    db.session.commit()
+    return redirect(url_for('accessibility_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/accessibility/<int:item_id>/delete', methods=['POST'])
+@login_required
+def accessibility_delete(wedding_id, item_id):
+    wedding = get_wedding_or_403(wedding_id)
+    item = AccessibilityItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Item removed.', 'success')
+    return redirect(url_for('accessibility_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/accessibility/populate-defaults', methods=['POST'])
+@login_required
+def accessibility_populate_defaults(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    for item_name, category, notes in DEFAULT_ACCESSIBILITY_CHECKLIST:
+        existing = AccessibilityItem.query.filter_by(wedding_id=wedding.id, item_name=item_name).first()
+        if not existing:
+            item = AccessibilityItem(wedding_id=wedding.id, item_name=item_name,
+                                    category=category, notes=notes)
+            db.session.add(item)
+    db.session.commit()
+    flash('Default accessibility checklist populated!', 'success')
+    return redirect(url_for('accessibility_view', wedding_id=wedding_id))
+
+
+# ============================================
+# WEDDING HASHTAG & SOCIAL MEDIA
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/social-media', methods=['GET', 'POST'])
+@login_required
+def social_media_view(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    settings = wedding.social_media
+    if request.method == 'POST':
+        if not settings:
+            settings = SocialMediaSettings(wedding_id=wedding.id)
+            db.session.add(settings)
+        settings.wedding_hashtag = request.form.get('wedding_hashtag', '').strip()
+        settings.backup_hashtags = request.form.get('backup_hashtags', '').strip()
+        settings.unplugged_ceremony = request.form.get('unplugged_ceremony') == 'on'
+        settings.unplugged_message = request.form.get('unplugged_message', '').strip()
+        settings.social_sharing_policy = request.form.get('social_sharing_policy', 'open')
+        settings.sharing_policy_message = request.form.get('sharing_policy_message', '').strip()
+        settings.photo_sharing_app = request.form.get('photo_sharing_app', '').strip()
+        settings.photo_sharing_url = request.form.get('photo_sharing_url', '').strip()
+        settings.photo_sharing_notes = request.form.get('photo_sharing_notes', '').strip()
+        settings.notes = request.form.get('notes', '').strip()
+        db.session.commit()
+        flash('Social media settings saved!', 'success')
+        return redirect(url_for('social_media_view', wedding_id=wedding_id))
+    return render_template('social_media/view.html', wedding=wedding, settings=settings,
+                         unplugged_templates=UNPLUGGED_CEREMONY_TEMPLATES,
+                         sharing_policies=SOCIAL_SHARING_POLICIES)
+
+
+# ============================================
+# TIMELINE BUFFER WARNINGS
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/timeline-analysis')
+@login_required
+def timeline_analysis(wedding_id):
+    """Analyze the day-of timeline for common issues: gaps, missing buffers, overtime risks."""
+    wedding = get_wedding_or_403(wedding_id)
+    items = sorted(wedding.day_of_items, key=lambda x: (x.time or datetime.min.time(), x.order))
+
+    warnings = []
+    tips = []
+
+    # Only analyze if there are timed items
+    timed_items = [i for i in items if i.time]
+
+    if len(timed_items) < 2:
+        tips.append({
+            'type': 'info',
+            'title': 'Add More Timeline Items',
+            'message': 'Add at least a few timed items to your day-of timeline for analysis (e.g., getting ready, ceremony, photos, reception).'
+        })
+    else:
+        # Check for gaps between consecutive items
+        for i in range(len(timed_items) - 1):
+            current = timed_items[i]
+            next_item = timed_items[i + 1]
+            current_minutes = current.time.hour * 60 + current.time.minute
+            next_minutes = next_item.time.hour * 60 + next_item.time.minute
+            gap = next_minutes - current_minutes
+
+            if gap > 90:
+                warnings.append({
+                    'type': 'gap',
+                    'title': f'Large gap: {gap} minutes',
+                    'message': f'Between "{current.title}" ({current.time.strftime("%I:%M %p")}) and "{next_item.title}" ({next_item.time.strftime("%I:%M %p")}). Guests may lose momentum during long gaps. Consider adding cocktail hour entertainment or activities.',
+                    'severity': 'warning'
+                })
+            elif gap < 10 and gap >= 0:
+                warnings.append({
+                    'type': 'buffer',
+                    'title': f'No buffer: only {gap} minutes',
+                    'message': f'Between "{current.title}" and "{next_item.title}". Add 15-30 minutes of buffer time. Hair/makeup runs long, guests arrive late, and photos take longer than expected.',
+                    'severity': 'danger'
+                })
+
+        # Check total timeline length vs typical vendor contracts (8-10 hours)
+        first_time = timed_items[0].time
+        last_time = timed_items[-1].time
+        total_minutes = (last_time.hour * 60 + last_time.minute) - (first_time.hour * 60 + first_time.minute)
+        total_hours = total_minutes / 60
+
+        if total_hours > 10:
+            warnings.append({
+                'type': 'overtime',
+                'title': f'Timeline spans {total_hours:.1f} hours',
+                'message': 'Most vendor contracts cover 8-10 hours. Overtime fees are typically $100-500/hour per vendor. Check your contracts and add overtime costs to your budget.',
+                'severity': 'warning'
+            })
+
+        # Check for common missing elements
+        categories = set(i.category for i in items if i.category)
+        titles_lower = ' '.join(i.title.lower() for i in items)
+
+        if 'prep' not in categories and 'getting ready' not in titles_lower and 'hair' not in titles_lower:
+            tips.append({'type': 'missing', 'title': 'Getting Ready Time',
+                        'message': 'No getting-ready block found. Hair and makeup typically takes 3-5 hours for the full party. The person getting married should finish first (not last) to allow 45-60 minutes before dressing.'})
+
+        if 'photos' not in categories and 'portrait' not in titles_lower and 'photo' not in titles_lower:
+            tips.append({'type': 'missing', 'title': 'Portrait Session',
+                        'message': 'No photo session found. Plan 30-40 min for family formals, 20-30 min for bridal party, and 30-45 min for couple portraits. Reserve 15-20 min for golden hour/sunset shots.'})
+
+        if 'first look' not in titles_lower:
+            tips.append({'type': 'suggestion', 'title': 'Consider a First Look',
+                        'message': 'A first look (45-60 min before ceremony) lets you do portraits before the ceremony, reducing the gap between ceremony and reception.'})
+
+        if 'cocktail' not in titles_lower and 'reception' in categories:
+            tips.append({'type': 'missing', 'title': 'Cocktail Hour',
+                        'message': 'No cocktail hour found. This fills the gap while the couple does post-ceremony photos. Plan entertainment, appetizers, and drinks.'})
+
+        if 'send' not in titles_lower and 'exit' not in titles_lower and 'departure' not in titles_lower:
+            tips.append({'type': 'suggestion', 'title': 'Plan Your Exit',
+                        'message': 'No send-off/exit planned. Sparklers, bubbles, or a grand exit make for great photos and a memorable ending.'})
+
+    return render_template('day_of/analysis.html', wedding=wedding,
+                         warnings=warnings, tips=tips, items=timed_items)
 
 
 # Start reminder thread:

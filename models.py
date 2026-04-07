@@ -1262,21 +1262,34 @@ BUDGET_TEMPLATES = {
 # ============================================
 
 POST_WEDDING_TASKS = [
-    ('Send thank-you notes for gifts', 'gifts', 'high'),
-    ('Preserve wedding dress/attire', 'attire', 'medium'),
-    ('Back up all wedding photos and videos', 'photography', 'high'),
-    ('Return rental items (suits, decor, etc.)', 'vendors', 'high'),
-    ('Review and rate vendors', 'vendors', 'medium'),
-    ('Submit name change paperwork (if applicable)', 'legal', 'high'),
-    ('Update driver\'s license and Social Security card', 'legal', 'medium'),
-    ('Update bank accounts and insurance', 'legal', 'medium'),
-    ('File marriage certificate', 'legal', 'high'),
-    ('Update emergency contacts', 'legal', 'low'),
-    ('Write reviews for vendors online', 'vendors', 'low'),
-    ('Create a wedding photo album', 'photography', 'low'),
-    ('Return or exchange duplicate gifts', 'gifts', 'low'),
+    # Immediate (within 1 week)
+    ('File marriage certificate with county clerk', 'legal', 'high'),
+    ('Preserve wedding dress/suit (clean within 2 weeks before stains set)', 'attire', 'high'),
+    ('Back up all wedding photos and videos to cloud storage', 'photography', 'high'),
     ('Send final vendor payments if outstanding', 'budget', 'high'),
+    ('Return rental items (suits, decor, equipment) before deadlines', 'vendors', 'high'),
+    ('Collect guest photos from phones, texts, and social media', 'photography', 'high'),
     ('Donate or preserve wedding flowers', 'flowers', 'low'),
+    ('Pack up leftover favors, decorations, and supplies', 'vendors', 'medium'),
+    # Within 1 month
+    ('Send thank-you notes for gifts (aim for within 3 months)', 'gifts', 'high'),
+    ('Review and rate vendors online (Google, Yelp, The Knot)', 'vendors', 'medium'),
+    ('Return or exchange duplicate/unwanted gifts', 'gifts', 'medium'),
+    ('Submit name change paperwork if applicable (start with SSA)', 'legal', 'high'),
+    ('Update driver\'s license and state ID', 'legal', 'medium'),
+    ('Update passport (takes 6-8 weeks)', 'legal', 'medium'),
+    ('Update bank accounts and credit cards', 'legal', 'medium'),
+    ('Update insurance policies (health, auto, home)', 'legal', 'medium'),
+    ('Update employer/HR records and payroll', 'legal', 'medium'),
+    ('Update beneficiaries on all accounts', 'legal', 'medium'),
+    ('Update emergency contacts everywhere', 'legal', 'low'),
+    # Within 3 months
+    ('Create a wedding photo album', 'photography', 'low'),
+    ('Write reviews for all vendors', 'vendors', 'low'),
+    ('Organize and store guest book, cards, and keepsakes', 'gifts', 'low'),
+    ('Update voter registration', 'legal', 'low'),
+    ('Update subscription services and memberships', 'legal', 'low'),
+    ('Schedule bouquet/boutonniere preservation if desired', 'flowers', 'low'),
 ]
 
 # ============================================
@@ -1698,3 +1711,115 @@ class CustomRsvpAnswer(db.Model):
 
     question = db.relationship('CustomRsvpQuestion', backref=db.backref('answers', lazy=True, cascade='all, delete-orphan'))
     guest = db.relationship('Guest', backref=db.backref('custom_rsvp_answers', lazy=True, cascade='all, delete-orphan'))
+
+
+# ============================================
+# HIDDEN COST REMINDERS
+# ============================================
+
+HIDDEN_COST_REMINDERS = [
+    ('Vendor Meals', 'Catering', 'Photographers, videographers, DJ, band, planner all need meals. Budget $30-90 per vendor.', 150),
+    ('Vendor Overtime', 'Vendors', 'Overtime fees of $100-500/hr per vendor if your event runs long. Add buffer.', 300),
+    ('Service Charges / Gratuity', 'Venue', 'Many venues add 15-25% service charge on top of quoted prices.', 500),
+    ('Corkage Fee', 'Venue', 'Fee charged by venue if you bring your own alcohol. Typically $15-35 per bottle.', 200),
+    ('Cake Cutting Fee', 'Venue', 'Some venues charge $1-3 per slice to cut and plate your cake.', 150),
+    ('Wedding Insurance', 'Insurance', 'Liability and cancellation coverage. Typically $150-500.', 300),
+    ('Event Permits', 'Venue', 'Required for outdoor venues, parks, historical sites. $50-250+.', 100),
+    ('Postage', 'Stationery', 'Save-the-dates, invitations, RSVP cards, thank-you notes. Budget per stamp.', 150),
+    ('Dress/Suit Alterations', 'Attire', 'Alterations often cost $200-800 on top of purchase price.', 400),
+    ('Dress Preservation & Cleaning', 'Attire', 'Post-wedding professional cleaning and preservation. $150-500.', 250),
+    ('Beauty Prep (Trials)', 'Beauty', 'Hair trial, makeup trial, manicure, spray tan, teeth whitening, facials.', 300),
+    ('Welcome Bags', 'Hospitality', 'Gift bags for hotel guests with snacks, water, local info. $5-15 per bag.', 200),
+    ('Wedding Party Gifts', 'Gifts', 'Bridesmaids, groomsmen, parents, flower girl, ring bearer gifts.', 500),
+    ('Parent Gifts', 'Gifts', 'Thank-you gifts for parents of the couple.', 200),
+    ('Day-of Emergency Fund', 'Emergency', 'Cash for tips, unexpected costs. Recommend 5% of total budget.', 500),
+    ('Valet / Parking', 'Transportation', 'Valet service or parking attendant fees if venue has limited parking.', 300),
+    ('Guest Shuttles', 'Transportation', 'Shuttle service between hotel and venue. $500-2000.', 800),
+    ('Non-Preferred Vendor Fee', 'Venue', 'Some venues charge 15-25% surcharge for vendors not on their preferred list.', 400),
+    ('Garbage Removal / Cleanup', 'Venue', 'Post-event cleaning and garbage removal. $150-500.', 250),
+    ('Extra Tables Rental', 'Rentals', 'Gift table, guest book table, place cards, cocktail hour tables.', 150),
+    ('Dance Floor Rental', 'Rentals', 'Portable dance floor if venue does not have one. $200-800.', 400),
+    ('Late-Night Snacks', 'Catering', 'Pizza, sliders, fries, or snacks for late-night dancing guests.', 300),
+    ('Rehearsal Dinner', 'Events', 'Often forgotten in main wedding budget. Can be $1000-5000+.', 2000),
+    ('Thank-You Cards', 'Stationery', 'Cards and postage for post-wedding thank-you notes.', 100),
+    ('Marriage License Fee', 'Legal', 'Application fee varies by county. $20-100.', 50),
+    ('Certified Copies', 'Legal', 'Additional certified copies of marriage certificate. $10-25 each.', 30),
+]
+
+
+# ============================================
+# GUEST ACCESSIBILITY PLANNER
+# ============================================
+
+class AccessibilityItem(db.Model):
+    """Track accessibility needs and accommodations for guests."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    item_name = db.Column(db.String(300), nullable=False)
+    category = db.Column(db.String(50))  # mobility, hearing, vision, sensory, dietary, seating, other
+    status = db.Column(db.String(20), default='needed')  # needed, arranged, confirmed
+    assigned_to = db.Column(db.String(200))  # who is responsible
+    cost = db.Column(db.Float)
+    vendor = db.Column(db.String(200))  # vendor or provider
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('accessibility_items', lazy=True, cascade='all, delete-orphan'))
+
+
+DEFAULT_ACCESSIBILITY_CHECKLIST = [
+    ('Wheelchair accessible entrance and pathways', 'mobility', 'Check that all ceremony and reception areas are wheelchair accessible'),
+    ('Accessible restrooms available', 'mobility', 'Verify ADA-compliant restrooms are available at the venue'),
+    ('Reserved parking near entrance for disabled guests', 'mobility', 'Designate accessible parking spots close to the venue entrance'),
+    ('Ramps available where there are steps', 'mobility', 'Ensure portable ramps are available if venue has stairs'),
+    ('Seating near exits for mobility-impaired guests', 'seating', 'Reserve end-of-row or near-exit seats for guests with mobility needs'),
+    ('Microphone for ceremony (hearing-impaired guests)', 'hearing', 'Ensure sound system amplifies vows and readings clearly'),
+    ('Sign language interpreter (if needed)', 'hearing', 'Book interpreter through Registry of Interpreters for the Deaf'),
+    ('Large-print programs and signage (16pt+ Sans Serif)', 'vision', 'Use Arial, Verdana, or Tahoma at 16pt minimum for readability'),
+    ('Well-lit pathways and signage', 'vision', 'Ensure all walkways and signs are adequately illuminated'),
+    ('Quiet/sensory-friendly break room', 'sensory', 'Designate a quiet space away from music for overwhelmed or neurodivergent guests'),
+    ('Allergen labels on all food stations', 'dietary', 'Label every dish with common allergens (nuts, dairy, gluten, shellfish)'),
+    ('Accommodation disclosure on RSVP', 'other', 'Add a field on RSVP for guests to share accessibility needs'),
+    ('Chairs available during cocktail hour', 'seating', 'Provide ample seating during standing portions of the event'),
+    ('Service animal accommodations', 'other', 'Ensure venue allows service animals and has a relief area'),
+    ('Low centerpieces at accessible tables', 'seating', 'Avoid tall arrangements that block sightlines for seated wheelchair users'),
+]
+
+
+# ============================================
+# WEDDING HASHTAG & SOCIAL MEDIA
+# ============================================
+
+class SocialMediaSettings(db.Model):
+    """Wedding social media preferences and hashtag."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    wedding_hashtag = db.Column(db.String(200))
+    backup_hashtags = db.Column(db.Text)  # JSON array of alternatives
+    unplugged_ceremony = db.Column(db.Boolean, default=False)
+    unplugged_message = db.Column(db.Text)  # Custom wording for unplugged ceremony sign/announcement
+    social_sharing_policy = db.Column(db.String(50), default='open')  # open, wait_for_couple, no_posting
+    sharing_policy_message = db.Column(db.Text)  # Custom message about when/what guests can share
+    photo_sharing_app = db.Column(db.String(200))  # e.g., "Wedding Share", "The Guest", etc.
+    photo_sharing_url = db.Column(db.String(500))  # URL or QR code link
+    photo_sharing_notes = db.Column(db.Text)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('social_media', uselist=False, cascade='all, delete-orphan'))
+
+
+UNPLUGGED_CEREMONY_TEMPLATES = [
+    ('polite', 'Welcome! We invite you to be fully present during our ceremony. Please silence your phones and put away cameras. Our professional photographer will capture every moment for us to share with you later.'),
+    ('friendly', 'We are so happy you are here! We kindly ask that you turn off your phones and cameras during the ceremony so everyone can be fully present. We promise to share photos!'),
+    ('direct', 'This is an unplugged ceremony. Please turn off all phones, cameras, and recording devices. We want to see your faces, not your screens! Photos will be shared after the wedding.'),
+    ('humorous', 'Unless you are our photographer, please put your phone away! We hired a professional for a reason. Plus, no one looks good lit by a phone screen. Enjoy the moment!'),
+    ('short', 'Unplugged ceremony. Phones off, love on.'),
+]
+
+SOCIAL_SHARING_POLICIES = [
+    ('open', 'Share freely! Post photos and videos anytime.'),
+    ('wait_for_couple', 'Please wait to post until the couple shares first (usually 24-48 hours after the wedding).'),
+    ('no_posting', 'We kindly request no social media posts from our wedding. We want to keep it private.'),
+    ('hashtag_only', 'Feel free to post using our wedding hashtag so we can find your photos!'),
+]

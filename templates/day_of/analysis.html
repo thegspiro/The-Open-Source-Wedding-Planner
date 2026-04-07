@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Timeline Analysis - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Timeline Analysis</h1>
+    <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-secondary">View Timeline</a>
+</div>
+
+<p class="form-help">Smart analysis of your day-of timeline to catch common planning mistakes: missing buffers, long gaps, overtime risks, and forgotten elements.</p>
+
+{% if warnings %}
+<h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem;">Warnings ({{ warnings|length }})</h2>
+{% for w in warnings %}
+<div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid {% if w.severity == 'danger' %}var(--color-danger){% else %}var(--color-warning){% endif %}; background: {% if w.severity == 'danger' %}var(--color-danger-bg, #fce4ec){% else %}var(--color-warning-bg, #fff8e1){% endif %};">
+    <strong>{{ w.title }}</strong>
+    <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">{{ w.message }}</p>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if tips %}
+<h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem;">Tips & Suggestions ({{ tips|length }})</h2>
+{% for t in tips %}
+<div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+    <strong>{{ t.title }}</strong>
+    <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">{{ t.message }}</p>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if not warnings and not tips %}
+<div class="empty-state">
+    <h2>Timeline Looks Good!</h2>
+    <p>No major issues detected. Make sure you have adequate buffer time between events and check vendor contract hours.</p>
+</div>
+{% endif %}
+
+{% if items %}
+<h2 style="font-family: var(--font-heading); margin: 2rem 0 1rem;">Your Timeline ({{ items|length }} timed items)</h2>
+<table class="data-table">
+    <thead>
+        <tr><th>Time</th><th>Event</th><th>Category</th><th>Location</th></tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td><strong>{{ item.time.strftime('%I:%M %p') }}</strong></td>
+            <td>{{ item.title }}{% if item.description %}<br><small class="expense-note">{{ item.description }}</small>{% endif %}</td>
+            <td><span class="category-badge">{{ item.category or 'other' }}</span></td>
+            <td>{{ item.location or '-' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Timeline</a>
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}
