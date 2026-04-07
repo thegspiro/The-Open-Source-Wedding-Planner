@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Wedding Day Packing List - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Wedding Day Packing List</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('packing_list_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Item</a>
+        <form method="POST" action="{{ url_for('packing_list_populate_defaults', wedding_id=wedding.id) }}" class="form-inline">
+            <button type="submit" class="btn-secondary btn-small">Load Default List</button>
+        </form>
+    </div>
+</div>
+
+<p class="form-help">Everything you need to bring on the big day. Beyond your emergency kit -- this covers rings, documents, ceremony supplies, reception items, and personal essentials.</p>
+
+{% if items %}
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-num">{{ packed }}/{{ total }}</div>
+        <div class="stat-label">Packed</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ total - packed }}</div>
+        <div class="stat-label">Remaining</div>
+    </div>
+</div>
+
+{% set category_labels = {'documents': 'Documents & Paperwork', 'ceremony': 'Ceremony Items', 'reception': 'Reception Items', 'attire': 'Attire & Clothing', 'accessories': 'Accessories & Jewelry', 'personal': 'Personal Items', 'gifts': 'Gifts & Cards', 'other': 'Other'} %}
+
+{% for cat, cat_items in categories.items() %}
+<div class="module-section">
+    <h2>{{ category_labels.get(cat, cat|title) }} ({{ cat_items|selectattr('packed')|list|length }}/{{ cat_items|length }})</h2>
+    {% for item in cat_items %}
+    <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--color-border);">
+        <form method="POST" action="{{ url_for('packing_list_toggle', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline">
+            <button type="submit" class="btn-small {% if item.packed %}btn-success{% else %}btn-secondary{% endif %}">
+                {% if item.packed %}Packed{% else %}Pack{% endif %}
+            </button>
+        </form>
+        <div style="flex: 1;">
+            <span {% if item.packed %}style="text-decoration: line-through; opacity: 0.6;"{% endif %}>{{ item.item_name }}</span>
+            {% if item.assigned_to %}<small> ({{ item.assigned_to }})</small>{% endif %}
+            {% if item.notes %}<br><small class="expense-note">{{ item.notes }}</small>{% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('packing_list_delete', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline">
+            <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete?')">Delete</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+{% else %}
+<div class="empty-state">
+    <h2>No Packing List Yet</h2>
+    <p>Load our default list of 44 commonly forgotten wedding day items, or add your own.</p>
+    <div class="form-actions">
+        <form method="POST" action="{{ url_for('packing_list_populate_defaults', wedding_id=wedding.id) }}" class="form-inline">
+            <button type="submit" class="btn-primary">Load Default List (44 items)</button>
+        </form>
+        <a href="{{ url_for('packing_list_add', wedding_id=wedding.id) }}" class="btn-secondary">Add Custom Item</a>
+    </div>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

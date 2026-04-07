@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Custom RSVP Questions - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Custom RSVP Questions</h1>
+    <a href="{{ url_for('custom_rsvp_questions_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Question</a>
+</div>
+
+<p class="form-help">Add custom questions to your RSVP form beyond the standard meal choice and dietary restrictions. Great for song requests, transportation needs, accessibility requirements, and more.</p>
+
+{% if questions %}
+<div class="module-section">
+    {% for q in questions %}
+    <div class="dashboard-card">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div>
+                <h3>{{ q.question_text }}</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Type:</strong> {{ q.question_type|title }}
+                    </div>
+                    {% if q.required %}
+                    <div class="info-item">
+                        <span class="category-badge" style="background: var(--color-warning);">Required</span>
+                    </div>
+                    {% endif %}
+                    <div class="info-item">
+                        <strong>Status:</strong> {% if q.active %}Active{% else %}Inactive{% endif %}
+                    </div>
+                    {% if q.options %}
+                    <div class="info-item">
+                        <strong>Options:</strong>
+                        {% for opt in q.options|from_json if q.options %}
+                            <span class="category-badge">{{ opt }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if q.answers %}
+                    <div class="info-item">
+                        <strong>Responses:</strong> {{ q.answers|length }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="form-actions">
+            <form method="POST" action="{{ url_for('custom_rsvp_questions_toggle', wedding_id=wedding.id, question_id=q.id) }}" class="form-inline">
+                <button type="submit" class="btn-small {% if q.active %}btn-success{% else %}btn-secondary{% endif %}">
+                    {% if q.active %}Active{% else %}Inactive{% endif %}
+                </button>
+            </form>
+            <form method="POST" action="{{ url_for('custom_rsvp_questions_delete', wedding_id=wedding.id, question_id=q.id) }}" class="form-inline">
+                <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this question and all its answers?')">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Custom Questions Yet</h2>
+    <p>Add questions like "Any song requests?", "Will you need shuttle service?", or "Any accessibility needs?"</p>
+    <a href="{{ url_for('custom_rsvp_questions_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Question</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

@@ -13,9 +13,13 @@ from models import (
     VendorNote, VendorQuote, SpeechToast, WeddingFavor,
     ActivityLog, Comment,
     InventoryItem, InventoryBin, EmergencyKitItem,
+    PreWeddingEvent, SignageItem, DayOfContact, DayOfTask,
+    PackingListItem, NameChangeTask, CustomRsvpQuestion, CustomRsvpAnswer,
     BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES,
     TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES, VenueFixture, VENUE_FIXTURE_TYPES,
-    INVENTORY_CATEGORIES, INVENTORY_AREAS
+    INVENTORY_CATEGORIES, INVENTORY_AREAS,
+    PRE_WEDDING_EVENT_TYPES, DEFAULT_SIGNAGE_ITEMS, DEFAULT_DAY_OF_TASKS,
+    DEFAULT_PACKING_LIST, DEFAULT_NAME_CHANGE_TASKS
 )
 from flask_migrate import Migrate
 from dotenv import load_dotenv
@@ -245,6 +249,17 @@ def load_logged_in_user():
         g.user = None
     else:
         g.user = db.session.get(User, user_id)
+
+
+@app.template_filter('from_json')
+def from_json_filter(value):
+    """Parse a JSON string into a Python object for use in templates."""
+    if not value:
+        return []
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return []
 
 
 @app.context_processor
@@ -3379,8 +3394,9 @@ def rsvp_portal(token):
     menu_items = []
     if wedding.reception and wedding.reception.menu_items:
         menu_items = [m for m in wedding.reception.menu_items if m.course == 'entree']
+    custom_questions = CustomRsvpQuestion.query.filter_by(wedding_id=wedding.id, active=True).order_by(CustomRsvpQuestion.order).all()
     return render_template('rsvp/portal.html', wedding=wedding, guests=guests,
-                         menu_items=menu_items, token=token)
+                         menu_items=menu_items, token=token, custom_questions=custom_questions)
 
 @app.route('/rsvp/<token>/submit', methods=['POST'])
 @rate_limit(max_requests=20, window_seconds=3600)
@@ -3427,6 +3443,18 @@ def rsvp_submit(token):
                        plus_one_of=guest_name, rsvp_status='accepted',
                        guest_token=generate_token())
             db.session.add(po)
+
+    # Save custom RSVP question answers
+    custom_questions = CustomRsvpQuestion.query.filter_by(wedding_id=wedding.id, active=True).all()
+    for q in custom_questions:
+        answer_text = request.form.get(f'custom_q_{q.id}', '').strip()
+        if answer_text:
+            existing_answer = CustomRsvpAnswer.query.filter_by(question_id=q.id, guest_id=guest.id).first()
+            if existing_answer:
+                existing_answer.answer_text = answer_text
+            else:
+                answer = CustomRsvpAnswer(question_id=q.id, guest_id=guest.id, answer_text=answer_text)
+                db.session.add(answer)
 
     db.session.commit()
 
@@ -7292,6 +7320,540 @@ def emergency_kit_reset(wedding_id):
     seed_default_emergency_kit(wedding.id)
     flash('Emergency kit reset to defaults.', 'success')
     return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+
+# ============================================
+# PRE-WEDDING EVENTS
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/pre-wedding-events')
+@login_required
+def pre_wedding_events_view(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    events = PreWeddingEvent.query.filter_by(wedding_id=wedding.id).order_by(PreWeddingEvent.date).all()
+    return render_template('pre_wedding_events/view.html', wedding=wedding, events=events,
+                         event_types=PRE_WEDDING_EVENT_TYPES)
+
+@app.route('/wedding/<int:wedding_id>/pre-wedding-events/add', methods=['GET', 'POST'])
+@login_required
+def pre_wedding_events_add(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    if request.method == 'POST':
+        event = PreWeddingEvent(
+            wedding_id=wedding.id,
+            event_type=request.form.get('event_type'),
+            name=request.form.get('name'),
+            time=request.form.get('time'),
+            end_time=request.form.get('end_time'),
+            venue_name=request.form.get('venue_name'),
+            venue_address=request.form.get('venue_address'),
+            host_name=request.form.get('host_name'),
+            host_phone=request.form.get('host_phone'),
+            host_email=request.form.get('host_email'),
+            expected_guest_count=request.form.get('expected_guest_count', type=int),
+            estimated_cost=request.form.get('estimated_cost', type=float),
+            notes=request.form.get('notes'),
+            status=request.form.get('status', 'planning')
+        )
+        if request.form.get('date'):
+            event.date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
+        db.session.add(event)
+        db.session.commit()
+        flash('Pre-wedding event added!', 'success')
+        return redirect(url_for('pre_wedding_events_view', wedding_id=wedding_id))
+    return render_template('pre_wedding_events/add.html', wedding=wedding,
+                         event_types=PRE_WEDDING_EVENT_TYPES)
+
+@app.route('/wedding/<int:wedding_id>/pre-wedding-events/<int:event_id>/edit', methods=['GET', 'POST'])
+@login_required
+def pre_wedding_events_edit(wedding_id, event_id):
+    wedding = get_wedding_or_403(wedding_id)
+    event = PreWeddingEvent.query.get_or_404(event_id)
+    if event.wedding_id != wedding.id:
+        abort(403)
+    if request.method == 'POST':
+        event.event_type = request.form.get('event_type')
+        event.name = request.form.get('name')
+        event.time = request.form.get('time')
+        event.end_time = request.form.get('end_time')
+        event.venue_name = request.form.get('venue_name')
+        event.venue_address = request.form.get('venue_address')
+        event.host_name = request.form.get('host_name')
+        event.host_phone = request.form.get('host_phone')
+        event.host_email = request.form.get('host_email')
+        event.expected_guest_count = request.form.get('expected_guest_count', type=int)
+        event.estimated_cost = request.form.get('estimated_cost', type=float)
+        event.actual_cost = request.form.get('actual_cost', type=float)
+        event.notes = request.form.get('notes')
+        event.status = request.form.get('status')
+        if request.form.get('date'):
+            event.date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
+        else:
+            event.date = None
+        db.session.commit()
+        flash('Event updated!', 'success')
+        return redirect(url_for('pre_wedding_events_view', wedding_id=wedding_id))
+    return render_template('pre_wedding_events/edit.html', wedding=wedding, event=event,
+                         event_types=PRE_WEDDING_EVENT_TYPES)
+
+@app.route('/wedding/<int:wedding_id>/pre-wedding-events/<int:event_id>/delete', methods=['POST'])
+@login_required
+def pre_wedding_events_delete(wedding_id, event_id):
+    wedding = get_wedding_or_403(wedding_id)
+    event = PreWeddingEvent.query.get_or_404(event_id)
+    if event.wedding_id != wedding.id:
+        abort(403)
+    db.session.delete(event)
+    db.session.commit()
+    flash('Event removed.', 'success')
+    return redirect(url_for('pre_wedding_events_view', wedding_id=wedding_id))
+
+
+# ============================================
+# WEDDING SIGNAGE CHECKLIST
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/signage')
+@login_required
+def signage_view(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    items = SignageItem.query.filter_by(wedding_id=wedding.id).all()
+    ceremony_items = [i for i in items if i.category == 'ceremony']
+    reception_items = [i for i in items if i.category == 'reception']
+    directional_items = [i for i in items if i.category == 'directional']
+    other_items = [i for i in items if i.category not in ('ceremony', 'reception', 'directional')]
+    stats = {
+        'total': len(items),
+        'completed': sum(1 for i in items if i.status == 'received' or i.status == 'placed'),
+        'total_cost': sum(i.cost or 0 for i in items)
+    }
+    return render_template('signage/view.html', wedding=wedding, items=items,
+                         ceremony_items=ceremony_items, reception_items=reception_items,
+                         directional_items=directional_items, other_items=other_items, stats=stats)
+
+@app.route('/wedding/<int:wedding_id>/signage/add', methods=['GET', 'POST'])
+@login_required
+def signage_add(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    if request.method == 'POST':
+        item = SignageItem(
+            wedding_id=wedding.id,
+            name=request.form.get('name'),
+            category=request.form.get('category'),
+            description=request.form.get('description'),
+            location=request.form.get('location'),
+            size=request.form.get('size'),
+            material=request.form.get('material'),
+            vendor=request.form.get('vendor'),
+            cost=request.form.get('cost', type=float),
+            status=request.form.get('status', 'needed'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash('Sign added!', 'success')
+        return redirect(url_for('signage_view', wedding_id=wedding_id))
+    return render_template('signage/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/signage/populate-defaults', methods=['POST'])
+@login_required
+def signage_populate_defaults(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    for name, category, description, location in DEFAULT_SIGNAGE_ITEMS:
+        existing = SignageItem.query.filter_by(wedding_id=wedding.id, name=name).first()
+        if not existing:
+            item = SignageItem(wedding_id=wedding.id, name=name, category=category,
+                             description=description, location=location, status='needed')
+            db.session.add(item)
+    db.session.commit()
+    flash('Default signage checklist populated!', 'success')
+    return redirect(url_for('signage_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/signage/<int:item_id>/toggle', methods=['POST'])
+@login_required
+def signage_toggle(wedding_id, item_id):
+    wedding = get_wedding_or_403(wedding_id)
+    item = SignageItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    # Cycle: needed -> ordered -> received -> placed -> needed
+    status_cycle = ['needed', 'ordered', 'received', 'placed']
+    try:
+        idx = status_cycle.index(item.status)
+        item.status = status_cycle[(idx + 1) % len(status_cycle)]
+    except ValueError:
+        item.status = 'needed'
+    db.session.commit()
+    return redirect(url_for('signage_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/signage/<int:item_id>/delete', methods=['POST'])
+@login_required
+def signage_delete(wedding_id, item_id):
+    wedding = get_wedding_or_403(wedding_id)
+    item = SignageItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Sign removed.', 'success')
+    return redirect(url_for('signage_view', wedding_id=wedding_id))
+
+
+# ============================================
+# DAY-OF CONTACT SHEET & TASK DELEGATION
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/day-of-contacts')
+@login_required
+def day_of_contacts_view(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    contacts = DayOfContact.query.filter_by(wedding_id=wedding.id).all()
+    tasks = DayOfTask.query.filter_by(wedding_id=wedding.id).all()
+    vendor_contacts = [c for c in contacts if c.category == 'vendor']
+    party_contacts = [c for c in contacts if c.category == 'wedding_party']
+    family_contacts = [c for c in contacts if c.category == 'family']
+    other_contacts = [c for c in contacts if c.category not in ('vendor', 'wedding_party', 'family')]
+    setup_tasks = [t for t in tasks if t.category == 'setup']
+    during_tasks = [t for t in tasks if t.category == 'during']
+    breakdown_tasks = [t for t in tasks if t.category == 'breakdown']
+    emergency_tasks = [t for t in tasks if t.category == 'emergency']
+    return render_template('day_of_contacts/view.html', wedding=wedding,
+                         contacts=contacts, tasks=tasks,
+                         vendor_contacts=vendor_contacts, party_contacts=party_contacts,
+                         family_contacts=family_contacts, other_contacts=other_contacts,
+                         setup_tasks=setup_tasks, during_tasks=during_tasks,
+                         breakdown_tasks=breakdown_tasks, emergency_tasks=emergency_tasks)
+
+@app.route('/wedding/<int:wedding_id>/day-of-contacts/add', methods=['GET', 'POST'])
+@login_required
+def day_of_contacts_add(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    if request.method == 'POST':
+        contact = DayOfContact(
+            wedding_id=wedding.id,
+            name=request.form.get('name'),
+            role=request.form.get('role'),
+            category=request.form.get('category'),
+            phone=request.form.get('phone'),
+            email=request.form.get('email'),
+            arrival_time=request.form.get('arrival_time'),
+            departure_time=request.form.get('departure_time'),
+            setup_location=request.form.get('setup_location'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(contact)
+        db.session.commit()
+        flash('Contact added!', 'success')
+        return redirect(url_for('day_of_contacts_view', wedding_id=wedding_id))
+    return render_template('day_of_contacts/add_contact.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/day-of-contacts/<int:contact_id>/delete', methods=['POST'])
+@login_required
+def day_of_contacts_delete(wedding_id, contact_id):
+    wedding = get_wedding_or_403(wedding_id)
+    contact = DayOfContact.query.get_or_404(contact_id)
+    if contact.wedding_id != wedding.id:
+        abort(403)
+    db.session.delete(contact)
+    db.session.commit()
+    flash('Contact removed.', 'success')
+    return redirect(url_for('day_of_contacts_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/day-of-tasks/add', methods=['GET', 'POST'])
+@login_required
+def day_of_tasks_add(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    if request.method == 'POST':
+        task = DayOfTask(
+            wedding_id=wedding.id,
+            task=request.form.get('task'),
+            assigned_to=request.form.get('assigned_to'),
+            category=request.form.get('category'),
+            timing=request.form.get('timing'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(task)
+        db.session.commit()
+        flash('Task added!', 'success')
+        return redirect(url_for('day_of_contacts_view', wedding_id=wedding_id))
+    return render_template('day_of_contacts/add_task.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/day-of-tasks/<int:task_id>/toggle', methods=['POST'])
+@login_required
+def day_of_tasks_toggle(wedding_id, task_id):
+    wedding = get_wedding_or_403(wedding_id)
+    task = DayOfTask.query.get_or_404(task_id)
+    if task.wedding_id != wedding.id:
+        abort(403)
+    task.completed = not task.completed
+    db.session.commit()
+    return redirect(url_for('day_of_contacts_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/day-of-tasks/<int:task_id>/delete', methods=['POST'])
+@login_required
+def day_of_tasks_delete(wedding_id, task_id):
+    wedding = get_wedding_or_403(wedding_id)
+    task = DayOfTask.query.get_or_404(task_id)
+    if task.wedding_id != wedding.id:
+        abort(403)
+    db.session.delete(task)
+    db.session.commit()
+    flash('Task removed.', 'success')
+    return redirect(url_for('day_of_contacts_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/day-of-tasks/populate-defaults', methods=['POST'])
+@login_required
+def day_of_tasks_populate_defaults(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    for task_name, category, timing in DEFAULT_DAY_OF_TASKS:
+        existing = DayOfTask.query.filter_by(wedding_id=wedding.id, task=task_name).first()
+        if not existing:
+            task = DayOfTask(wedding_id=wedding.id, task=task_name, category=category, timing=timing)
+            db.session.add(task)
+    db.session.commit()
+    flash('Default day-of tasks populated!', 'success')
+    return redirect(url_for('day_of_contacts_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/day-of-contacts/import-vendors', methods=['POST'])
+@login_required
+def day_of_contacts_import_vendors(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    vendors = Vendor.query.filter_by(wedding_id=wedding.id).all()
+    imported = 0
+    for v in vendors:
+        existing = DayOfContact.query.filter_by(wedding_id=wedding.id, name=v.contact_name or v.business_name).first()
+        if not existing:
+            contact = DayOfContact(
+                wedding_id=wedding.id,
+                name=v.contact_name or v.business_name,
+                role=v.vendor_type or 'Vendor',
+                category='vendor',
+                phone=v.phone,
+                email=v.email,
+                notes=v.notes
+            )
+            db.session.add(contact)
+            imported += 1
+    db.session.commit()
+    flash(f'{imported} vendor contacts imported!', 'success')
+    return redirect(url_for('day_of_contacts_view', wedding_id=wedding_id))
+
+
+# ============================================
+# WEDDING DAY PACKING LIST
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/packing-list')
+@login_required
+def packing_list_view(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    items = PackingListItem.query.filter_by(wedding_id=wedding.id).all()
+    categories = {}
+    for item in items:
+        cat = item.category or 'other'
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append(item)
+    total = len(items)
+    packed = sum(1 for i in items if i.packed)
+    return render_template('packing_list/view.html', wedding=wedding, items=items,
+                         categories=categories, total=total, packed=packed)
+
+@app.route('/wedding/<int:wedding_id>/packing-list/add', methods=['GET', 'POST'])
+@login_required
+def packing_list_add(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    if request.method == 'POST':
+        item = PackingListItem(
+            wedding_id=wedding.id,
+            item_name=request.form.get('item_name'),
+            category=request.form.get('category'),
+            assigned_to=request.form.get('assigned_to'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash('Item added!', 'success')
+        return redirect(url_for('packing_list_view', wedding_id=wedding_id))
+    return render_template('packing_list/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/packing-list/<int:item_id>/toggle', methods=['POST'])
+@login_required
+def packing_list_toggle(wedding_id, item_id):
+    wedding = get_wedding_or_403(wedding_id)
+    item = PackingListItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    item.packed = not item.packed
+    db.session.commit()
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'packed': item.packed, 'id': item.id})
+    return redirect(url_for('packing_list_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/packing-list/<int:item_id>/delete', methods=['POST'])
+@login_required
+def packing_list_delete(wedding_id, item_id):
+    wedding = get_wedding_or_403(wedding_id)
+    item = PackingListItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Item removed.', 'success')
+    return redirect(url_for('packing_list_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/packing-list/populate-defaults', methods=['POST'])
+@login_required
+def packing_list_populate_defaults(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    for item_name, category in DEFAULT_PACKING_LIST:
+        existing = PackingListItem.query.filter_by(wedding_id=wedding.id, item_name=item_name).first()
+        if not existing:
+            item = PackingListItem(wedding_id=wedding.id, item_name=item_name, category=category)
+            db.session.add(item)
+    db.session.commit()
+    flash('Default packing list populated!', 'success')
+    return redirect(url_for('packing_list_view', wedding_id=wedding_id))
+
+
+# ============================================
+# NAME CHANGE CHECKLIST
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/name-change')
+@login_required
+def name_change_view(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    tasks = NameChangeTask.query.filter_by(wedding_id=wedding.id).order_by(NameChangeTask.order).all()
+    total = len(tasks)
+    completed = sum(1 for t in tasks if t.completed)
+    categories = {}
+    for task in tasks:
+        cat = task.category or 'other'
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append(task)
+    return render_template('name_change/view.html', wedding=wedding, tasks=tasks,
+                         categories=categories, total=total, completed=completed)
+
+@app.route('/wedding/<int:wedding_id>/name-change/add', methods=['GET', 'POST'])
+@login_required
+def name_change_add(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    if request.method == 'POST':
+        task = NameChangeTask(
+            wedding_id=wedding.id,
+            task_name=request.form.get('task_name'),
+            category=request.form.get('category'),
+            reference_number=request.form.get('reference_number'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(task)
+        db.session.commit()
+        flash('Task added!', 'success')
+        return redirect(url_for('name_change_view', wedding_id=wedding_id))
+    return render_template('name_change/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/name-change/<int:task_id>/toggle', methods=['POST'])
+@login_required
+def name_change_toggle(wedding_id, task_id):
+    wedding = get_wedding_or_403(wedding_id)
+    task = NameChangeTask.query.get_or_404(task_id)
+    if task.wedding_id != wedding.id:
+        abort(403)
+    task.completed = not task.completed
+    task.completed_date = date.today() if task.completed else None
+    db.session.commit()
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'completed': task.completed, 'id': task.id})
+    return redirect(url_for('name_change_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/name-change/<int:task_id>/delete', methods=['POST'])
+@login_required
+def name_change_delete(wedding_id, task_id):
+    wedding = get_wedding_or_403(wedding_id)
+    task = NameChangeTask.query.get_or_404(task_id)
+    if task.wedding_id != wedding.id:
+        abort(403)
+    db.session.delete(task)
+    db.session.commit()
+    flash('Task removed.', 'success')
+    return redirect(url_for('name_change_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/name-change/populate-defaults', methods=['POST'])
+@login_required
+def name_change_populate_defaults(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    for task_name, category, order in DEFAULT_NAME_CHANGE_TASKS:
+        existing = NameChangeTask.query.filter_by(wedding_id=wedding.id, task_name=task_name).first()
+        if not existing:
+            task = NameChangeTask(wedding_id=wedding.id, task_name=task_name, category=category, order=order)
+            db.session.add(task)
+    db.session.commit()
+    flash('Default name change checklist populated!', 'success')
+    return redirect(url_for('name_change_view', wedding_id=wedding_id))
+
+
+# ============================================
+# CUSTOM RSVP QUESTIONS
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/custom-rsvp-questions')
+@login_required
+def custom_rsvp_questions_view(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    questions = CustomRsvpQuestion.query.filter_by(wedding_id=wedding.id).order_by(CustomRsvpQuestion.order).all()
+    return render_template('custom_rsvp/view.html', wedding=wedding, questions=questions)
+
+@app.route('/wedding/<int:wedding_id>/custom-rsvp-questions/add', methods=['GET', 'POST'])
+@login_required
+def custom_rsvp_questions_add(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    if request.method == 'POST':
+        import json
+        options_text = request.form.get('options', '').strip()
+        options_json = None
+        if options_text:
+            options_json = json.dumps([o.strip() for o in options_text.split('\n') if o.strip()])
+        question = CustomRsvpQuestion(
+            wedding_id=wedding.id,
+            question_text=request.form.get('question_text'),
+            question_type=request.form.get('question_type', 'text'),
+            options=options_json,
+            required=request.form.get('required') == 'on',
+            active=True
+        )
+        # Set order to next available
+        max_order = db.session.query(db.func.max(CustomRsvpQuestion.order)).filter_by(wedding_id=wedding.id).scalar() or 0
+        question.order = max_order + 1
+        db.session.add(question)
+        db.session.commit()
+        flash('Custom RSVP question added!', 'success')
+        return redirect(url_for('custom_rsvp_questions_view', wedding_id=wedding_id))
+    return render_template('custom_rsvp/add.html', wedding=wedding)
+
+@app.route('/wedding/<int:wedding_id>/custom-rsvp-questions/<int:question_id>/toggle', methods=['POST'])
+@login_required
+def custom_rsvp_questions_toggle(wedding_id, question_id):
+    wedding = get_wedding_or_403(wedding_id)
+    question = CustomRsvpQuestion.query.get_or_404(question_id)
+    if question.wedding_id != wedding.id:
+        abort(403)
+    question.active = not question.active
+    db.session.commit()
+    return redirect(url_for('custom_rsvp_questions_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/custom-rsvp-questions/<int:question_id>/delete', methods=['POST'])
+@login_required
+def custom_rsvp_questions_delete(wedding_id, question_id):
+    wedding = get_wedding_or_403(wedding_id)
+    question = CustomRsvpQuestion.query.get_or_404(question_id)
+    if question.wedding_id != wedding.id:
+        abort(403)
+    db.session.delete(question)
+    db.session.commit()
+    flash('Question removed.', 'success')
+    return redirect(url_for('custom_rsvp_questions_view', wedding_id=wedding_id))
 
 
 # Start reminder thread:

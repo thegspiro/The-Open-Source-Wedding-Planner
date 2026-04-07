@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Edit Event - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Edit: {{ event.name }}</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Event Type *</label>
+                <select name="event_type" required>
+                    {% for value, label in event_types %}
+                    <option value="{{ value }}" {% if event.event_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Event Name *</label>
+                <input type="text" name="name" required value="{{ event.name }}">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" name="date" value="{{ event.date.strftime('%Y-%m-%d') if event.date else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Start Time</label>
+                <input type="text" name="time" value="{{ event.time or '' }}">
+            </div>
+            <div class="form-group">
+                <label>End Time</label>
+                <input type="text" name="end_time" value="{{ event.end_time or '' }}">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Venue Name</label>
+                <input type="text" name="venue_name" value="{{ event.venue_name or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Venue Address</label>
+                <input type="text" name="venue_address" value="{{ event.venue_address or '' }}">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Host Name</label>
+                <input type="text" name="host_name" value="{{ event.host_name or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Host Phone</label>
+                <input type="text" name="host_phone" value="{{ event.host_phone or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Host Email</label>
+                <input type="email" name="host_email" value="{{ event.host_email or '' }}">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Expected Guest Count</label>
+                <input type="number" name="expected_guest_count" min="0" value="{{ event.expected_guest_count or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Estimated Cost ($)</label>
+                <input type="number" name="estimated_cost" step="0.01" min="0" value="{{ event.estimated_cost or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Actual Cost ($)</label>
+                <input type="number" name="actual_cost" step="0.01" min="0" value="{{ event.actual_cost or '' }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Status</label>
+            <select name="status">
+                <option value="planning" {% if event.status == 'planning' %}selected{% endif %}>Planning</option>
+                <option value="confirmed" {% if event.status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                <option value="completed" {% if event.status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="cancelled" {% if event.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="3">{{ event.notes or '' }}</textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Changes</button>
+            <a href="{{ url_for('pre_wedding_events_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

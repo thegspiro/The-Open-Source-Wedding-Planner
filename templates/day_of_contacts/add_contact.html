@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Add Day-of Contact - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Add Day-of Contact</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text" name="name" required placeholder="e.g., Sarah Johnson">
+            </div>
+            <div class="form-group">
+                <label>Role *</label>
+                <input type="text" name="role" required placeholder="e.g., Photographer, MOH, DJ">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Category *</label>
+            <select name="category" required>
+                <option value="">-- Select --</option>
+                <option value="vendor">Vendor</option>
+                <option value="wedding_party">Wedding Party</option>
+                <option value="family">Family</option>
+                <option value="coordinator">Coordinator / Planner</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Phone</label>
+                <input type="text" name="phone" placeholder="Phone number">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" name="email" placeholder="Email address">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Arrival Time</label>
+                <input type="text" name="arrival_time" placeholder="e.g., 10:00 AM">
+            </div>
+            <div class="form-group">
+                <label>Departure Time</label>
+                <input type="text" name="departure_time" placeholder="e.g., 11:00 PM">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Setup Location</label>
+            <input type="text" name="setup_location" placeholder="Where they should go on arrival">
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="2" placeholder="Special instructions, parking info, etc."></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Contact</button>
+            <a href="{{ url_for('day_of_contacts_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

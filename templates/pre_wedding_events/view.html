@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Pre-Wedding Events - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Pre-Wedding Events</h1>
+    <a href="{{ url_for('pre_wedding_events_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Event</a>
+</div>
+
+<p class="form-help">Track all pre-wedding celebrations: engagement party, bridal shower, bachelor/ette parties, welcome party, and more.</p>
+
+{% if events %}
+<div class="dashboard-grid">
+    {% for event in events %}
+    <div class="dashboard-card">
+        <span class="category-badge">{{ event.event_type|replace('_', ' ')|title }}</span>
+        {% if event.status == 'completed' %}
+        <span class="category-badge" style="background: var(--color-success); color: white;">Completed</span>
+        {% elif event.status == 'confirmed' %}
+        <span class="category-badge" style="background: var(--color-info); color: white;">Confirmed</span>
+        {% elif event.status == 'cancelled' %}
+        <span class="category-badge" style="background: var(--color-danger); color: white;">Cancelled</span>
+        {% endif %}
+        <h3>{{ event.name }}</h3>
+        <div class="info-grid">
+            {% if event.date %}
+            <div class="info-item"><strong>Date:</strong> {{ event.date.strftime('%b %d, %Y') }}</div>
+            {% endif %}
+            {% if event.time %}
+            <div class="info-item"><strong>Time:</strong> {{ event.time }}{% if event.end_time %} - {{ event.end_time }}{% endif %}</div>
+            {% endif %}
+            {% if event.venue_name %}
+            <div class="info-item"><strong>Venue:</strong> {{ event.venue_name }}</div>
+            {% endif %}
+            {% if event.venue_address %}
+            <div class="info-item"><strong>Address:</strong> {{ event.venue_address }}</div>
+            {% endif %}
+            {% if event.host_name %}
+            <div class="info-item"><strong>Host:</strong> {{ event.host_name }}{% if event.host_phone %} ({{ event.host_phone }}){% endif %}</div>
+            {% endif %}
+            {% if event.expected_guest_count %}
+            <div class="info-item"><strong>Expected Guests:</strong> {{ event.expected_guest_count }}</div>
+            {% endif %}
+            {% if event.estimated_cost %}
+            <div class="info-item"><strong>Est. Cost:</strong> ${{ "{:,.0f}".format(event.estimated_cost) }}</div>
+            {% endif %}
+            {% if event.actual_cost %}
+            <div class="info-item"><strong>Actual Cost:</strong> ${{ "{:,.0f}".format(event.actual_cost) }}</div>
+            {% endif %}
+            {% if event.notes %}
+            <div class="info-item"><strong>Notes:</strong> {{ event.notes }}</div>
+            {% endif %}
+        </div>
+        <div class="form-actions">
+            <a href="{{ url_for('pre_wedding_events_edit', wedding_id=wedding.id, event_id=event.id) }}" class="btn-secondary btn-small">Edit</a>
+            <form method="POST" action="{{ url_for('pre_wedding_events_delete', wedding_id=wedding.id, event_id=event.id) }}" class="form-inline">
+                <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this event?')">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No Pre-Wedding Events Yet</h2>
+    <p>Track your engagement party, bridal shower, bachelor/ette parties, welcome drinks, and send-off brunch.</p>
+    <a href="{{ url_for('pre_wedding_events_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Your First Event</a>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

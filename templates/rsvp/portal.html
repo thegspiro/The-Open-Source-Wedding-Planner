@@ -52,6 +52,29 @@
                     <label>Plus One Name (if applicable)</label>
                     <input type="text" name="plus_one_name" placeholder="Guest name">
                 </div>
+                {% if custom_questions %}
+                {% for q in custom_questions %}
+                <div class="form-group">
+                    <label>{{ q.question_text }}{% if q.required %} *{% endif %}</label>
+                    {% if q.question_type == 'select' and q.options %}
+                    <select name="custom_q_{{ q.id }}" {% if q.required %}required{% endif %}>
+                        <option value="">-- Select --</option>
+                        {% for opt in q.options|from_json %}
+                        <option value="{{ opt }}">{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                    {% elif q.question_type == 'checkbox' %}
+                    <select name="custom_q_{{ q.id }}">
+                        <option value="">-- Select --</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                    {% else %}
+                    <input type="text" name="custom_q_{{ q.id }}" placeholder="Your answer" {% if q.required %}required{% endif %}>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% endif %}
                 <div class="form-group">
                     <label>Notes</label>
                     <textarea name="rsvp_notes" rows="3" placeholder="Any message for the couple..."></textarea>
