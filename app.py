@@ -12,31 +12,47 @@ from models import (
     ContingencyPlan, TipItem, Gift,
     VendorNote, VendorQuote, SpeechToast, WeddingFavor,
     ActivityLog, Comment,
-    InventoryItem, InventoryBin, WeddingElement,
+    InventoryItem, InventoryBin, EmergencyKitItem,
     BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES,
-    TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES,
+    TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES, VenueFixture, VENUE_FIXTURE_TYPES,
     INVENTORY_CATEGORIES, INVENTORY_AREAS
 )
+from flask_migrate import Migrate
+from dotenv import load_dotenv
+load_dotenv()
+
 import random
 from datetime import datetime, timedelta, date
 import os
 import csv
 import io
 import secrets
-from email_service import send_reminder_email, send_guest_email
+from email_service import send_reminder_email, send_guest_email, send_pdf_email
+import re
 import threading
 import time as time_module
 import json
 import math
 from functools import wraps
-from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission
+from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission, validate_time_string, validate_name_pronunciation, validate_text_field
+
+__version__ = '2.10.0'
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///wedding_organizer.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+if app.config['SECRET_KEY'] in ('dev-secret-key-change-in-production', 'your-secret-key-change-in-production', 'change-me-to-a-random-secret-key'):
+    import logging
+    logging.warning(
+        '*** WARNING: Using default SECRET_KEY. This is insecure for production! ***\n'
+        '    Generate a key:  python3 -c "import secrets; print(secrets.token_hex(32))"\n'
+        '    Then set it:     Copy .env.example to .env and update SECRET_KEY'
+    )
+
 db.init_app(app)
+migrate = Migrate(app, db)
 
 # Initialize security: CSRF protection, security headers, session hardening
 init_security(app)
@@ -53,10 +69,22 @@ def too_many_requests(e):
     flash(str(e.description) if hasattr(e, 'description') else 'Too many requests.', 'error')
     return redirect(request.referrer or url_for('index'))
 
+# Health check endpoint for monitoring and container orchestration
+@app.route('/health')
+def health_check():
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        return jsonify({'status': 'healthy', 'database': 'connected'}), 200
+    except Exception as e:
+        return jsonify({'status': 'unhealthy', 'database': str(e)}), 503
+
+
 # Initialize database and seed traditional elements
+# Note: db.create_all() is kept for initial setup / development convenience.
+# For production schema changes, use Flask-Migrate: flask db migrate / flask db upgrade
 with app.app_context():
     db.create_all()
-    
+
     # Seed traditional elements if none exist
     if TraditionalElement.query.count() == 0:
         traditional_elements = [
@@ -259,7 +287,7 @@ def get_wedding_or_403(wedding_id):
 
     Aborts with 403 if the user does not have access.
     """
-    wedding = get_wedding_or_403(wedding_id)
+    wedding = Wedding.query.get_or_404(wedding_id)
     user = g.get('user')
     if not user:
         abort(401)
@@ -268,6 +296,126 @@ def get_wedding_or_403(wedding_id):
         abort(403, description='You do not have access to this wedding.')
     g.wedding_role = access.role
     return wedding
+
+
+# ============================================
+# DEFAULT EMERGENCY KIT ITEMS
+# ============================================
+
+DEFAULT_EMERGENCY_KIT_ITEMS = {
+    'fashion': [
+        'Safety pins (assorted sizes)',
+        'Sewing kit (needle, white & black thread)',
+        'Fashion tape (double-sided)',
+        'Stain remover pen',
+        'Static guard spray',
+        'Lint roller',
+        'Wrinkle release spray',
+        'Extra buttons (matching attire)',
+        'Shoe insoles / heel protectors',
+        'Clear nail polish (stop stocking runs)',
+        'Hem tape',
+        'Shoe polish / white shoe touch-up',
+    ],
+    'health': [
+        'Pain relievers (ibuprofen, acetaminophen)',
+        'Antacid tablets',
+        'Anti-nausea medication',
+        'Allergy medication (antihistamines)',
+        'Band-aids (assorted sizes)',
+        'Blister pads / moleskin',
+        'Eye drops',
+        'Breath mints / gum',
+        'Throat lozenges',
+        'Tissues (travel packs)',
+        'Hand sanitizer',
+        'Sunscreen (SPF 30+)',
+        'Bug spray',
+        'Tampons / pads',
+        'Deodorant',
+        'Tweezers',
+        'Nail clippers',
+        'Contact lens solution / spare contacts',
+        'Hydrocortisone cream',
+        'Electrolyte packets',
+    ],
+    'beauty': [
+        'Bobby pins & hair pins',
+        'Hair ties & clips',
+        'Hairspray (travel size)',
+        'Dry shampoo',
+        'Makeup blotting papers',
+        'Lipstick / lip gloss (matching shade)',
+        'Powder compact / setting spray',
+        'Concealer',
+        'Cotton swabs & cotton pads',
+        'Makeup remover wipes',
+        'Perfume / cologne (travel size)',
+        'Nail file & nail glue',
+        'Eyelash glue',
+        'Compact mirror',
+        'Disposable razor',
+    ],
+    'tools': [
+        'Scissors',
+        'Super glue',
+        'Duct tape / gaffer tape',
+        'White chalk (for scuff marks)',
+        'Pen and notepad',
+        'Permanent marker',
+        'Phone charger / portable battery',
+        'Extension cord / power strip',
+        'Umbrella(s)',
+        'Flashlight',
+        'Zip ties',
+        'Rubber bands',
+        'Command strips / hooks',
+        'Floral wire & floral tape',
+        'Trash bags',
+        'Paper towels',
+        'Baby wipes',
+        'Lighter or matches',
+        'Batteries (AA / AAA)',
+    ],
+    'food': [
+        'Water bottles',
+        'Granola bars / protein bars',
+        'Straws (to drink without smudging lipstick)',
+        'Mints for the couple',
+        'Ginger chews (for nausea)',
+        'Electrolyte drinks',
+    ],
+    'documents': [
+        'Marriage license',
+        'Vendor contact list',
+        'Day-of timeline copies',
+        'Rings',
+        'Vow cards / notes',
+        'Cash for tips (labeled envelopes)',
+        'ID / wallet',
+        'Insurance cards',
+        'Hotel room key',
+        'Emergency contact list',
+        'Copies of vendor contracts',
+        'Seating chart copy',
+        'Spare car keys',
+        'Checkbook (final vendor payments)',
+    ],
+}
+
+
+def seed_default_emergency_kit(wedding_id):
+    """Create default emergency kit items for a wedding."""
+    for category, items in DEFAULT_EMERGENCY_KIT_ITEMS.items():
+        for item_name in items:
+            kit_item = EmergencyKitItem(
+                wedding_id=wedding_id,
+                item_name=item_name,
+                category=category,
+                packed=False
+            )
+            db.session.add(kit_item)
+    db.session.commit()
 
 
 # ============================================
@@ -383,6 +531,10 @@ def user_settings():
 # MAIN ROUTES
 # ============================================
 
+@app.route('/version')
+def app_version():
+    return {'version': __version__}
+
 @app.route('/')
 @login_required
 def index():
@@ -408,7 +560,19 @@ def new_wedding():
             return redirect(url_for('wedding_dashboard', wedding_id=existing[0].id))
 
     if request.method == 'POST':
-        couple_names = request.form['couple_names']
+        num_people = int(request.form.get('num_people', 2))
+        names = []
+        for i in range(num_people):
+            name = request.form.get(f'person_{i}_name', '').strip()
+            if name:
+                names.append(name)
+
+        # Auto-generate couple_names display string from individual names
+        if len(names) == 2:
+            couple_names = f'{names[0]} & {names[1]}'
+        else:
+            couple_names = ', '.join(names[:-1]) + f' & {names[-1]}' if len(names) > 1 else names[0] if names else 'Wedding'
+
         wedding_date = datetime.strptime(request.form['wedding_date'], '%Y-%m-%d')
         email = request.form['email']
 
@@ -421,13 +585,26 @@ def new_wedding():
         db.session.add(wedding)
         db.session.commit()
 
+        # Create Person records from names collected at creation
+        for i, name in enumerate(names):
+            person = Person(
+                wedding_id=wedding.id,
+                name=name,
+                display_order=i + 1
+            )
+            db.session.add(person)
+        db.session.commit()
+
         # Give the current user owner access
         access = WeddingAccess(user_id=user.id, wedding_id=wedding.id, role='owner')
         db.session.add(access)
         db.session.commit()
 
+        # Pre-populate emergency kit with common items
+        seed_default_emergency_kit(wedding.id)
+
         flash(f'Wedding created! Let\'s set up some details.', 'success')
-        return redirect(url_for('onboarding_step1', wedding_id=wedding.id))
+        return redirect(url_for('onboarding_step2', wedding_id=wedding.id))
 
     return render_template('new_wedding.html')
 
@@ -438,57 +615,41 @@ def new_wedding():
 @app.route('/wedding/<int:wedding_id>/onboarding/step1', methods=['GET', 'POST'])
 @login_required
 def onboarding_step1(wedding_id):
-    """Step 1: How many people are getting married?"""
-    wedding = get_wedding_or_403(wedding_id)
-    
-    if request.method == 'POST':
-        num_people = int(request.form.get('num_people', 2))
-        # Store in session for next step
-        
-        session['onboarding_num_people'] = num_people
-        return redirect(url_for('onboarding_step2', wedding_id=wedding_id))
-    
-    return render_template('onboarding/step1.html', wedding=wedding)
+    """Step 1: Redirect to step 2 - people are now created at wedding creation."""
+    get_wedding_or_403(wedding_id)
+    return redirect(url_for('onboarding_step2', wedding_id=wedding_id))
 
 @app.route('/wedding/<int:wedding_id>/onboarding/step2', methods=['GET', 'POST'])
 @login_required
 def onboarding_step2(wedding_id):
-    """Step 2: Collect information about each person"""
+    """Step 2: Collect additional details for each person (names already set at creation)"""
     wedding = get_wedding_or_403(wedding_id)
-    
-    num_people = session.get('onboarding_num_people', 2)
-    
+
+    people = Person.query.filter_by(wedding_id=wedding_id).order_by(Person.display_order).all()
+
     if request.method == 'POST':
-        # Create Person records for each individual
-        for i in range(num_people):
-            name = request.form.get(f'person_{i}_name')
+        # Update existing Person records with additional details
+        for i, person in enumerate(people):
             title = request.form.get(f'person_{i}_title')
             pronouns = request.form.get(f'person_{i}_pronouns')
             side_label = request.form.get(f'person_{i}_side_label')
-            
-            if name:  # Only create if name provided
-                person = Person(
-                    wedding_id=wedding_id,
-                    name=name,
-                    title=title if title != 'other' else request.form.get(f'person_{i}_title_custom'),
-                    preferred_pronouns=pronouns,
-                    side_label=side_label,
-                    display_order=i+1
-                )
-                db.session.add(person)
-        
+
+            person.title = title if title != 'other' else request.form.get(f'person_{i}_title_custom')
+            person.preferred_pronouns = pronouns
+            person.side_label = side_label
+
         db.session.commit()
-        
+
         # Mark people module as complete
         modules = json.loads(wedding.modules_completed or '[]')
         if 'people' not in modules:
             modules.append('people')
             wedding.modules_completed = json.dumps(modules)
             db.session.commit()
-        
+
         return redirect(url_for('onboarding_step3', wedding_id=wedding_id))
-    
-    return render_template('onboarding/step2.html', wedding=wedding, num_people=num_people)
+
+    return render_template('onboarding/step2.html', wedding=wedding, people=people)
 
 @app.route('/wedding/<int:wedding_id>/onboarding/step3', methods=['GET', 'POST'])
 @login_required
@@ -1095,6 +1256,34 @@ def person_edit(wedding_id, person_id):
         person.side_label = request.form.get('side_label')
         person.email = request.form.get('email')
         person.phone = request.form.get('phone')
+
+        # Validate and save name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('people/edit.html', wedding=wedding, person=person)
+        person.name_pronunciation = pron_value or None
+
+        # Validate and save getting ready fields
+        getting_ready_time_str = request.form.get('getting_ready_time')
+        if getting_ready_time_str:
+            parsed_time = validate_time_string(getting_ready_time_str)
+            if parsed_time is None:
+                flash('Invalid getting ready time format. Use HH:MM.', 'danger')
+                return render_template('people/edit.html', wedding=wedding, person=person)
+            person.getting_ready_time = parsed_time
+        else:
+            person.getting_ready_time = None
+
+        addr_valid, addr_value, addr_err = validate_text_field(
+            request.form.get('getting_ready_address'), max_length=1000, field_name='Getting ready address')
+        if not addr_valid:
+            flash(addr_err, 'danger')
+            return render_template('people/edit.html', wedding=wedding, person=person)
+        person.getting_ready_address = addr_value or None
+
+        person.getting_ready_location = sanitize_string(request.form.get('getting_ready_location', ''), max_length=200) or None
+
         db.session.commit()
         flash('Person updated!', 'success')
         return redirect(url_for('people_view', wedding_id=wedding_id))
@@ -1143,6 +1332,18 @@ def ceremony_edit(wedding_id):
         ceremony.has_unity_ceremony = request.form.get('has_unity_ceremony') == 'on'
         ceremony.unity_ceremony_type = request.form.get('unity_ceremony_type')
         ceremony.has_special_readings = request.form.get('has_special_readings') == 'on'
+
+        # Validate and save venue load-in time
+        load_in_str = request.form.get('venue_load_in_time')
+        if load_in_str:
+            parsed_time = validate_time_string(load_in_str)
+            if parsed_time is None:
+                flash('Invalid venue load-in time format. Use HH:MM.', 'danger')
+                return render_template('ceremony/edit.html', wedding=wedding, ceremony=ceremony)
+            ceremony.venue_load_in_time = parsed_time
+        else:
+            ceremony.venue_load_in_time = None
+
         db.session.commit()
         flash('Ceremony details updated!', 'success')
         return redirect(url_for('ceremony_view', wedding_id=wedding_id))
@@ -1311,6 +1512,43 @@ def reception_edit(wedding_id):
         reception.kids_sitter_name = request.form.get('kids_sitter_name')
         reception.kids_sitter_phone = request.form.get('kids_sitter_phone')
         reception.expected_guest_count = request.form.get('expected_guest_count', type=int)
+
+        # Validate and save venue load-in time
+        load_in_str = request.form.get('venue_load_in_time')
+        if load_in_str:
+            parsed_time = validate_time_string(load_in_str)
+            if parsed_time is None:
+                flash('Invalid venue load-in time format. Use HH:MM.', 'danger')
+                return render_template('reception/edit.html', wedding=wedding, reception=reception)
+            reception.venue_load_in_time = parsed_time
+        else:
+            reception.venue_load_in_time = None
+
+        # Validate and save after-party fields
+        ap_time_str = request.form.get('after_party_start_time')
+        if ap_time_str:
+            parsed_time = validate_time_string(ap_time_str)
+            if parsed_time is None:
+                flash('Invalid after-party start time format. Use HH:MM.', 'danger')
+                return render_template('reception/edit.html', wedding=wedding, reception=reception)
+            reception.after_party_start_time = parsed_time
+        else:
+            reception.after_party_start_time = None
+
+        venue_valid, venue_value, venue_err = validate_text_field(
+            request.form.get('after_party_venue'), max_length=200, field_name='After-party venue')
+        if not venue_valid:
+            flash(venue_err, 'danger')
+            return render_template('reception/edit.html', wedding=wedding, reception=reception)
+        reception.after_party_venue = venue_value or None
+
+        addr_valid, addr_value, addr_err = validate_text_field(
+            request.form.get('after_party_address'), max_length=1000, field_name='After-party address')
+        if not addr_valid:
+            flash(addr_err, 'danger')
+            return render_template('reception/edit.html', wedding=wedding, reception=reception)
+        reception.after_party_address = addr_value or None
+
         db.session.commit()
         flash('Reception details updated!', 'success')
         return redirect(url_for('reception_view', wedding_id=wedding_id))
@@ -1347,6 +1585,7 @@ def guest_add(wedding_id):
             guest_type=request.form.get('guest_type'),
             side=request.form.get('side'),
             dietary_restrictions=request.form.get('dietary_restrictions'),
+            accessibility_needs=request.form.get('accessibility_needs'),
             household_group=request.form.get('household_group'),
             social_groups=request.form.get('social_groups'),
             guest_token=generate_token()
@@ -1370,6 +1609,7 @@ def guest_edit(wedding_id, guest_id):
         guest.guest_type = request.form.get('guest_type')
         guest.side = request.form.get('side')
         guest.dietary_restrictions = request.form.get('dietary_restrictions')
+        guest.accessibility_needs = request.form.get('accessibility_needs')
         guest.rsvp_status = request.form.get('rsvp_status')
         guest.meal_choice = request.form.get('meal_choice')
         guest.invitation_sent = request.form.get('invitation_sent') == 'on'
@@ -1434,6 +1674,12 @@ def bridal_party_view(wedding_id):
 def bridal_party_add(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
+        # Validate name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('bridal_party/add.html', wedding=wedding)
+
         member = BridalPartyMember(
             wedding_id=wedding_id,
             name=request.form.get('name'),
@@ -1441,7 +1687,8 @@ def bridal_party_add(wedding_id):
             side=request.form.get('side'),
             email=request.form.get('email'),
             phone=request.form.get('phone'),
-            processional_order=request.form.get('processional_order', type=int)
+            processional_order=request.form.get('processional_order', type=int),
+            name_pronunciation=pron_value or None
         )
         db.session.add(member)
         db.session.commit()
@@ -1472,6 +1719,14 @@ def bridal_party_edit(wedding_id, member_id):
         member.has_plus_one = request.form.get('has_plus_one') == 'on'
         member.plus_one_name = request.form.get('plus_one_name')
         member.responsibilities = request.form.get('responsibilities')
+
+        # Validate name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('bridal_party/edit.html', wedding=wedding, member=member)
+        member.name_pronunciation = pron_value or None
+
         db.session.commit()
         flash('Wedding party member updated!', 'success')
         return redirect(url_for('bridal_party_view', wedding_id=wedding_id))
@@ -1747,13 +2002,40 @@ def vendor_edit(wedding_id, vendor_id):
         vendor.cancellation_policy = request.form.get('cancellation_policy')
         vendor.contract_notes = request.form.get('contract_notes')
         vendor.backup_contact = request.form.get('backup_contact')
-        vendor.backup_phone = request.form.get('backup_phone')
+
+        # Validate backup phone
+        backup_phone_val = request.form.get('backup_phone', '').strip()
+        if backup_phone_val and not validate_phone(backup_phone_val):
+            flash('Invalid backup phone number format.', 'danger')
+            return render_template('vendors/edit.html', wedding=wedding, vendor=vendor)
+        vendor.backup_phone = backup_phone_val or None
+
         if request.form.get('final_payment_date'):
             vendor.final_payment_date = datetime.strptime(request.form.get('final_payment_date'), '%Y-%m-%d').date()
         if request.form.get('service_date'):
             vendor.service_date = datetime.strptime(request.form.get('service_date'), '%Y-%m-%d').date()
         if request.form.get('service_time'):
             vendor.service_time = datetime.strptime(request.form.get('service_time'), '%H:%M').time()
+
+        # Validate and save arrival time
+        arrival_str = request.form.get('arrival_time')
+        if arrival_str:
+            parsed_time = validate_time_string(arrival_str)
+            if parsed_time is None:
+                flash('Invalid arrival time format. Use HH:MM.', 'danger')
+                return render_template('vendors/edit.html', wedding=wedding, vendor=vendor)
+            vendor.arrival_time = parsed_time
+        else:
+            vendor.arrival_time = None
+
+        # Validate overtime rate
+        ot_valid, ot_value, ot_err = validate_text_field(
+            request.form.get('overtime_rate'), max_length=100, field_name='Overtime rate')
+        if not ot_valid:
+            flash(ot_err, 'danger')
+            return render_template('vendors/edit.html', wedding=wedding, vendor=vendor)
+        vendor.overtime_rate = ot_value or None
+
         vendor.service_location = request.form.get('service_location')
         vendor.setup_instructions = request.form.get('setup_instructions')
         vendor.meals_needed = request.form.get('meals_needed', type=int)
@@ -2312,6 +2594,13 @@ def itinerary_participants(wedding_id):
 def itinerary_add_participant(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
+        # Validate name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('itinerary/add_participant.html', wedding=wedding,
+                                   people=wedding.people, bridal_party=wedding.bridal_party)
+
         participant = WeddingParticipant(
             wedding_id=wedding_id,
             name=request.form.get('name'),
@@ -2319,7 +2608,8 @@ def itinerary_add_participant(wedding_id):
             role_category=request.form.get('role_category'),
             phone=request.form.get('phone'),
             email=request.form.get('email'),
-            notes=request.form.get('notes')
+            notes=request.form.get('notes'),
+            name_pronunciation=pron_value or None
         )
         # Link to existing Person if selected
         person_id = request.form.get('person_id', type=int)
@@ -2352,6 +2642,16 @@ def itinerary_edit_participant(wedding_id, participant_id):
         participant.person_id = person_id if person_id else None
         bp_id = request.form.get('bridal_party_id', type=int)
         participant.bridal_party_id = bp_id if bp_id else None
+
+        # Validate name pronunciation
+        pron_valid, pron_value = validate_name_pronunciation(request.form.get('name_pronunciation'))
+        if not pron_valid:
+            flash('Name pronunciation must be 200 characters or fewer.', 'danger')
+            return render_template('itinerary/edit_participant.html', wedding=wedding,
+                                   participant=participant, people=wedding.people,
+                                   bridal_party=wedding.bridal_party)
+        participant.name_pronunciation = pron_value or None
+
         db.session.commit()
         flash('Participant updated!', 'success')
         return redirect(url_for('itinerary_participants', wedding_id=wedding_id))
@@ -3842,49 +4142,403 @@ def guest_group_remove_guest(wedding_id, group_id, guest_id):
     return redirect(url_for('guest_groups_view', wedding_id=wedding_id))
 
 
+def compute_table_pixel_size(table, scale=1.4):
+    """Return (width_px, height_px) for a table at the given scale."""
+    ref = TABLE_SIZE_REFERENCE.get(table.table_size)
+    shape = table.table_shape or 'round'
+    cap = table.capacity
+    if ref:
+        if shape in ('round', 'oval'):
+            tw = ref.get('diameter', 60) * scale
+            th = tw if shape == 'round' else tw * 0.67
+        elif shape == 'rectangular':
+            tw = ref.get('length', 72) * scale
+            th = ref.get('width', 30) * scale
+        elif shape == 'square':
+            tw = ref.get('side', 48) * scale
+            th = tw
+        else:
+            tw = ref.get('length', 96) * scale
+            th = ref.get('width', 30) * scale
+    else:
+        if shape in ('round', 'oval'):
+            diameter = 24 + cap * 5
+            tw = diameter * scale
+            th = tw if shape == 'round' else tw * 0.67
+        elif shape in ('rectangular', 'serpentine'):
+            tw = (48 + max(0, cap - 4) * 12) * scale
+            th = 30 * scale
+        elif shape == 'square':
+            side = 24 + cap * 6
+            tw = side * scale
+            th = tw
+        else:
+            diameter = 24 + cap * 5
+            tw = diameter * scale
+            th = tw
+    return (round(tw), round(th))
+
+
+# Real-world spacing constants (inches)
+CHAIR_PUSHBACK_INCHES = 24   # space from table edge to back of pushed-out chair
+AISLE_CLEARANCE_INCHES = 42  # comfortable aisle between chair backs
+
+
+def compute_grid_position(index, table, scale=1.4, cols=4, offset_x=50, offset_y=50):
+    """Compute (x, y) position for a table in a grid layout with proper spacing.
+
+    Spacing accounts for table size + chair pushback + aisle clearance
+    so tables don't overlap on the canvas.
+    """
+    tw, th = compute_table_pixel_size(table, scale)
+    # Edge-to-edge clearance in pixels
+    clearance = (CHAIR_PUSHBACK_INCHES * 2 + AISLE_CLEARANCE_INCHES) * scale
+    # Cell size = table + surrounding clearance
+    cell_w = tw + clearance
+    cell_h = th + clearance
+    col = index % cols
+    row = index // cols
+    x = offset_x + col * cell_w
+    y = offset_y + row * cell_h
+    return (round(x), round(y))
+
+
+def compute_table_floor_data(tables, scale=1.4):
+    """Compute SVG floor plan rendering data for a list of tables.
+
+    Returns a dict keyed by table.id with dimensions, center point,
+    and chair positions (with filled/empty status).
+    """
+    import math
+    CHAIR_GAP = 14
+    PAD = 22
+
+    result = {}
+    for table in tables:
+        ref = TABLE_SIZE_REFERENCE.get(table.table_size)
+        shape = table.table_shape or 'round'
+        cap = table.capacity
+        assigned_count = len(table.assigned_guests)
+
+        if ref:
+            if shape in ('round', 'oval'):
+                tw = ref.get('diameter', 60) * scale
+                th = tw if shape == 'round' else tw * 0.67
+            elif shape == 'rectangular':
+                tw = ref.get('length', 72) * scale
+                th = ref.get('width', 30) * scale
+            elif shape == 'square':
+                tw = ref.get('side', 48) * scale
+                th = tw
+            else:
+                tw = ref.get('length', 96) * scale
+                th = ref.get('width', 30) * scale
+        else:
+            # Fallback: estimate from capacity using real-world table sizes
+            # Round: 2→36", 4→48", 6→48", 8→60", 10→72", 12→84"
+            # Rectangular: width ~30", length scales with capacity
+            if shape in ('round', 'oval'):
+                diameter = 24 + cap * 5  # inches, matches industry standards
+                tw = diameter * scale
+                th = tw if shape == 'round' else tw * 0.67
+            elif shape in ('rectangular', 'serpentine'):
+                tw = (48 + max(0, cap - 4) * 12) * scale  # length grows with seats
+                th = 30 * scale  # standard banquet width
+            elif shape == 'square':
+                side = 24 + cap * 6  # inches
+                tw = side * scale
+                th = tw
+            else:
+                diameter = 24 + cap * 5
+                tw = diameter * scale
+                th = tw
+
+        tw = round(tw)
+        th = round(th)
+        svg_w = tw + PAD * 2
+        svg_h = th + PAD * 2
+        cx = svg_w / 2
+        cy = svg_h / 2
+
+        chairs = []
+        one_sided = ref.get('one_sided', False) if ref else False
+
+        if shape in ('round', 'oval'):
+            rx = tw / 2 + CHAIR_GAP
+            ry = th / 2 + CHAIR_GAP
+            for i in range(cap):
+                angle = (2 * math.pi * i / cap) - math.pi / 2
+                x = round(cx + rx * math.cos(angle), 1)
+                y = round(cy + ry * math.sin(angle), 1)
+                chairs.append({'x': x, 'y': y, 'filled': i < assigned_count})
+        elif shape == 'square':
+            # Square: distribute evenly around all 4 sides
+            perimeter = 4 * tw
+            spacing = perimeter / cap if cap > 0 else perimeter
+            for i in range(cap):
+                dist = spacing * i + spacing / 2
+                if dist < tw:
+                    x, y = PAD + dist, PAD - CHAIR_GAP
+                elif dist < 2 * tw:
+                    x, y = PAD + tw + CHAIR_GAP, PAD + (dist - tw)
+                elif dist < 3 * tw:
+                    x, y = PAD + tw - (dist - 2 * tw), PAD + tw + CHAIR_GAP
+                else:
+                    x, y = PAD - CHAIR_GAP, PAD + tw - (dist - 3 * tw)
+                chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': i < assigned_count})
+        else:
+            # Rectangular/serpentine: chairs along long sides only
+            if one_sided:
+                # Head table: all chairs on one side (front, facing audience)
+                spacing = tw / cap if cap > 0 else tw
+                for i in range(cap):
+                    x = PAD + spacing * i + spacing / 2
+                    y = PAD + th + CHAIR_GAP
+                    chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': i < assigned_count})
+            else:
+                # Standard banquet: split chairs between top and bottom long sides
+                top_count = cap // 2
+                bottom_count = cap - top_count
+                # Top side (left to right)
+                if top_count > 0:
+                    spacing = tw / top_count
+                    for i in range(top_count):
+                        x = PAD + spacing * i + spacing / 2
+                        y = PAD - CHAIR_GAP
+                        chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': len(chairs) < assigned_count})
+                # Bottom side (left to right)
+                if bottom_count > 0:
+                    spacing = tw / bottom_count
+                    for i in range(bottom_count):
+                        x = PAD + spacing * i + spacing / 2
+                        y = PAD + th + CHAIR_GAP
+                        chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': len(chairs) < assigned_count})
+
+        # Apply rotation (swap dimensions and rotate chair positions)
+        rotation = getattr(table, 'rotation', 0) or 0
+        if rotation in (90, 270):
+            # Swap table dimensions and SVG bounds
+            tw, th = th, tw
+            svg_w = tw + PAD * 2
+            svg_h = th + PAD * 2
+            new_cx = svg_w / 2
+            new_cy = svg_h / 2
+            # Rotate each chair around the center
+            cos_a = math.cos(math.radians(rotation))
+            sin_a = math.sin(math.radians(rotation))
+            for chair in chairs:
+                dx = chair['x'] - cx
+                dy = chair['y'] - cy
+                chair['x'] = round(new_cx + dx * cos_a - dy * sin_a, 1)
+                chair['y'] = round(new_cy + dx * sin_a + dy * cos_a, 1)
+            cx, cy = new_cx, new_cy
+
+        result[table.id] = {
+            'tw': tw, 'th': th,
+            'svg_w': svg_w, 'svg_h': svg_h,
+            'cx': cx, 'cy': cy,
+            'chairs': chairs,
+            'rotation': rotation,
+        }
+    return result
+
+
 @app.route('/wedding/<int:wedding_id>/seating-chart')
 @login_required
 def seating_chart(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     reception = wedding.reception
     tables = reception.seating_tables if reception else []
-    all_attending = [g for g in wedding.guests if g.rsvp_status == 'accepted']
-    unassigned = [g for g in all_attending if not g.table_id]
+    fixtures = reception.venue_fixtures if reception else []
+    all_guests = wedding.guests
+    all_attending = [g for g in all_guests if g.rsvp_status == 'accepted']
+    # Unassigned includes all guests without a table (regardless of RSVP status)
+    unassigned = [g for g in all_guests if not g.table_id and g.rsvp_status != 'declined']
+    # Count guests awaiting RSVP who are assigned to tables
+    pending_assigned = [g for g in all_guests if g.table_id and g.rsvp_status != 'accepted']
     preferences = SeatingPreference.query.filter_by(wedding_id=wedding_id).all()
 
     # Build stats
     total_capacity = sum(t.capacity for t in tables)
     total_attending = len(all_attending)
-    total_assigned = total_attending - len(unassigned)
+    total_assigned = len([g for g in all_guests if g.table_id])
 
-    # Check for constraint violations
+    # Check for constraint violations (using dict lookup instead of nested loop)
+    guest_table_map = {g.id: g.table_id for g in all_guests}
     violations = []
     for pref in preferences:
-        guest_table = None
-        other_table = None
-        for g in all_attending:
-            if g.id == pref.guest_id:
-                guest_table = g.table_id
-            if g.id == pref.other_guest_id:
-                other_table = g.table_id
+        guest_table = guest_table_map.get(pref.guest_id)
+        other_table = guest_table_map.get(pref.other_guest_id)
         if guest_table and other_table:
             if pref.preference_type == 'together' and guest_table != other_table:
                 violations.append(f'{pref.guest.name} and {pref.other_guest.name} should sit together but are at different tables')
             elif pref.preference_type == 'apart' and guest_table == other_table:
                 violations.append(f'{pref.guest.name} and {pref.other_guest.name} should sit apart but are at the same table')
 
+    # Flag guests assigned to tables who haven't accepted RSVP
+    if pending_assigned:
+        for g in pending_assigned:
+            violations.append(f'{g.name} is assigned to a table but RSVP status is "{g.rsvp_status or "pending"}"')
+
+    # Detect "lonely" guests — assigned to a table but share no household, social group, or side with tablemates
+    lonely_guests = []
+    for table in tables:
+        assigned = table.assigned_guests
+        if len(assigned) <= 1:
+            continue
+        for guest in assigned:
+            guest_tags = set()
+            if guest.household_group:
+                guest_tags.add(('household', guest.household_group.strip().lower()))
+            if guest.social_groups:
+                for tag in guest.social_groups.split(','):
+                    tag = tag.strip()
+                    if tag:
+                        guest_tags.add(('social', tag.lower()))
+            if guest.side:
+                guest_tags.add(('side', guest.side.strip().lower()))
+
+            has_connection = False
+            for other in assigned:
+                if other.id == guest.id:
+                    continue
+                other_tags = set()
+                if other.household_group:
+                    other_tags.add(('household', other.household_group.strip().lower()))
+                if other.social_groups:
+                    for tag in other.social_groups.split(','):
+                        tag = tag.strip()
+                        if tag:
+                            other_tags.add(('social', tag.lower()))
+                if other.side:
+                    other_tags.add(('side', other.side.strip().lower()))
+                if guest_tags & other_tags:
+                    has_connection = True
+                    break
+
+            if not has_connection and guest_tags:
+                table_name = table.table_name or f'Table {table.table_number}'
+                lonely_guests.append(f'{guest.name} at {table_name} — doesn\'t share a group, household, or side with any tablemate')
+
     stats = {
         'total_capacity': total_capacity,
         'total_attending': total_attending,
         'total_assigned': total_assigned,
         'total_unassigned': len(unassigned),
+        'pending_rsvp_assigned': len(pending_assigned),
+        'lonely_guest_count': len(lonely_guests),
         'capacity_surplus': total_capacity - total_attending,
     }
 
+    table_floor_data = compute_table_floor_data(tables)
+
+    # Compute fixture pixel data
+    SCALE = 1.4
+    fixture_floor_data = {}
+    for f in fixtures:
+        fw = round(f.width_inches * SCALE)
+        fh = round(f.height_inches * SCALE)
+        fixture_floor_data[f.id] = {'w': fw, 'h': fh}
+
+    # Compute canvas size to fit all tables and fixtures with padding
+    canvas_w = 900  # minimum width
+    canvas_h = 600  # minimum height
+    for table in tables:
+        fd = table_floor_data[table.id]
+        right = (table.x_position or 0) + fd['svg_w'] + 20
+        bottom = (table.y_position or 0) + fd['svg_h'] + 40
+        canvas_w = max(canvas_w, right)
+        canvas_h = max(canvas_h, bottom)
+    for f in fixtures:
+        ffd = fixture_floor_data[f.id]
+        right = (f.x_position or 0) + ffd['w'] + 20
+        bottom = (f.y_position or 0) + ffd['h'] + 40
+        canvas_w = max(canvas_w, right)
+        canvas_h = max(canvas_h, bottom)
+
+    # Detect tables that are too close together (overlapping clearance zones)
+    import math
+    min_clearance_px = (CHAIR_PUSHBACK_INCHES * 2 + 24) * SCALE  # bare minimum: chairs + 24" passage
+    # ADA requires 36" clear aisle for wheelchair access
+    ada_min_px = 36 * SCALE
+    proximity_warnings = []
+    accessibility_warnings = []
+
+    # Collect all obstacle bounding boxes (tables + fixtures)
+    obstacles = []
+    for table in tables:
+        fd = table_floor_data[table.id]
+        ox = (table.x_position or 0) + (fd['svg_w'] - fd['tw']) / 2
+        oy = (table.y_position or 0) + (fd['svg_h'] - fd['th']) / 2
+        obstacles.append({
+            'name': table.table_name or f'Table {table.table_number}',
+            'x': ox, 'y': oy, 'w': fd['tw'], 'h': fd['th'],
+            'is_table': True,
+        })
+    for f in fixtures:
+        ffd = fixture_floor_data[f.id]
+        obstacles.append({
+            'name': f.label or VENUE_FIXTURE_TYPES.get(f.fixture_type, {}).get('label', f.fixture_type),
+            'x': f.x_position or 0, 'y': f.y_position or 0,
+            'w': ffd['w'], 'h': ffd['h'],
+            'is_table': False,
+        })
+
+    for i, o1 in enumerate(obstacles):
+        for o2 in obstacles[i+1:]:
+            dx = abs((o1['x'] + o1['w']/2) - (o2['x'] + o2['w']/2))
+            dy = abs((o1['y'] + o1['h']/2) - (o2['y'] + o2['h']/2))
+            edge_dx = max(0, dx - o1['w']/2 - o2['w']/2)
+            edge_dy = max(0, dy - o1['h']/2 - o2['h']/2)
+            edge_dist = math.sqrt(edge_dx**2 + edge_dy**2)
+
+            # Table-to-table needs chair clearance
+            if o1['is_table'] and o2['is_table']:
+                if edge_dist < min_clearance_px:
+                    real_inches = round(edge_dist / SCALE)
+                    proximity_warnings.append(
+                        f'{o1["name"]} and {o2["name"]} are too close ({real_inches}" apart — need at least 84" for chairs + aisle)'
+                    )
+
+            # Any pair: check ADA wheelchair clearance (36")
+            if edge_dist < ada_min_px:
+                real_inches = round(edge_dist / SCALE)
+                accessibility_warnings.append(
+                    f'{o1["name"]} and {o2["name"]} have only {real_inches}" clearance — wheelchairs need at least 36"'
+                )
+
+    # Dietary balance warnings — flag tables where >60% of guests share a restriction
+    dietary_warnings = []
+    for table in tables:
+        guests = table.assigned_guests
+        if len(guests) < 3:
+            continue
+        restriction_counts = {}
+        for g in guests:
+            if g.dietary_restrictions:
+                for r in g.dietary_restrictions.split(','):
+                    r = r.strip().lower()
+                    if r:
+                        restriction_counts[r] = restriction_counts.get(r, 0) + 1
+        for restriction, count in restriction_counts.items():
+            if count >= len(guests) * 0.6 and count >= 3:
+                tname = table.table_name or f'Table {table.table_number}'
+                dietary_warnings.append(
+                    f'{tname}: {count}/{len(guests)} guests have "{restriction}" — consider spreading dietary needs across tables'
+                )
+
     return render_template('seating/chart.html', wedding=wedding, tables=tables,
+                         fixtures=fixtures,
                          unassigned_guests=unassigned, preferences=preferences,
-                         violations=violations, stats=stats,
-                         table_size_ref=TABLE_SIZE_REFERENCE, table_roles=TABLE_ROLES)
+                         violations=violations, lonely_guests=lonely_guests, stats=stats,
+                         proximity_warnings=proximity_warnings,
+                         accessibility_warnings=accessibility_warnings,
+                         dietary_warnings=dietary_warnings,
+                         canvas_w=round(canvas_w), canvas_h=round(canvas_h),
+                         table_size_ref=TABLE_SIZE_REFERENCE, table_roles=TABLE_ROLES,
+                         table_floor_data=table_floor_data,
+                         fixture_floor_data=fixture_floor_data,
+                         fixture_types=VENUE_FIXTURE_TYPES)
 
 
 @app.route('/wedding/<int:wedding_id>/seating-chart/table/add', methods=['POST'])
@@ -3921,10 +4575,12 @@ def seating_table_add(wedding_id):
         table_shape=shape,
         table_size=size,
         table_role=request.form.get('table_role', 'guest'),
-        x_position=50 + (existing_count % 4) * 220,
-        y_position=50 + (existing_count // 4) * 200,
         notes=request.form.get('notes', '')
     )
+    # Compute proper grid position based on table dimensions
+    pos_x, pos_y = compute_grid_position(existing_count, table)
+    table.x_position = pos_x
+    table.y_position = pos_y
     db.session.add(table)
     db.session.commit()
     log_activity(wedding_id, 'added', 'table', f'Table {table_number}')
@@ -3979,6 +4635,13 @@ def seating_tables_bulk_add(wedding_id):
     ref = TABLE_SIZE_REFERENCE.get(preset, TABLE_SIZE_REFERENCE['round_60'])
 
     added = 0
+    grid_index = 0  # tracks position in the guest table grid
+    # Compute clearance for the selected table type
+    clearance_px = (CHAIR_PUSHBACK_INCHES * 2 + AISLE_CLEARANCE_INCHES) * 1.4
+
+    # Determine where guest tables start (below head table if present)
+    guest_start_y = 50
+
     # Optionally add head table first
     if include_head:
         existing += 1
@@ -3988,17 +4651,27 @@ def seating_tables_bulk_add(wedding_id):
             table_name='Head Table',
             capacity=request.form.get('head_capacity', 8, type=int),
             table_shape='rectangular',
-            table_size='banquet_8ft',
+            table_size='head_16ft',
             table_role='head',
-            x_position=350,
-            y_position=30,
         )
+        head_tw, head_th = compute_table_pixel_size(head)
+        head.x_position = 50
+        head.y_position = 30
+        guest_start_y = 30 + head_th + clearance_px
         db.session.add(head)
         added += 1
 
-    # Add guest tables in a grid layout
+    # Add guest tables in a grid layout with proper spacing
+    # Build a temporary table object to compute its pixel size
+    sample = SeatingTable(table_shape=ref['shape'], table_size=preset, capacity=ref['capacity'])
+    sample_tw, sample_th = compute_table_pixel_size(sample)
+    cell_w = sample_tw + clearance_px
+    cell_h = sample_th + clearance_px
+
     for i in range(count):
         existing += 1
+        col = i % 4
+        row = i // 4
         table = SeatingTable(
             reception_id=reception.id,
             table_number=str(existing),
@@ -4007,13 +4680,14 @@ def seating_tables_bulk_add(wedding_id):
             table_shape=ref['shape'],
             table_size=preset,
             table_role='guest',
-            x_position=50 + (i % 4) * 220,
-            y_position=180 + (i // 4) * 200,
+            x_position=round(50 + col * cell_w),
+            y_position=round(guest_start_y + row * cell_h),
         )
         db.session.add(table)
         added += 1
+        grid_index = i
 
-    # Optionally add kids table
+    # Optionally add kids table (placed after the last guest table)
     if include_kids:
         existing += 1
         kids = SeatingTable(
@@ -4024,9 +4698,12 @@ def seating_tables_bulk_add(wedding_id):
             table_shape='round',
             table_size='round_60',
             table_role='kids',
-            x_position=50 + (count % 4) * 220,
-            y_position=180 + (count // 4) * 200,
         )
+        next_i = grid_index + 1
+        kids_col = next_i % 4
+        kids_row = next_i // 4
+        kids.x_position = round(50 + kids_col * cell_w)
+        kids.y_position = round(guest_start_y + kids_row * cell_h)
         db.session.add(kids)
         added += 1
 
@@ -4044,7 +4721,19 @@ def seating_assign(wedding_id):
     guest = Guest.query.get_or_404(guest_id)
     guest.table_id = table_id if table_id else None
     db.session.commit()
-    flash(f'{guest.name} assigned!', 'success')
+    msg = f'{guest.name} assigned!'
+    category = 'success'
+    if table_id:
+        warnings = []
+        table = SeatingTable.query.get(table_id)
+        if table and len(table.assigned_guests) > table.capacity:
+            warnings.append(f'table is now over capacity ({len(table.assigned_guests)}/{table.capacity})')
+        if guest.rsvp_status != 'accepted':
+            warnings.append(f'RSVP status is "{guest.rsvp_status or "pending"}"')
+        if warnings:
+            msg += ' Note: ' + '; '.join(warnings) + '.'
+            category = 'warning'
+    flash(msg, category)
     return redirect(url_for('seating_chart', wedding_id=wedding_id))
 
 
@@ -4063,12 +4752,20 @@ def seating_unassign(wedding_id, guest_id):
 def seating_bulk_assign(wedding_id):
     table_id = request.form.get('table_id', type=int)
     guest_ids = request.form.getlist('guest_ids')
+    assigned = 0
+    pending_count = 0
     for gid in guest_ids:
         guest = Guest.query.get(int(gid))
         if guest:
             guest.table_id = table_id
+            assigned += 1
+            if guest.rsvp_status != 'accepted':
+                pending_count += 1
     db.session.commit()
-    flash(f'{len(guest_ids)} guests assigned!', 'success')
+    msg = f'{assigned} guests assigned!'
+    if pending_count:
+        msg += f' ({pending_count} have not yet accepted their RSVP.)'
+    flash(msg, 'success' if pending_count == 0 else 'warning')
     return redirect(url_for('seating_chart', wedding_id=wedding_id))
 
 
@@ -4098,6 +4795,88 @@ def seating_update_position(wedding_id):
     return jsonify({'status': 'ok'})
 
 
+@app.route('/wedding/<int:wedding_id>/seating-chart/table/<int:table_id>/rotate', methods=['POST'])
+@login_required
+def seating_table_rotate(wedding_id, table_id):
+    """AJAX endpoint to rotate a table by 90 degrees."""
+    table = SeatingTable.query.get_or_404(table_id)
+    current = table.rotation or 0
+    table.rotation = (current + 90) % 360
+    db.session.commit()
+    return jsonify({'status': 'ok', 'rotation': table.rotation})
+
+
+# --- Venue Fixtures (dance floor, bar, stage, etc.) ---
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/fixture/add', methods=['POST'])
+@login_required
+def fixture_add(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    reception = wedding.reception
+    if not reception:
+        flash('Please set up reception details first.', 'warning')
+        return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+    fixture_type = request.form.get('fixture_type', '')
+    preset = VENUE_FIXTURE_TYPES.get(fixture_type)
+
+    if preset:
+        width = preset['width']
+        height = preset['height']
+        label = preset['label']
+    else:
+        width = request.form.get('width_inches', 72, type=int)
+        height = request.form.get('height_inches', 36, type=int)
+        label = request.form.get('label', 'Custom Fixture')
+
+    # Place below existing tables/fixtures
+    y_offset = 50
+    for t in reception.seating_tables:
+        y_offset = max(y_offset, (t.y_position or 0) + 150)
+    for f in reception.venue_fixtures:
+        y_offset = max(y_offset, (f.y_position or 0) + 100)
+
+    fixture = VenueFixture(
+        reception_id=reception.id,
+        fixture_type=fixture_type or 'custom',
+        label=request.form.get('label', '') or label,
+        width_inches=width,
+        height_inches=height,
+        x_position=50,
+        y_position=round(y_offset + 30),
+        notes=request.form.get('notes', ''),
+    )
+    db.session.add(fixture)
+    db.session.commit()
+    flash(f'{fixture.label} added to floor plan!', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/fixture/<int:fixture_id>/delete', methods=['POST'])
+@login_required
+def fixture_delete(wedding_id, fixture_id):
+    get_wedding_or_403(wedding_id)
+    fixture = VenueFixture.query.get_or_404(fixture_id)
+    db.session.delete(fixture)
+    db.session.commit()
+    flash('Fixture removed from floor plan.', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/fixture/update-position', methods=['POST'])
+@login_required
+def fixture_update_position(wedding_id):
+    """AJAX endpoint for drag-and-drop fixture positioning."""
+    fixture_id = request.json.get('fixture_id')
+    x = request.json.get('x')
+    y = request.json.get('y')
+    fixture = VenueFixture.query.get_or_404(fixture_id)
+    fixture.x_position = x
+    fixture.y_position = y
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
 # --- Seating Preferences (together/apart) ---
 
 @app.route('/wedding/<int:wedding_id>/seating-chart/preferences')
@@ -4123,7 +4902,18 @@ def seating_preference_add(wedding_id):
         flash('Cannot create a preference for the same guest.', 'warning')
         return redirect(url_for('seating_preferences', wedding_id=wedding_id))
 
-    # Check for duplicate
+    # Check for contradictory reverse preference (A→B "together" vs B→A "apart")
+    reverse = SeatingPreference.query.filter_by(
+        wedding_id=wedding_id, guest_id=other_guest_id, other_guest_id=guest_id
+    ).first()
+    if reverse and reverse.preference_type != pref_type:
+        guest = Guest.query.get(guest_id)
+        other = Guest.query.get(other_guest_id)
+        flash(f'Conflict: {other.name} & {guest.name} already have a "{reverse.preference_type}" preference. '
+              f'Remove it first before adding a "{pref_type}" preference.', 'warning')
+        return redirect(url_for('seating_preferences', wedding_id=wedding_id))
+
+    # Check for duplicate (same direction)
     existing = SeatingPreference.query.filter_by(
         wedding_id=wedding_id, guest_id=guest_id, other_guest_id=other_guest_id
     ).first()
@@ -4201,10 +4991,13 @@ def seating_auto_assign(wedding_id):
         flash('No guests to assign.', 'info')
         return redirect(url_for('seating_chart', wedding_id=wedding_id))
 
-    # Load preferences
+    # Load preferences (sorted by priority so higher-priority constraints are processed first)
     prefs = SeatingPreference.query.filter_by(wedding_id=wedding_id).all()
-    together_pairs = [(p.guest_id, p.other_guest_id) for p in prefs if p.preference_type == 'together']
-    apart_pairs = [(p.guest_id, p.other_guest_id) for p in prefs if p.preference_type == 'apart']
+    together_pairs = sorted(
+        [(p.guest_id, p.other_guest_id, p.priority) for p in prefs if p.preference_type == 'together'],
+        key=lambda x: -x[2]  # highest priority first
+    )
+    apart_pairs = [(p.guest_id, p.other_guest_id, p.priority) for p in prefs if p.preference_type == 'apart']
 
     # Build guest groups using Union-Find for "together" constraints
     guest_ids = {g.id for g in guests_to_assign}
@@ -4221,25 +5014,28 @@ def seating_auto_assign(wedding_id):
         if ra != rb:
             parent[ra] = rb
 
-    # Merge from "together" preferences
-    for a, b in together_pairs:
+    # Merge from "together" preferences (already sorted by priority, highest first)
+    for a, b, priority in together_pairs:
         if a in guest_ids and b in guest_ids:
             union(a, b)
 
-    # Also merge by household_group
+    # Also merge by household_group (case-insensitive, whitespace-normalized)
     household_map = {}
     for g in guests_to_assign:
         if g.household_group:
-            if g.household_group in household_map:
-                union(g.id, household_map[g.household_group])
+            key = g.household_group.strip().lower()
+            if key in household_map:
+                union(g.id, household_map[key])
             else:
-                household_map[g.household_group] = g.id
+                household_map[key] = g.id
 
-    # Also group plus-ones with their hosts
-    name_to_id = {g.name: g.id for g in guests_to_assign}
+    # Also group plus-ones with their hosts (case-insensitive, whitespace-normalized)
+    name_to_id = {g.name.strip().lower(): g.id for g in guests_to_assign if g.name}
     for g in guests_to_assign:
-        if g.is_plus_one and g.plus_one_of and g.plus_one_of in name_to_id:
-            union(g.id, name_to_id[g.plus_one_of])
+        if g.is_plus_one and g.plus_one_of:
+            host_key = g.plus_one_of.strip().lower()
+            if host_key in name_to_id:
+                union(g.id, name_to_id[host_key])
 
     # Build actual groups
     from collections import defaultdict
@@ -4247,11 +5043,12 @@ def seating_auto_assign(wedding_id):
     for g in guests_to_assign:
         groups[find(g.id)].append(g)
 
-    # Build apart-set (which group roots must not share a table)
-    apart_roots = set()
-    for a, b in apart_pairs:
+    # Build apart-set (which group roots must not share a table) with priority
+    apart_roots = {}  # (root_a, root_b) -> priority
+    for a, b, priority in apart_pairs:
         if a in guest_ids and b in guest_ids:
-            apart_roots.add((find(a), find(b)))
+            key = (find(a), find(b))
+            apart_roots[key] = max(apart_roots.get(key, 0), priority)
 
     # --- Social Group Affinity ---
     # Build a map: group_root -> set of social tags
@@ -4297,16 +5094,26 @@ def seating_auto_assign(wedding_id):
     # Sort groups by traits for smart placement
     guest_lookup = {g.id: g for g in guests_to_assign}
 
+    # Track which groups have accessibility needs
+    groups_with_accessibility = set()
+    for root, members in groups.items():
+        if any(g.accessibility_needs for g in members):
+            groups_with_accessibility.add(root)
+
     def group_sort_key(grp):
-        """Priority: kids first (for kids table), then family, then friends."""
+        """Priority: accessibility first, kids next, then family, then friends."""
+        root = find(grp[0].id)
+        has_accessibility = root in groups_with_accessibility
         types = [g.guest_type for g in grp]
+        if has_accessibility:
+            return (0, 0, -len(grp))
         if any(t == 'child' or t == 'kid' for t in types):
-            return (0, -len(grp))
+            return (0, 1, -len(grp))
         if any(t == 'family' for t in types):
-            return (1, -len(grp))
+            return (1, 0, -len(grp))
         if any(t == 'vip' for t in types):
-            return (2, -len(grp))
-        return (3, -len(grp))
+            return (2, 0, -len(grp))
+        return (3, 0, -len(grp))
 
     sorted_groups = sorted(groups.values(), key=group_sort_key)
 
@@ -4321,17 +5128,25 @@ def seating_auto_assign(wedding_id):
         """Check if placing this group at this table violates constraints."""
         if table_counts.get(table.id, 0) + group_size > table.capacity:
             return False
-        # Check apart constraints
+        # Check apart constraints (respect priority — only block if priority >= 3)
         for assigned_root in table_assignments[table.id]:
-            if (group_root, assigned_root) in apart_roots or (assigned_root, group_root) in apart_roots:
+            priority = apart_roots.get((group_root, assigned_root), 0) or apart_roots.get((assigned_root, group_root), 0)
+            if priority >= 3:
                 return False
         return True
+
+    # Sort tables by table_number for accessibility preference (lower = closer to entrance)
+    tables_by_number = sorted(tables, key=lambda t: t.table_number)
 
     def table_affinity(group_root, table):
         """Score how well this group fits at this table based on who's already there."""
         score = 0
         for existing_root in table_assignments[table.id]:
             score += affinity_score(group_root, existing_root)
+        # Boost score for lower-numbered tables when group has accessibility needs
+        if group_root in groups_with_accessibility:
+            idx = tables_by_number.index(table) if table in tables_by_number else len(tables)
+            score += max(0, len(tables) - idx)  # higher score for lower table numbers
         return score
 
     def place_group(grp, table):
@@ -4523,20 +5338,37 @@ def export_vendors_csv(wedding_id):
     response.headers['Content-Disposition'] = f'attachment; filename=vendors_{wedding_id}.csv'
     return response
 
+def _render_or_pdf(template, filename, **context):
+    """Render a template as HTML, or as a PDF download if ?format=pdf is in the query string."""
+    html = render_template(template, **context)
+    if request.args.get('format') == 'pdf':
+        from weasyprint import HTML, CSS
+        pdf = HTML(string=html).write_pdf(
+            stylesheets=[CSS(string='@media print { .print-btn, .share-form-inline { display: none !important; } }')],
+            presentational_hints=True
+        )
+        response = make_response(pdf)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        return response
+    return html
+
 @app.route('/wedding/<int:wedding_id>/print/timeline')
 @login_required
 def print_timeline(wedding_id):
     """Printable day-of timeline."""
     wedding = get_wedding_or_403(wedding_id)
     items = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
-    return render_template('print/timeline.html', wedding=wedding, items=items)
+    return _render_or_pdf('print/timeline.html', f'timeline_{wedding_id}.pdf',
+                          wedding=wedding, items=items)
 
 @app.route('/wedding/<int:wedding_id>/print/vendor-contacts')
 @login_required
 def print_vendor_contacts(wedding_id):
     """Printable vendor contact sheet."""
     wedding = get_wedding_or_403(wedding_id)
-    return render_template('print/vendor_contacts.html', wedding=wedding, vendors=wedding.vendors)
+    return _render_or_pdf('print/vendor_contacts.html', f'vendor_contacts_{wedding_id}.pdf',
+                          wedding=wedding, vendors=wedding.vendors)
 
 @app.route('/wedding/<int:wedding_id>/print/shot-list')
 @login_required
@@ -4544,23 +5376,448 @@ def print_shot_list(wedding_id):
     """Printable photography shot list."""
     wedding = get_wedding_or_403(wedding_id)
     shots = sorted(wedding.photo_shots, key=lambda x: (x.category or '', x.priority or ''))
-    return render_template('print/shot_list.html', wedding=wedding, shots=shots)
+    return _render_or_pdf('print/shot_list.html', f'shot_list_{wedding_id}.pdf',
+                          wedding=wedding, shots=shots)
 
 @app.route('/wedding/<int:wedding_id>/print/emergency-contacts')
 @login_required
 def print_emergency_contacts(wedding_id):
     """Printable emergency contact card."""
     wedding = get_wedding_or_403(wedding_id)
-    return render_template('print/emergency_contacts.html', wedding=wedding,
-                         vendors=wedding.vendors, participants=wedding.participants)
+    return _render_or_pdf('print/emergency_contacts.html', f'emergency_contacts_{wedding_id}.pdf',
+                          wedding=wedding, vendors=wedding.vendors, participants=wedding.participants)
 
 @app.route('/wedding/<int:wedding_id>/print/seating')
 @login_required
 def print_seating(wedding_id):
-    """Printable seating chart."""
+    """Printable seating chart with visual floor plan."""
     wedding = get_wedding_or_403(wedding_id)
     tables = wedding.reception.seating_tables if wedding.reception else []
-    return render_template('print/seating.html', wedding=wedding, tables=tables)
+    fixtures = wedding.reception.venue_fixtures if wedding.reception else []
+    table_floor_data = compute_table_floor_data(tables, scale=1.0)
+    fixture_floor_data = {}
+    scale = 1.4
+    for f in fixtures:
+        fixture_floor_data[f.id] = {
+            'w': int(f.width_inches * scale),
+            'h': int(f.height_inches * scale),
+        }
+    return _render_or_pdf('print/seating.html', f'seating_{wedding_id}.pdf',
+                          wedding=wedding, tables=tables,
+                          table_floor_data=table_floor_data,
+                          fixtures=fixtures,
+                          fixture_floor_data=fixture_floor_data,
+                          fixture_types=VENUE_FIXTURE_TYPES)
+
+@app.route('/wedding/<int:wedding_id>/print')
+@login_required
+def print_center(wedding_id):
+    """Print Center - all printable documents in one place."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('print/print_center.html', wedding=wedding)
+
+
+def _generate_pdf_bytes(template_name, **context):
+    """Render a template and return PDF bytes via WeasyPrint."""
+    from weasyprint import HTML, CSS
+    html = render_template(template_name, **context)
+    return HTML(string=html).write_pdf(
+        stylesheets=[CSS(string='@media print { .print-btn, .share-btn, .share-form-inline { display: none !important; } }')],
+        presentational_hints=True
+    )
+
+
+# Mapping of document types to their template, filename pattern, and data-gathering logic.
+PRINT_DOCUMENTS = {
+    'timeline':            {'title': 'Day-Of Timeline',       'template': 'print/timeline.html',            'filename': 'timeline'},
+    'vendor_contacts':     {'title': 'Vendor Contacts',       'template': 'print/vendor_contacts.html',     'filename': 'vendor_contacts'},
+    'shot_list':           {'title': 'Photography Shot List', 'template': 'print/shot_list.html',           'filename': 'shot_list'},
+    'emergency_contacts':  {'title': 'Emergency Contacts',    'template': 'print/emergency_contacts.html',  'filename': 'emergency_contacts'},
+    'seating':             {'title': 'Seating Chart',         'template': 'print/seating.html',             'filename': 'seating'},
+    'ceremony_program':    {'title': 'Ceremony Program',      'template': 'print/ceremony_program.html',    'filename': 'ceremony_program'},
+    'music_cue_sheet':     {'title': 'Music Cue Sheet',       'template': 'print/music_cue_sheet.html',     'filename': 'music_cue_sheet'},
+    'guest_list':          {'title': 'Guest List',            'template': 'print/guest_list.html',           'filename': 'guest_list'},
+    'tips_tracker':        {'title': 'Tips & Payments',       'template': 'print/tips_tracker.html',         'filename': 'tips'},
+    'hair_makeup':         {'title': 'Hair & Makeup Schedule','template': 'print/hair_makeup.html',          'filename': 'hair_makeup'},
+    'bridal_party':        {'title': 'Wedding Party',         'template': 'print/bridal_party.html',         'filename': 'bridal_party'},
+    'venue_info':          {'title': 'Venue Information',     'template': 'print/venue_info.html',           'filename': 'venue_info'},
+    'decor_setup':         {'title': 'Decor & Setup Plan',    'template': 'print/decor_setup.html',          'filename': 'decor_setup'},
+    'reception_script':    {'title': 'Reception Run Sheet',   'template': 'print/reception_script.html',     'filename': 'reception_script'},
+    'emergency_kit':       {'title': 'Emergency Kit Checklist','template': 'print/emergency_kit.html',       'filename': 'emergency_kit'},
+    'rehearsal':           {'title': 'Rehearsal Schedule',    'template': 'print/rehearsal.html',             'filename': 'rehearsal'},
+    'transportation':      {'title': 'Transportation & Hotels','template': 'print/transportation.html',      'filename': 'transportation'},
+    'contingency_plans':   {'title': 'Backup Plans',          'template': 'print/contingency_plans.html',    'filename': 'contingency_plans'},
+    'budget_summary':      {'title': 'Budget Summary',        'template': 'print/budget_summary.html',       'filename': 'budget'},
+}
+
+
+def _get_print_context(document_type, wedding):
+    """Build the template context dict for a given document type."""
+    ctx = {'wedding': wedding}
+    if document_type == 'timeline':
+        ctx['items'] = sorted(wedding.day_of_items, key=lambda x: (x.order, x.time or datetime.min.time()))
+    elif document_type == 'vendor_contacts':
+        ctx['vendors'] = wedding.vendors
+    elif document_type == 'shot_list':
+        ctx['shots'] = sorted(wedding.photo_shots, key=lambda x: (x.category or '', x.priority or ''))
+    elif document_type == 'emergency_contacts':
+        ctx['vendors'] = wedding.vendors
+        ctx['participants'] = wedding.participants
+    elif document_type == 'seating':
+        tables = wedding.reception.seating_tables if wedding.reception else []
+        fixtures = wedding.reception.venue_fixtures if wedding.reception else []
+        ctx['tables'] = tables
+        ctx['table_floor_data'] = compute_table_floor_data(tables, scale=1.0)
+        ctx['fixtures'] = fixtures
+        scale = 1.4
+        ctx['fixture_floor_data'] = {f.id: {'w': int(f.width_inches * scale), 'h': int(f.height_inches * scale)} for f in fixtures}
+        ctx['fixture_types'] = VENUE_FIXTURE_TYPES
+    elif document_type == 'ceremony_program':
+        ceremony = wedding.ceremony
+        ctx['ceremony'] = ceremony
+        ctx['readings'] = sorted(ceremony.readings, key=lambda x: (x.order or 0)) if ceremony and ceremony.readings else []
+        ctx['timeline_items'] = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony and ceremony.timeline_items else []
+        ctx['bridal_party'] = sorted(wedding.bridal_party, key=lambda x: (x.processional_order or 999))
+    elif document_type == 'music_cue_sheet':
+        ctx['ceremony'] = wedding.ceremony
+        ctx['songs'] = sorted(wedding.songs, key=lambda x: (x.moment or '', x.order or 0))
+    elif document_type == 'guest_list':
+        ctx['guests'] = sorted(wedding.guests, key=lambda x: x.name)
+    elif document_type == 'tips_tracker':
+        ctx['tips'] = sorted(wedding.tips, key=lambda x: (x.service_category or '', x.recipient))
+    elif document_type == 'hair_makeup':
+        ctx['appointments'] = sorted(wedding.hair_makeup, key=lambda x: (x.appointment_time or datetime.min.time()))
+    elif document_type == 'bridal_party':
+        ctx['bridal_party'] = sorted(wedding.bridal_party, key=lambda x: (x.side or '', x.processional_order or 999))
+    elif document_type == 'venue_info':
+        ctx['ceremony'] = wedding.ceremony
+        ctx['reception'] = wedding.reception
+        ctx['vendors'] = wedding.vendors
+        ctx['accommodations'] = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    elif document_type == 'decor_setup':
+        ctx['reception'] = wedding.reception
+        ctx['floral_items'] = sorted(wedding.floral_items, key=lambda x: (x.item_type or ''))
+        ctx['inventory_items'] = wedding.inventory_items
+    elif document_type == 'reception_script':
+        reception = wedding.reception
+        ctx['reception'] = reception
+        ctx['reception_items'] = sorted(reception.timeline_items, key=lambda x: (x.order or 0)) if reception and reception.timeline_items else []
+        ctx['songs'] = sorted(wedding.songs, key=lambda x: (x.moment or '', x.order or 0))
+        ctx['speeches'] = sorted(wedding.speeches, key=lambda x: (x.order or 0))
+    elif document_type == 'emergency_kit':
+        if not wedding.emergency_kit_items:
+            seed_default_emergency_kit(wedding.id)
+        ctx['kit_items'] = sorted(wedding.emergency_kit_items, key=lambda x: (x.category or '', x.item_name))
+    elif document_type == 'rehearsal':
+        ctx['rehearsal_dinner'] = wedding.rehearsal_dinner
+        ceremony = wedding.ceremony
+        ctx['ceremony_items'] = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony and ceremony.timeline_items else []
+        ctx['bridal_party'] = sorted(wedding.bridal_party, key=lambda x: (x.processional_order or 999))
+    elif document_type == 'transportation':
+        ctx['accommodations'] = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    elif document_type == 'contingency_plans':
+        ctx['plans'] = sorted(wedding.contingency_plans, key=lambda x: (x.category or ''))
+    elif document_type == 'budget_summary':
+        budget = wedding.budget
+        ctx['budget'] = budget
+        ctx['expenses'] = sorted(budget.expenses, key=lambda x: (x.category or '', x.item_name)) if budget else []
+    return ctx
+
+
+@app.route('/wedding/<int:wedding_id>/print/share', methods=['POST'])
+@login_required
+def print_share(wedding_id):
+    """Email a print document as a PDF attachment."""
+    wedding = get_wedding_or_403(wedding_id)
+
+    document_type = request.form.get('document_type', '').strip()
+    recipient_email = request.form.get('recipient_email', '').strip()
+    recipient_name = request.form.get('recipient_name', '').strip()
+    message = request.form.get('message', '').strip()
+
+    # Validate document type
+    if document_type not in PRINT_DOCUMENTS:
+        flash('Invalid document type.', 'error')
+        return redirect(url_for('print_center', wedding_id=wedding_id))
+
+    # Validate email
+    if not recipient_email or not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', recipient_email):
+        flash('Please enter a valid email address.', 'error')
+        return redirect(url_for('print_center', wedding_id=wedding_id))
+
+    doc_info = PRINT_DOCUMENTS[document_type]
+
+    try:
+        # Build context and generate PDF
+        ctx = _get_print_context(document_type, wedding)
+        pdf_bytes = _generate_pdf_bytes(doc_info['template'], **ctx)
+        pdf_filename = f"{doc_info['filename']}_{wedding_id}.pdf"
+
+        # Build email body
+        greeting = f"Hi {recipient_name},\n\n" if recipient_name else "Hi,\n\n"
+        custom_msg = f"{message}\n\n" if message else ""
+        body_text = (
+            f"{greeting}"
+            f"{custom_msg}"
+            f"{wedding.couple_names} shared a wedding document with you: "
+            f"{doc_info['title']}.\n\n"
+            f"The document is attached as a PDF.\n\n"
+            f"Best regards,\nWedding Organizer"
+        )
+
+        subject = f"{doc_info['title']} - {wedding.couple_names}"
+
+        success = send_pdf_email(
+            to_email=recipient_email,
+            subject=subject,
+            body_text=body_text,
+            pdf_bytes=pdf_bytes,
+            pdf_filename=pdf_filename,
+        )
+
+        if success:
+            flash(f'{doc_info["title"]} sent to {recipient_email}.', 'success')
+        else:
+            flash('Email could not be sent. Please check your SMTP configuration.', 'error')
+    except Exception as e:
+        print(f"Error sharing document: {e}")
+        flash('An error occurred while generating or sending the document.', 'error')
+
+    return redirect(url_for('print_center', wedding_id=wedding_id))
+
+def _build_personal_timeline(wedding, participant):
+    """Build personalized timeline data for a single participant."""
+    from datetime import time as time_type
+    # Get timeline items assigned to this participant
+    assigned_items = sorted(
+        participant.timeline_items,
+        key=lambda x: (x.time or time_type.min, x.order)
+    )
+    # Also include items where their name appears in the 'who' field
+    name_lower = participant.name.lower()
+    for item in wedding.day_of_items:
+        if item not in assigned_items and item.who and name_lower in item.who.lower():
+            assigned_items.append(item)
+    assigned_items = sorted(assigned_items, key=lambda x: (x.time or time_type.min, x.order))
+
+    # Get hair & makeup appointments matching this person's name
+    hair_makeup = [appt for appt in wedding.hair_makeup
+                   if appt.person_name and appt.person_name.lower() == name_lower]
+    hair_makeup = sorted(hair_makeup, key=lambda x: (x.appointment_time or time_type.min))
+
+    # Get responsibilities from bridal party member if linked
+    responsibilities = []
+    if participant.bridal_party_member and participant.bridal_party_member.responsibilities:
+        responsibilities = [r.strip() for r in participant.bridal_party_member.responsibilities.split('\n') if r.strip()]
+    elif participant.notes:
+        responsibilities = [r.strip() for r in participant.notes.split('\n') if r.strip()]
+
+    # Key contacts: couple + coordinator/planner
+    key_contacts = []
+    for p in wedding.participants:
+        if p.id != participant.id and p.role_category in ('couple', 'handler'):
+            key_contacts.append(p)
+    # Also add planner vendors
+    for v in wedding.vendors:
+        if v.category == 'planner' and v.contact_name:
+            class _Contact:
+                def __init__(self, name, role, phone, email):
+                    self.name = name
+                    self.role = role
+                    self.phone = phone
+                    self.email = email
+            key_contacts.append(_Contact(v.contact_name, 'wedding_planner', v.phone, v.email))
+
+    return {
+        'participant': participant,
+        'timeline_items': assigned_items,
+        'hair_makeup': hair_makeup,
+        'responsibilities': responsibilities,
+        'key_contacts': key_contacts,
+    }
+
+@app.route('/wedding/<int:wedding_id>/print/personal-timelines')
+@login_required
+def print_personal_timelines(wedding_id):
+    """Selection page: choose which participant's timeline to print."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('print/personal_timelines.html',
+                           wedding=wedding, participants=wedding.participants)
+
+@app.route('/wedding/<int:wedding_id>/print/personal-timeline/<int:participant_id>')
+@login_required
+def print_personal_timeline(wedding_id, participant_id):
+    """Printable personal timeline for a specific participant."""
+    wedding = get_wedding_or_403(wedding_id)
+    participant = WeddingParticipant.query.get_or_404(participant_id)
+    if participant.wedding_id != wedding.id:
+        abort(404)
+    data = _build_personal_timeline(wedding, participant)
+    return _render_or_pdf('print/personal_timeline.html',
+                          f'timeline_{participant.name.replace(" ", "_")}_{wedding_id}.pdf',
+                          wedding=wedding, **data)
+
+@app.route('/wedding/<int:wedding_id>/print/all-personal-timelines')
+@login_required
+def print_all_personal_timelines(wedding_id):
+    """Printable combined personal timelines for all participants (one page per person)."""
+    wedding = get_wedding_or_403(wedding_id)
+    participant_data = []
+    for p in sorted(wedding.participants, key=lambda x: (x.role_category or 'zzz', x.name)):
+        data = _build_personal_timeline(wedding, p)
+        participant_data.append(data)
+    return _render_or_pdf('print/all_personal_timelines.html',
+                          f'all_personal_timelines_{wedding_id}.pdf',
+                          wedding=wedding, participant_data=participant_data)
+
+@app.route('/wedding/<int:wedding_id>/print/ceremony-program')
+@login_required
+def print_ceremony_program(wedding_id):
+    """Printable ceremony program with readings and script."""
+    wedding = get_wedding_or_403(wedding_id)
+    ceremony = wedding.ceremony
+    readings = sorted(ceremony.readings, key=lambda x: (x.order or 0)) if ceremony and ceremony.readings else []
+    timeline_items = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony and ceremony.timeline_items else []
+    bridal_party = sorted(wedding.bridal_party, key=lambda x: (x.processional_order or 999))
+    return _render_or_pdf('print/ceremony_program.html', f'ceremony_program_{wedding_id}.pdf',
+                          wedding=wedding, ceremony=ceremony, readings=readings,
+                          timeline_items=timeline_items, bridal_party=bridal_party)
+
+@app.route('/wedding/<int:wedding_id>/print/music-cue-sheet')
+@login_required
+def print_music_cue_sheet(wedding_id):
+    """Printable music cue sheet for DJ/band."""
+    wedding = get_wedding_or_403(wedding_id)
+    ceremony = wedding.ceremony
+    songs = sorted(wedding.songs, key=lambda x: (x.moment or '', x.order or 0))
+    return _render_or_pdf('print/music_cue_sheet.html', f'music_cue_sheet_{wedding_id}.pdf',
+                          wedding=wedding, ceremony=ceremony, songs=songs)
+
+@app.route('/wedding/<int:wedding_id>/print/guest-list')
+@login_required
+def print_guest_list(wedding_id):
+    """Printable guest list with meal choices and dietary restrictions."""
+    wedding = get_wedding_or_403(wedding_id)
+    guests = sorted(wedding.guests, key=lambda x: x.name)
+    return _render_or_pdf('print/guest_list.html', f'guest_list_{wedding_id}.pdf',
+                          wedding=wedding, guests=guests)
+
+@app.route('/wedding/<int:wedding_id>/print/tips')
+@login_required
+def print_tips_tracker(wedding_id):
+    """Printable tips and payment tracker."""
+    wedding = get_wedding_or_403(wedding_id)
+    tips = sorted(wedding.tips, key=lambda x: (x.service_category or '', x.recipient))
+    return _render_or_pdf('print/tips_tracker.html', f'tips_{wedding_id}.pdf',
+                          wedding=wedding, tips=tips)
+
+@app.route('/wedding/<int:wedding_id>/print/hair-makeup')
+@login_required
+def print_hair_makeup(wedding_id):
+    """Printable hair and makeup schedule."""
+    wedding = get_wedding_or_403(wedding_id)
+    appointments = sorted(wedding.hair_makeup, key=lambda x: (x.appointment_time or datetime.min.time()))
+    return _render_or_pdf('print/hair_makeup.html', f'hair_makeup_{wedding_id}.pdf',
+                          wedding=wedding, appointments=appointments)
+
+@app.route('/wedding/<int:wedding_id>/print/bridal-party')
+@login_required
+def print_bridal_party_info(wedding_id):
+    """Printable wedding party info sheet."""
+    wedding = get_wedding_or_403(wedding_id)
+    bridal_party = sorted(wedding.bridal_party, key=lambda x: (x.side or '', x.processional_order or 999))
+    return _render_or_pdf('print/bridal_party.html', f'bridal_party_{wedding_id}.pdf',
+                          wedding=wedding, bridal_party=bridal_party)
+
+@app.route('/wedding/<int:wedding_id>/print/venue-info')
+@login_required
+def print_venue_info(wedding_id):
+    """Printable venue information sheet."""
+    wedding = get_wedding_or_403(wedding_id)
+    ceremony = wedding.ceremony
+    reception = wedding.reception
+    accommodations = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    return _render_or_pdf('print/venue_info.html', f'venue_info_{wedding_id}.pdf',
+                          wedding=wedding, ceremony=ceremony, reception=reception,
+                          vendors=wedding.vendors, accommodations=accommodations)
+
+@app.route('/wedding/<int:wedding_id>/print/decor-setup')
+@login_required
+def print_decor_setup(wedding_id):
+    """Printable decor and setup plan."""
+    wedding = get_wedding_or_403(wedding_id)
+    reception = wedding.reception
+    floral_items = sorted(wedding.floral_items, key=lambda x: (x.item_type or ''))
+    inventory_items = wedding.inventory_items
+    return _render_or_pdf('print/decor_setup.html', f'decor_setup_{wedding_id}.pdf',
+                          wedding=wedding, reception=reception,
+                          floral_items=floral_items, inventory_items=inventory_items)
+
+@app.route('/wedding/<int:wedding_id>/print/reception-script')
+@login_required
+def print_reception_script(wedding_id):
+    """Printable MC/DJ reception run sheet."""
+    wedding = get_wedding_or_403(wedding_id)
+    reception = wedding.reception
+    reception_items = sorted(reception.timeline_items, key=lambda x: (x.order or 0)) if reception and reception.timeline_items else []
+    songs = sorted(wedding.songs, key=lambda x: (x.moment or '', x.order or 0))
+    speeches = sorted(wedding.speeches, key=lambda x: (x.order or 0))
+    return _render_or_pdf('print/reception_script.html', f'reception_script_{wedding_id}.pdf',
+                          wedding=wedding, reception=reception,
+                          reception_items=reception_items, songs=songs, speeches=speeches)
+
+@app.route('/wedding/<int:wedding_id>/print/emergency-kit')
+@login_required
+def print_emergency_kit(wedding_id):
+    """Printable emergency kit supplies checklist."""
+    wedding = get_wedding_or_403(wedding_id)
+    # Auto-seed default items for weddings created before this feature
+    if not wedding.emergency_kit_items:
+        seed_default_emergency_kit(wedding.id)
+    kit_items = sorted(wedding.emergency_kit_items, key=lambda x: (x.category or '', x.item_name))
+    return _render_or_pdf('print/emergency_kit.html', f'emergency_kit_{wedding_id}.pdf',
+                          wedding=wedding, kit_items=kit_items)
+
+@app.route('/wedding/<int:wedding_id>/print/rehearsal')
+@login_required
+def print_rehearsal(wedding_id):
+    """Printable rehearsal schedule."""
+    wedding = get_wedding_or_403(wedding_id)
+    rehearsal_dinner = wedding.rehearsal_dinner
+    ceremony = wedding.ceremony
+    ceremony_items = sorted(ceremony.timeline_items, key=lambda x: x.order) if ceremony and ceremony.timeline_items else []
+    bridal_party = sorted(wedding.bridal_party, key=lambda x: (x.processional_order or 999))
+    return _render_or_pdf('print/rehearsal.html', f'rehearsal_{wedding_id}.pdf',
+                          wedding=wedding, rehearsal_dinner=rehearsal_dinner,
+                          ceremony_items=ceremony_items, bridal_party=bridal_party)
+
+@app.route('/wedding/<int:wedding_id>/print/transportation')
+@login_required
+def print_transportation(wedding_id):
+    """Printable transportation and accommodations sheet."""
+    wedding = get_wedding_or_403(wedding_id)
+    accommodations = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    return _render_or_pdf('print/transportation.html', f'transportation_{wedding_id}.pdf',
+                          wedding=wedding, accommodations=accommodations)
+
+@app.route('/wedding/<int:wedding_id>/print/contingency-plans')
+@login_required
+def print_contingency_plans(wedding_id):
+    """Printable backup and contingency plans."""
+    wedding = get_wedding_or_403(wedding_id)
+    plans = sorted(wedding.contingency_plans, key=lambda x: (x.category or ''))
+    return _render_or_pdf('print/contingency_plans.html', f'contingency_plans_{wedding_id}.pdf',
+                          wedding=wedding, plans=plans)
+
+@app.route('/wedding/<int:wedding_id>/print/budget')
+@login_required
+def print_budget_summary(wedding_id):
+    """Printable budget summary."""
+    wedding = get_wedding_or_403(wedding_id)
+    budget = wedding.budget
+    expenses = sorted(budget.expenses, key=lambda x: (x.category or '', x.item_name)) if budget else []
+    return _render_or_pdf('print/budget_summary.html', f'budget_{wedding_id}.pdf',
+                          wedding=wedding, budget=budget, expenses=expenses)
 
 @app.route('/wedding/<int:wedding_id>/export/mailing-labels')
 @login_required
@@ -4577,6 +5834,706 @@ def export_mailing_labels(wedding_id):
     response.headers['Content-Type'] = 'text/csv'
     response.headers['Content-Disposition'] = f'attachment; filename=mailing_labels_{wedding_id}.csv'
     return response
+
+# ============================================
+# CSV EXPORTS - ADDITIONAL MODULES
+# ============================================
+
+@app.route('/wedding/<int:wedding_id>/export/bridal-party')
+@login_required
+def export_bridal_party_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Name', 'Role', 'Side', 'Email', 'Phone', 'Processional Order',
+                     'Responsibilities', 'Gift Idea', 'Gift Cost', 'Gift Purchased'])
+    for m in wedding.bridal_party:
+        writer.writerow([
+            m.name, m.role or '', m.side or '', m.email or '', m.phone or '',
+            m.processional_order or '', m.responsibilities or '', m.gift_idea or '',
+            m.gift_cost or 0, 'Yes' if m.gift_purchased else 'No'
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=bridal_party_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/registry')
+@login_required
+def export_registry_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Item Name', 'Store', 'URL', 'Price', 'Qty Requested', 'Qty Purchased', 'Purchased By'])
+    for r in wedding.registry_items:
+        writer.writerow([
+            r.item_name, r.store or '', r.url or '', r.price or 0,
+            r.quantity_requested or 1, r.quantity_purchased or 0, r.purchased_by or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=registry_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/music')
+@login_required
+def export_music_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Title', 'Artist', 'Moment', 'Duration (min)', 'Spotify URL', 'Notes'])
+    for s in wedding.songs:
+        writer.writerow([
+            s.title, s.artist or '', s.moment or '', s.duration_minutes or '',
+            s.spotify_url or '', s.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=music_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/photos')
+@login_required
+def export_photos_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Category', 'Description', 'People', 'Priority', 'Captured', 'Notes'])
+    for s in wedding.photo_shots:
+        writer.writerow([
+            s.category or '', s.description, s.people or '', s.priority or '',
+            'Yes' if s.captured else 'No', s.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=shot_list_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/attire')
+@login_required
+def export_attire_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Person Name', 'Person Type', 'Garment Type', 'Designer', 'Color',
+                     'Size', 'Store', 'Price', 'Purchased', 'Accessories', 'Notes'])
+    for a in wedding.attire:
+        writer.writerow([
+            a.person_name or '', a.person_type or '', a.garment_type or '',
+            a.designer or '', a.color or '', a.size or '', a.store or '',
+            a.price or 0, 'Yes' if a.purchased else 'No',
+            a.accessories or '', a.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=attire_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/gifts')
+@login_required
+def export_gifts_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Event', 'From', 'Description', 'Estimated Value', 'Date Received',
+                     'Thank You Sent', 'Notes'])
+    for g in wedding.gifts:
+        writer.writerow([
+            g.event, g.from_name, g.description or '', g.estimated_value or 0,
+            str(g.date_received or ''), 'Yes' if g.thank_you_sent else 'No',
+            g.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=gifts_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/flowers')
+@login_required
+def export_flowers_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Item Type', 'Recipient', 'Flowers', 'Colors', 'Quantity', 'Cost', 'Notes'])
+    for f in wedding.floral_items:
+        writer.writerow([
+            f.item_type, f.recipient or '', f.flowers or '', f.colors or '',
+            f.quantity or 1, f.cost or 0, f.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=flowers_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/speeches')
+@login_required
+def export_speeches_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Speaker Name', 'Type', 'Order', 'Duration (min)', 'Reviewed', 'Notes'])
+    for s in wedding.speeches:
+        writer.writerow([
+            s.speaker_name, s.speech_type or '', s.order or 0,
+            s.duration_minutes or '', 'Yes' if s.reviewed else 'No', s.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=speeches_{wedding_id}.csv'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/export/favors')
+@login_required
+def export_favors_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Description', 'Quantity', 'Cost Per Item', 'Total Cost',
+                     'Assembled', 'Vendor', 'Notes'])
+    for f in wedding.favors:
+        writer.writerow([
+            f.description, f.quantity or 0, f.cost_per_item or 0, f.total_cost or 0,
+            'Yes' if f.assembled else 'No', f.vendor or '', f.notes or ''
+        ])
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=favors_{wedding_id}.csv'
+    return response
+
+# ============================================
+# SAMPLE CSV TEMPLATE DOWNLOADS
+# ============================================
+
+@app.route('/templates/<template_name>.csv')
+def download_sample_csv(template_name):
+    """Download a sample CSV template for importing data."""
+    allowed = {'guests', 'vendors', 'tasks', 'budget'}
+    if template_name not in allowed:
+        abort(404)
+    return app.send_static_file(f'templates/{template_name}_template.csv')
+
+# ============================================
+# CSV IMPORTS
+# ============================================
+
+def _parse_csv_upload(request_obj):
+    """Parse an uploaded CSV file and return rows as list of dicts. Returns (rows, error)."""
+    if 'file' not in request_obj.files:
+        return None, 'No file uploaded.'
+    file = request_obj.files['file']
+    if file.filename == '':
+        return None, 'No file selected.'
+    if not file.filename.lower().endswith('.csv'):
+        return None, 'Please upload a CSV file.'
+    try:
+        content = file.read().decode('utf-8-sig')  # utf-8-sig handles BOM from Excel
+        reader = csv.DictReader(io.StringIO(content))
+        rows = list(reader)
+        if not rows:
+            return None, 'CSV file is empty.'
+        return rows, None
+    except UnicodeDecodeError:
+        return None, 'Could not read file. Please ensure it is a UTF-8 encoded CSV.'
+    except csv.Error as e:
+        return None, f'CSV parsing error: {str(e)}'
+
+@app.route('/wedding/<int:wedding_id>/import/guests', methods=['POST'])
+@login_required
+def import_guests_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    rows, error = _parse_csv_upload(request)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('guests_view', wedding_id=wedding_id))
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        name = row.get('Name', row.get('name', '')).strip()
+        if not name:
+            skipped += 1
+            continue
+        guest = Guest(
+            wedding_id=wedding_id,
+            name=sanitize_string(name),
+            email=sanitize_string(row.get('Email', row.get('email', '')).strip()) or None,
+            phone=sanitize_string(row.get('Phone', row.get('phone', '')).strip()) or None,
+            address=sanitize_string(row.get('Address', row.get('address', '')).strip()) or None,
+            rsvp_status=row.get('RSVP Status', row.get('rsvp_status', 'pending')).strip().lower() or 'pending',
+            meal_choice=sanitize_string(row.get('Meal Choice', row.get('meal_choice', '')).strip()) or None,
+            dietary_restrictions=sanitize_string(row.get('Dietary Restrictions', row.get('dietary_restrictions', '')).strip()) or None,
+            side=sanitize_string(row.get('Side', row.get('side', '')).strip()) or None,
+            guest_type=sanitize_string(row.get('Guest Type', row.get('guest_type', '')).strip()) or None,
+            social_groups=sanitize_string(row.get('Social Groups', row.get('social_groups', '')).strip()) or None,
+            household_group=sanitize_string(row.get('Household Group', row.get('household_group', '')).strip()) or None,
+        )
+        # Handle plus one
+        plus_one = row.get('Plus One', row.get('plus_one_of', '')).strip()
+        if plus_one:
+            guest.is_plus_one = True
+            guest.plus_one_of = sanitize_string(plus_one)
+        db.session.add(guest)
+        imported += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {imported} guest(s). {skipped} row(s) skipped (no name).', 'success')
+    return redirect(url_for('guests_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/import/vendors', methods=['POST'])
+@login_required
+def import_vendors_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    rows, error = _parse_csv_upload(request)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('vendors_view', wedding_id=wedding_id))
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        business_name = row.get('Business Name', row.get('business_name', '')).strip()
+        category = row.get('Category', row.get('category', '')).strip()
+        if not business_name or not category:
+            skipped += 1
+            continue
+        vendor = Vendor(
+            wedding_id=wedding_id,
+            category=sanitize_string(category),
+            business_name=sanitize_string(business_name),
+            contact_name=sanitize_string(row.get('Contact', row.get('contact_name', '')).strip()) or None,
+            email=sanitize_string(row.get('Email', row.get('email', '')).strip()) or None,
+            phone=sanitize_string(row.get('Phone', row.get('phone', '')).strip()) or None,
+            website=sanitize_string(row.get('Website', row.get('website', '')).strip()) or None,
+            notes=sanitize_string(row.get('Notes', row.get('notes', '')).strip()) or None,
+        )
+        # Parse numeric fields safely
+        try:
+            vendor.total_cost = float(row.get('Total Cost', row.get('total_cost', 0)) or 0)
+        except (ValueError, TypeError):
+            vendor.total_cost = 0
+        try:
+            vendor.deposit_amount = float(row.get('Deposit', row.get('deposit_amount', 0)) or 0)
+        except (ValueError, TypeError):
+            vendor.deposit_amount = 0
+        db.session.add(vendor)
+        imported += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {imported} vendor(s). {skipped} row(s) skipped.', 'success')
+    return redirect(url_for('vendors_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/import/tasks', methods=['POST'])
+@login_required
+def import_tasks_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    rows, error = _parse_csv_upload(request)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('tasks_view', wedding_id=wedding_id))
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        title = row.get('Title', row.get('title', '')).strip()
+        if not title:
+            skipped += 1
+            continue
+        task = Task(
+            wedding_id=wedding_id,
+            title=sanitize_string(title),
+            description=sanitize_string(row.get('Description', row.get('description', '')).strip()) or None,
+            priority=row.get('Priority', row.get('priority', 'medium')).strip().lower() or 'medium',
+            category=sanitize_string(row.get('Category', row.get('category', '')).strip()) or None,
+            assigned_to=sanitize_string(row.get('Assigned To', row.get('assigned_to', '')).strip()) or None,
+        )
+        # Parse due date
+        due_str = row.get('Due Date', row.get('due_date', '')).strip()
+        if due_str:
+            for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%d/%m/%Y'):
+                try:
+                    task.due_date = datetime.strptime(due_str, fmt)
+                    break
+                except ValueError:
+                    continue
+        if not task.due_date:
+            task.due_date = wedding.wedding_date  # fallback to wedding date
+        # Parse completed
+        completed_str = row.get('Completed', row.get('completed', 'No')).strip().lower()
+        task.completed = completed_str in ('yes', 'true', '1', 'x')
+        db.session.add(task)
+        imported += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {imported} task(s). {skipped} row(s) skipped.', 'success')
+    return redirect(url_for('tasks_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/import/budget', methods=['POST'])
+@login_required
+def import_budget_csv(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    rows, error = _parse_csv_upload(request)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('budget_view', wedding_id=wedding_id))
+
+    # Ensure budget exists
+    if not wedding.budget:
+        budget = Budget(wedding_id=wedding_id, total_budget=0)
+        db.session.add(budget)
+        db.session.flush()
+    else:
+        budget = wedding.budget
+
+    imported = 0
+    skipped = 0
+    for row in rows:
+        item_name = row.get('Item', row.get('item_name', row.get('Item Name', ''))).strip()
+        category = row.get('Category', row.get('category', '')).strip()
+        if not item_name or not category:
+            skipped += 1
+            continue
+        expense = BudgetExpense(
+            budget_id=budget.id,
+            category=sanitize_string(category),
+            item_name=sanitize_string(item_name),
+            notes=sanitize_string(row.get('Notes', row.get('notes', '')).strip()) or None,
+            covered_by=sanitize_string(row.get('Covered By', row.get('covered_by', '')).strip()) or None,
+            payment_status=row.get('Payment Status', row.get('payment_status', '')).strip() or None,
+        )
+        for field, keys in [
+            ('estimated_cost', ['Estimated Cost', 'estimated_cost']),
+            ('actual_cost', ['Actual Cost', 'actual_cost']),
+            ('paid_amount', ['Paid Amount', 'paid_amount']),
+        ]:
+            for key in keys:
+                val = row.get(key, '').strip()
+                if val:
+                    try:
+                        setattr(expense, field, float(val))
+                    except (ValueError, TypeError):
+                        pass
+                    break
+        db.session.add(expense)
+        imported += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {imported} expense(s). {skipped} row(s) skipped.', 'success')
+    return redirect(url_for('budget_view', wedding_id=wedding_id))
+
+# ============================================
+# FULL WEDDING JSON EXPORT / IMPORT
+# ============================================
+
+def _serialize_date(val):
+    """Safely serialize date/datetime/time to string."""
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val.isoformat()
+    if isinstance(val, date):
+        return val.isoformat()
+    # time objects
+    if hasattr(val, 'isoformat'):
+        return val.isoformat()
+    return str(val)
+
+def _serialize_model(obj, exclude=None):
+    """Serialize a SQLAlchemy model to a dict, excluding specified fields."""
+    exclude = set(exclude or [])
+    exclude.update({'id', '_sa_instance_state'})
+    result = {}
+    for col in obj.__table__.columns:
+        if col.name in exclude:
+            continue
+        val = getattr(obj, col.name)
+        result[col.name] = _serialize_date(val) if isinstance(val, (datetime, date)) or (hasattr(val, 'isoformat') and callable(val.isoformat)) else val
+    return result
+
+@app.route('/wedding/<int:wedding_id>/export/full')
+@login_required
+def export_wedding_json(wedding_id):
+    """Export the entire wedding plan as a single JSON file."""
+    wedding = get_wedding_or_403(wedding_id)
+    exclude_fk = ['wedding_id']
+
+    data = {
+        'export_version': '1.0',
+        'exported_at': datetime.utcnow().isoformat(),
+        'wedding': _serialize_model(wedding, exclude=['id']),
+        'people': [_serialize_model(p, exclude=exclude_fk) for p in wedding.people],
+        'guests': [_serialize_model(g, exclude=exclude_fk + ['table_id', 'person_id']) for g in wedding.guests],
+        'tasks': [_serialize_model(t, exclude=exclude_fk + ['depends_on_id']) for t in wedding.tasks],
+        'vendors': [],
+        'bridal_party': [_serialize_model(m, exclude=exclude_fk + ['person_id']) for m in wedding.bridal_party],
+        'registry_items': [_serialize_model(r, exclude=exclude_fk) for r in wedding.registry_items],
+        'attire': [_serialize_model(a, exclude=exclude_fk + ['person_id']) for a in wedding.attire],
+        'songs': [_serialize_model(s, exclude=exclude_fk) for s in wedding.songs],
+        'photo_shots': [_serialize_model(s, exclude=exclude_fk) for s in wedding.photo_shots],
+        'floral_items': [_serialize_model(f, exclude=exclude_fk) for f in wedding.floral_items],
+        'invitations': [_serialize_model(i, exclude=exclude_fk) for i in wedding.invitations],
+        'speeches': [_serialize_model(s, exclude=exclude_fk) for s in wedding.speeches],
+        'favors': [_serialize_model(f, exclude=exclude_fk) for f in wedding.favors],
+        'gifts': [_serialize_model(g, exclude=exclude_fk) for g in wedding.gifts],
+        'tips': [_serialize_model(t, exclude=exclude_fk) for t in wedding.tips],
+        'contingency_plans': [_serialize_model(c, exclude=exclude_fk) for c in wedding.contingency_plans],
+        'accommodations': [_serialize_model(a, exclude=exclude_fk) for a in wedding.accommodations],
+        'day_of_items': [_serialize_model(i, exclude=exclude_fk) for i in wedding.day_of_items],
+        'hair_makeup': [_serialize_model(h, exclude=exclude_fk) for h in wedding.hair_makeup],
+        'guest_groups': [_serialize_model(g, exclude=exclude_fk) for g in wedding.guest_groups],
+        'inventory_items': [_serialize_model(i, exclude=exclude_fk + ['bin_id']) for i in wedding.inventory_items],
+        'inventory_bins': [_serialize_model(b, exclude=exclude_fk) for b in wedding.inventory_bins],
+    }
+
+    # Vendors with nested communication log and quotes
+    for v in wedding.vendors:
+        vendor_data = _serialize_model(v, exclude=exclude_fk)
+        vendor_data['communication_log'] = [_serialize_model(n, exclude=['vendor_id']) for n in v.communication_log]
+        data['vendors'].append(vendor_data)
+
+    # Vendor quotes (wedding-level)
+    data['vendor_quotes'] = [_serialize_model(q, exclude=exclude_fk) for q in wedding.vendor_quotes]
+
+    # Ceremony with timeline and readings
+    if wedding.ceremony:
+        ceremony_data = _serialize_model(wedding.ceremony, exclude=exclude_fk)
+        ceremony_data['timeline_items'] = [_serialize_model(i, exclude=['ceremony_id']) for i in wedding.ceremony.timeline_items]
+        ceremony_data['readings'] = [_serialize_model(r, exclude=['ceremony_id']) for r in wedding.ceremony.readings]
+        data['ceremony'] = ceremony_data
+    else:
+        data['ceremony'] = None
+
+    # Reception with timeline, menu, tables
+    if wedding.reception:
+        reception_data = _serialize_model(wedding.reception, exclude=exclude_fk)
+        reception_data['timeline_items'] = [_serialize_model(i, exclude=['reception_id']) for i in wedding.reception.timeline_items]
+        reception_data['menu_items'] = [_serialize_model(m, exclude=['reception_id']) for m in wedding.reception.menu_items]
+        reception_data['seating_tables'] = [_serialize_model(t, exclude=['reception_id']) for t in wedding.reception.seating_tables]
+        data['reception'] = reception_data
+    else:
+        data['reception'] = None
+
+    # Honeymoon with itinerary and packing
+    if wedding.honeymoon:
+        honeymoon_data = _serialize_model(wedding.honeymoon, exclude=exclude_fk)
+        honeymoon_data['itinerary_items'] = [_serialize_model(i, exclude=['honeymoon_id']) for i in wedding.honeymoon.itinerary_items]
+        honeymoon_data['packing_items'] = [_serialize_model(p, exclude=['honeymoon_id']) for p in wedding.honeymoon.packing_items]
+        data['honeymoon'] = honeymoon_data
+    else:
+        data['honeymoon'] = None
+
+    # Branding
+    data['branding'] = _serialize_model(wedding.branding, exclude=exclude_fk) if wedding.branding else None
+
+    # Budget with expenses and category limits
+    if wedding.budget:
+        budget_data = _serialize_model(wedding.budget, exclude=exclude_fk)
+        budget_data['expenses'] = [_serialize_model(e, exclude=['budget_id']) for e in wedding.budget.expenses]
+        budget_data['category_limits'] = [_serialize_model(l, exclude=['budget_id']) for l in wedding.budget.category_limits]
+        data['budget'] = budget_data
+    else:
+        data['budget'] = None
+
+    # Rehearsal dinner
+    data['rehearsal_dinner'] = _serialize_model(wedding.rehearsal_dinner, exclude=exclude_fk) if wedding.rehearsal_dinner else None
+
+    # Marriage license
+    data['marriage_license'] = _serialize_model(wedding.marriage_license, exclude=exclude_fk) if wedding.marriage_license else None
+
+    response = make_response(json.dumps(data, indent=2, default=str))
+    response.headers['Content-Type'] = 'application/json'
+    safe_name = wedding.couple_names.replace(' ', '_').replace('/', '_')[:50]
+    response.headers['Content-Disposition'] = f'attachment; filename=wedding_{safe_name}_{wedding_id}.json'
+    return response
+
+@app.route('/wedding/<int:wedding_id>/import/full', methods=['POST'])
+@login_required
+def import_wedding_json(wedding_id):
+    """Import a wedding plan from a JSON file, merging into the current wedding."""
+    wedding = get_wedding_or_403(wedding_id)
+
+    if 'file' not in request.files:
+        flash('No file uploaded.', 'error')
+        return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+    file = request.files['file']
+    if file.filename == '' or not file.filename.lower().endswith('.json'):
+        flash('Please upload a JSON file.', 'error')
+        return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+
+    try:
+        content = file.read().decode('utf-8')
+        data = json.loads(content)
+    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+        flash(f'Invalid JSON file: {str(e)}', 'error')
+        return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+
+    if 'export_version' not in data:
+        flash('This does not appear to be a valid Wedding Organizer export file.', 'error')
+        return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+
+    def _parse_dt(val):
+        if not val:
+            return None
+        for fmt in ('%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
+            try:
+                return datetime.strptime(val, fmt)
+            except (ValueError, TypeError):
+                continue
+        return None
+
+    def _parse_date(val):
+        if not val:
+            return None
+        try:
+            return datetime.strptime(val, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None
+
+    def _parse_time(val):
+        if not val:
+            return None
+        for fmt in ('%H:%M:%S', '%H:%M'):
+            try:
+                return datetime.strptime(val, fmt).time()
+            except (ValueError, TypeError):
+                continue
+        return None
+
+    def _safe_float(val):
+        try:
+            return float(val) if val else None
+        except (ValueError, TypeError):
+            return None
+
+    def _safe_int(val):
+        try:
+            return int(val) if val else None
+        except (ValueError, TypeError):
+            return None
+
+    def _safe_bool(val):
+        if isinstance(val, bool):
+            return val
+        if isinstance(val, str):
+            return val.lower() in ('true', '1', 'yes')
+        return bool(val) if val else False
+
+    counts = {}
+
+    # Import simple list models
+    model_map = {
+        'guests': (Guest, {'name': str, 'email': str, 'phone': str, 'address': str,
+                          'rsvp_status': str, 'meal_choice': str, 'dietary_restrictions': str,
+                          'side': str, 'guest_type': str, 'household_group': str, 'social_groups': str,
+                          'is_plus_one': _safe_bool, 'plus_one_of': str,
+                          'gift_received': _safe_bool, 'thank_you_sent': _safe_bool,
+                          'rsvp_notes': str}),
+        'tasks': (Task, {'title': str, 'description': str, 'priority': str, 'category': str,
+                        'assigned_to': str, 'completed': _safe_bool, 'is_milestone': _safe_bool,
+                        'due_date': _parse_dt}),
+        'bridal_party': (BridalPartyMember, {'name': str, 'role': str, 'side': str, 'email': str,
+                                             'phone': str, 'responsibilities': str,
+                                             'gift_idea': str, 'gift_cost': _safe_float,
+                                             'gift_purchased': _safe_bool, 'processional_order': _safe_int}),
+        'registry_items': (RegistryItem, {'item_name': str, 'store': str, 'url': str,
+                                         'price': _safe_float, 'quantity_requested': _safe_int,
+                                         'quantity_purchased': _safe_int, 'purchased_by': str}),
+        'attire': (Attire, {'person_name': str, 'person_type': str, 'garment_type': str,
+                           'designer': str, 'color': str, 'size': str, 'store': str,
+                           'price': _safe_float, 'purchased': _safe_bool, 'accessories': str, 'notes': str}),
+        'songs': (Song, {'title': str, 'artist': str, 'moment': str, 'spotify_url': str,
+                        'duration_minutes': _safe_float, 'notes': str, 'order': _safe_int}),
+        'photo_shots': (PhotoShot, {'category': str, 'description': str, 'people': str,
+                                    'priority': str, 'captured': _safe_bool, 'notes': str}),
+        'floral_items': (FloralItem, {'item_type': str, 'recipient': str, 'flowers': str,
+                                      'colors': str, 'quantity': _safe_int, 'cost': _safe_float, 'notes': str}),
+        'invitations': (Invitation, {'item_type': str, 'designer': str, 'quantity': _safe_int,
+                                     'cost': _safe_float, 'status': str, 'notes': str}),
+        'speeches': (SpeechToast, {'speaker_name': str, 'speech_type': str, 'order': _safe_int,
+                                   'duration_minutes': _safe_int, 'reviewed': _safe_bool, 'notes': str}),
+        'favors': (WeddingFavor, {'description': str, 'quantity': _safe_int, 'cost_per_item': _safe_float,
+                                  'total_cost': _safe_float, 'assembled': _safe_bool, 'vendor': str, 'notes': str}),
+        'gifts': (Gift, {'event': str, 'from_name': str, 'description': str,
+                         'estimated_value': _safe_float, 'thank_you_sent': _safe_bool, 'notes': str,
+                         'date_received': _parse_date}),
+        'tips': (TipItem, {'recipient': str, 'service_category': str, 'suggested_amount': _safe_float,
+                           'actual_amount': _safe_float, 'payment_method': str,
+                           'envelope_prepared': _safe_bool, 'given': _safe_bool, 'notes': str}),
+        'contingency_plans': (ContingencyPlan, {'category': str, 'title': str, 'description': str,
+                                                'contact_name': str, 'contact_phone': str, 'notes': str}),
+        'accommodations': (Accommodation, {'accommodation_type': str, 'name': str, 'address': str,
+                                           'phone': str, 'website': str, 'block_code': str, 'rate': str,
+                                           'rooms_reserved': _safe_int, 'welcome_bag': _safe_bool, 'notes': str}),
+        'day_of_items': (DayOfTimelineItem, {'title': str, 'description': str, 'location': str,
+                                             'who': str, 'category': str, 'order': _safe_int,
+                                             'time': _parse_time}),
+        'hair_makeup': (HairMakeup, {'person_name': str, 'service_type': str, 'stylist_name': str,
+                                     'style_notes': str, 'trial_completed': _safe_bool,
+                                     'cost': _safe_float, 'notes': str, 'appointment_time': _parse_time}),
+        'guest_groups': (GuestGroup, {'name': str, 'color': str, 'seat_together': _safe_bool,
+                                      'priority': _safe_int, 'notes': str}),
+    }
+
+    for key, (model_cls, field_map) in model_map.items():
+        items = data.get(key, [])
+        if not items:
+            continue
+        count = 0
+        for item_data in items:
+            obj = model_cls(wedding_id=wedding_id)
+            for field, converter in field_map.items():
+                val = item_data.get(field)
+                if val is not None and val != '':
+                    try:
+                        setattr(obj, field, converter(val) if converter != str else sanitize_string(str(val)))
+                    except (ValueError, TypeError):
+                        pass
+            db.session.add(obj)
+            count += 1
+        counts[key] = count
+
+    # Import vendors with nested communication log
+    vendor_items = data.get('vendors', [])
+    if vendor_items:
+        v_count = 0
+        for v_data in vendor_items:
+            vendor = Vendor(wedding_id=wedding_id)
+            for field in ['category', 'business_name', 'contact_name', 'email', 'phone',
+                         'website', 'notes', 'setup_instructions', 'service_location']:
+                val = v_data.get(field)
+                if val:
+                    setattr(vendor, field, sanitize_string(str(val)))
+            for field in ['total_cost', 'deposit_amount', 'balance_due']:
+                val = v_data.get(field)
+                if val is not None:
+                    try:
+                        setattr(vendor, field, float(val))
+                    except (ValueError, TypeError):
+                        pass
+            vendor.contract_signed = _safe_bool(v_data.get('contract_signed'))
+            vendor.deposit_paid = _safe_bool(v_data.get('deposit_paid'))
+            vendor.service_date = _parse_date(v_data.get('service_date'))
+            db.session.add(vendor)
+            db.session.flush()
+            for note_data in v_data.get('communication_log', []):
+                note = VendorNote(vendor_id=vendor.id)
+                for f in ['note_type', 'subject', 'content']:
+                    val = note_data.get(f)
+                    if val:
+                        setattr(note, f, sanitize_string(str(val)))
+                note.date = _parse_dt(note_data.get('date')) or datetime.utcnow()
+                db.session.add(note)
+            v_count += 1
+        counts['vendors'] = v_count
+
+    db.session.commit()
+
+    summary_parts = [f'{v} {k.replace("_", " ")}' for k, v in counts.items() if v > 0]
+    if summary_parts:
+        flash(f'Successfully imported: {", ".join(summary_parts)}.', 'success')
+    else:
+        flash('No data was imported from the file.', 'warning')
+
+    return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
 
 # ============================================
 # GLOBAL SEARCH
@@ -5185,7 +7142,8 @@ def inventory_bin_assign(wedding_id, bin_id):
 def inventory_bin_print(wedding_id, bin_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     bin = InventoryBin.query.get_or_404(bin_id)
-    return render_template('inventory/bin_print.html', wedding=wedding, bin=bin)
+    return _render_or_pdf('inventory/bin_print.html', f'bin_{bin.label}_{wedding_id}.pdf',
+                          wedding=wedding, bin=bin)
 
 
 @app.route('/wedding/<int:wedding_id>/inventory/print')
@@ -5194,7 +7152,8 @@ def inventory_print_all(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
     unassigned = InventoryItem.query.filter_by(wedding_id=wedding_id, bin_id=None).all()
-    return render_template('inventory/print_all.html', wedding=wedding, bins=bins, unassigned=unassigned)
+    return _render_or_pdf('inventory/print_all.html', f'inventory_{wedding_id}.pdf',
+                          wedding=wedding, bins=bins, unassigned=unassigned)
 
 
 @app.route('/wedding/<int:wedding_id>/inventory/labels')
@@ -5202,7 +7161,8 @@ def inventory_print_all(wedding_id):
 def inventory_labels_print(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
     bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
-    return render_template('inventory/labels_print.html', wedding=wedding, bins=bins)
+    return _render_or_pdf('inventory/labels_print.html', f'labels_{wedding_id}.pdf',
+                          wedding=wedding, bins=bins)
 
 
 @app.route('/wedding/<int:wedding_id>/inventory/export')
@@ -5221,6 +7181,117 @@ def inventory_export_csv(wedding_id):
     output.seek(0)
     return Response(output, mimetype='text/csv',
                    headers={'Content-Disposition': 'attachment;filename=inventory.csv'})
+
+
+# ============================================
+# EMERGENCY KIT MANAGEMENT ROUTES
+# ============================================
+
+EMERGENCY_KIT_CATEGORIES = ['fashion', 'health', 'beauty', 'tools', 'food', 'documents']
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit')
+@login_required
+def emergency_kit_view(wedding_id):
+    """View and manage emergency kit items."""
+    wedding = get_wedding_or_403(wedding_id)
+    if not wedding.emergency_kit_items:
+        seed_default_emergency_kit(wedding.id)
+    items_by_category = {}
+    for cat in EMERGENCY_KIT_CATEGORIES:
+        items_by_category[cat] = sorted(
+            [i for i in wedding.emergency_kit_items if i.category == cat],
+            key=lambda x: x.item_name
+        )
+    total = len(wedding.emergency_kit_items)
+    packed = sum(1 for i in wedding.emergency_kit_items if i.packed)
+    return render_template('emergency_kit_manage.html', wedding=wedding,
+                           items_by_category=items_by_category,
+                           categories=EMERGENCY_KIT_CATEGORIES,
+                           total=total, packed=packed)
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/add', methods=['POST'])
+@login_required
+def emergency_kit_add(wedding_id):
+    """Add a new emergency kit item."""
+    wedding = get_wedding_or_403(wedding_id)
+    item_name = request.form.get('item_name', '').strip()
+    category = request.form.get('category', 'tools')
+    notes = request.form.get('notes', '').strip()
+    if not item_name:
+        flash('Item name is required.', 'error')
+        return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+    if category not in EMERGENCY_KIT_CATEGORIES:
+        category = 'tools'
+    item = EmergencyKitItem(
+        wedding_id=wedding_id,
+        item_name=item_name,
+        category=category,
+        packed=False,
+        notes=notes or None
+    )
+    db.session.add(item)
+    db.session.commit()
+    flash('Item added to emergency kit!', 'success')
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/<int:item_id>/edit', methods=['POST'])
+@login_required
+def emergency_kit_edit(wedding_id, item_id):
+    """Edit an emergency kit item."""
+    wedding = get_wedding_or_403(wedding_id)
+    item = EmergencyKitItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    item_name = request.form.get('item_name', '').strip()
+    if not item_name:
+        flash('Item name is required.', 'error')
+        return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+    item.item_name = item_name
+    category = request.form.get('category', item.category)
+    if category in EMERGENCY_KIT_CATEGORIES:
+        item.category = category
+    item.notes = request.form.get('notes', '').strip() or None
+    db.session.commit()
+    flash('Item updated!', 'success')
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/<int:item_id>/delete', methods=['POST'])
+@login_required
+def emergency_kit_delete(wedding_id, item_id):
+    """Delete an emergency kit item."""
+    wedding = get_wedding_or_403(wedding_id)
+    item = EmergencyKitItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Item removed from emergency kit.', 'success')
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/<int:item_id>/toggle', methods=['POST'])
+@login_required
+def emergency_kit_toggle(wedding_id, item_id):
+    """Toggle packed status of an emergency kit item."""
+    wedding = get_wedding_or_403(wedding_id)
+    item = EmergencyKitItem.query.get_or_404(item_id)
+    if item.wedding_id != wedding.id:
+        abort(403)
+    item.packed = not item.packed
+    db.session.commit()
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'packed': item.packed, 'id': item.id})
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
+
+@app.route('/wedding/<int:wedding_id>/emergency-kit/reset', methods=['POST'])
+@login_required
+def emergency_kit_reset(wedding_id):
+    """Reset emergency kit to default items."""
+    wedding = get_wedding_or_403(wedding_id)
+    EmergencyKitItem.query.filter_by(wedding_id=wedding.id).delete()
+    db.session.commit()
+    seed_default_emergency_kit(wedding.id)
+    flash('Emergency kit reset to defaults.', 'success')
+    return redirect(url_for('emergency_kit_view', wedding_id=wedding_id))
 
 
 # Start reminder thread:

@@ -3,7 +3,10 @@
 {% block content %}
 <div class="page-header">
     <h1>Gift Registry</h1>
-    <a href="{{ url_for('registry_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Item</a>
+    <div class="header-actions">
+        <a href="{{ url_for('registry_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Item</a>
+        <a href="{{ url_for('export_registry_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
+    </div>
 </div>
 
 {% if items %}

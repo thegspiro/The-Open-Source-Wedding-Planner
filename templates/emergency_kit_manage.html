@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Emergency Kit - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Emergency Kit</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('print_emergency_kit', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Checklist</a>
+        <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Back to Dashboard</a>
+    </div>
+</div>
+
+<!-- Progress -->
+<div class="stats-row" style="margin-bottom: 1.5rem;">
+    <div class="stat-box">
+        <div class="stat-num">{{ packed }}</div>
+        <div class="stat-label">Packed</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ total - packed }}</div>
+        <div class="stat-label">Remaining</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ total }}</div>
+        <div class="stat-label">Total Items</div>
+    </div>
+    <div class="stat-box">
+        {% if total > 0 %}
+        <div class="stat-num">{{ ((packed / total) * 100)|int }}%</div>
+        {% else %}
+        <div class="stat-num">0%</div>
+        {% endif %}
+        <div class="stat-label">Complete</div>
+    </div>
+</div>
+
+{% if total > 0 %}
+<div class="progress-bar" style="margin-bottom: 2rem; height: 8px;">
+    <div class="progress-fill" style="width: {{ ((packed / total) * 100)|int if total > 0 else 0 }}%"></div>
+</div>
+{% endif %}
+
+<!-- Add Item Form -->
+<div class="module-section">
+    <h2>Add New Item</h2>
+    <form method="POST" action="{{ url_for('emergency_kit_add', wedding_id=wedding.id) }}" class="form-container">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; align-items: end;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="item_name">Item Name *</label>
+                <input type="text" id="item_name" name="item_name" required placeholder="e.g. Extra bobby pins">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="category">Category</label>
+                <select id="category" name="category">
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="notes">Notes</label>
+                <input type="text" id="notes" name="notes" placeholder="Optional notes">
+            </div>
+        </div>
+        <div class="form-actions" style="margin-top: 1rem;">
+            <button type="submit" class="btn-primary btn-small">+ Add Item</button>
+        </div>
+    </form>
+</div>
+
+<!-- Items by Category -->
+{% set category_icons = {'fashion': 'needle & thread', 'health': 'first aid', 'beauty': 'cosmetics', 'tools': 'toolkit', 'food': 'snacks', 'documents': 'paperwork'} %}
+{% for cat in categories %}
+{% set items = items_by_category[cat] %}
+{% if items %}
+<div class="module-section">
+    <h2 style="display: flex; align-items: center; justify-content: space-between;">
+        <span>{{ cat|capitalize }} ({{ items|length }})</span>
+        <span style="font-size: 0.85rem; font-weight: normal; color: var(--color-text-muted);">
+            {{ items|selectattr('packed')|list|length }} packed
+        </span>
+    </h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 60px;">Packed</th>
+                <th>Item</th>
+                <th>Notes</th>
+                <th style="width: 200px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr id="kit-row-{{ item.id }}" style="{% if item.packed %}opacity: 0.6;{% endif %}">
+                <td>
+                    <form method="POST" action="{{ url_for('emergency_kit_toggle', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline toggle-form">
+                        <button type="submit" class="btn-small {% if item.packed %}btn-primary{% else %}btn-secondary{% endif %}" style="min-width: 40px;">
+                            {% if item.packed %}&#10003;{% else %}&nbsp;{% endif %}
+                        </button>
+                    </form>
+                </td>
+                <td style="{% if item.packed %}text-decoration: line-through;{% endif %}">{{ item.item_name }}</td>
+                <td style="color: var(--color-text-muted); font-size: 0.9rem;">{{ item.notes or '' }}</td>
+                <td>
+                    <div style="display: flex; gap: 0.3rem; align-items: center;">
+                        <button type="button" class="btn-secondary btn-small" onclick="toggleEdit({{ item.id }})">Edit</button>
+                        <form method="POST" action="{{ url_for('emergency_kit_delete', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline">
+                            <button type="submit" class="btn-danger btn-small" onclick="return confirm('Remove this item?')">Delete</button>
+                        </form>
+                    </div>
+                    <!-- Inline Edit Form (hidden by default) -->
+                    <form method="POST" action="{{ url_for('emergency_kit_edit', wedding_id=wedding.id, item_id=item.id) }}" id="edit-form-{{ item.id }}" style="display: none; margin-top: 0.5rem;">
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            <input type="text" name="item_name" value="{{ item.item_name }}" required style="font-size: 0.85rem; padding: 0.3rem 0.5rem;">
+                            <select name="category" style="font-size: 0.85rem; padding: 0.3rem 0.5rem;">
+                                {% for c in categories %}
+                                <option value="{{ c }}" {% if c == item.category %}selected{% endif %}>{{ c|capitalize }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" name="notes" value="{{ item.notes or '' }}" placeholder="Notes" style="font-size: 0.85rem; padding: 0.3rem 0.5rem;">
+                            <div style="display: flex; gap: 0.3rem;">
+                                <button type="submit" class="btn-primary btn-small">Save</button>
+                                <button type="button" class="btn-secondary btn-small" onclick="toggleEdit({{ item.id }})">Cancel</button>
+                            </div>
+                        </div>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endfor %}
+
+{% if total == 0 %}
+<div class="empty-state">
+    <h2>No Emergency Kit Items</h2>
+    <p>Add items using the form above, or reset to the default checklist.</p>
+</div>
+{% endif %}
+
+<!-- Reset to Defaults -->
+<div class="module-section" style="margin-top: 2rem;">
+    <h2>Reset Kit</h2>
+    <p style="color: var(--color-text-muted); margin-bottom: 1rem;">This will delete all current items and restore the default emergency kit checklist.</p>
+    <form method="POST" action="{{ url_for('emergency_kit_reset', wedding_id=wedding.id) }}">
+        <button type="submit" class="btn-danger" onclick="return confirm('Are you sure? This will remove all current items and replace them with the default checklist.')">Reset to Defaults</button>
+    </form>
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+
+<script>
+function toggleEdit(itemId) {
+    var form = document.getElementById('edit-form-' + itemId);
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+// AJAX toggle for packed status
+var csrfToken = '';
+var csrfInput = document.querySelector('input[name="_csrf_token"]');
+if (csrfInput) csrfToken = csrfInput.value;
+
+document.querySelectorAll('.toggle-form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var btn = form.querySelector('button');
+        var row = form.closest('tr');
+        var url = form.action;
+        var token = csrfToken || (form.querySelector('input[name="_csrf_token"]') ? form.querySelector('input[name="_csrf_token"]').value : '');
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': token
+            }
+        }).then(function(resp) { return resp.json(); })
+        .then(function(data) {
+            if (data.packed) {
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+                btn.innerHTML = '&#10003;';
+                row.style.opacity = '0.6';
+                var nameCell = row.children[1];
+                nameCell.style.textDecoration = 'line-through';
+            } else {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+                btn.innerHTML = '&nbsp;';
+                row.style.opacity = '1';
+                var nameCell = row.children[1];
+                nameCell.style.textDecoration = 'none';
+            }
+        }).catch(function() {
+            form.submit();
+        });
+    });
+});
+</script>
+{% endblock %}

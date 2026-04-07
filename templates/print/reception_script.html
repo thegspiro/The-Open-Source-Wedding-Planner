@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reception Run Sheet - {{ wedding.couple_names }}</title>
+    <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--body-font); color: #3a3a3a;
+            line-height: 1.6; padding: 20px 40px; background: #fff;
+        }
+
+        .print-btn {
+            display: inline-block; padding: 8px 20px; background: var(--primary);
+            color: #fff; border: none; cursor: pointer; font-size: 14px;
+            margin-bottom: 20px; font-family: var(--body-font); border-radius: 4px;
+        }
+        .print-btn:hover { opacity: 0.85; }
+
+        .print-header {
+            text-align: center; padding: 25px 20px 20px; margin-bottom: 25px;
+            border-bottom: 2px solid var(--secondary);
+        }
+        .print-header::before {
+            content: ''; display: block; width: 50px; height: 2px;
+            background: var(--accent); margin: 0 auto 12px;
+        }
+        .monogram {
+            font-family: var(--heading-font); font-size: 30px; color: var(--primary);
+            letter-spacing: 4px; margin-bottom: 6px;
+        }
+        .print-header h1 {
+            font-family: var(--heading-font); font-size: 24px; font-weight: normal;
+            color: var(--primary); letter-spacing: 2px; margin-bottom: 4px;
+        }
+        .print-header .wedding-date {
+            font-size: 12px; color: #999; letter-spacing: 1px; text-transform: uppercase;
+        }
+
+        .section-title {
+            font-family: var(--heading-font); font-size: 14px; text-transform: uppercase;
+            letter-spacing: 2px; color: var(--primary);
+            border-bottom: 1px solid var(--secondary);
+            padding-bottom: 6px; margin-bottom: 12px; margin-top: 25px;
+        }
+        .section-title:first-of-type { margin-top: 0; }
+
+        /* Reception timeline */
+        .event-table {
+            width: 100%; border-collapse: collapse; margin-bottom: 20px;
+        }
+        .event-table th {
+            background: var(--primary); color: #fff; font-weight: 600;
+            font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 8px 10px; text-align: left; border: none;
+        }
+        .event-table td {
+            border-bottom: 1px solid #e8e2da; padding: 8px 10px;
+            font-size: 12px; vertical-align: top;
+        }
+        .event-table tr:nth-child(even) td {
+            background: rgba(212, 197, 178, 0.08);
+        }
+        .event-time {
+            font-weight: 600; color: var(--primary); white-space: nowrap; font-size: 13px;
+        }
+        .event-name { font-weight: 600; color: #333; }
+
+        /* Speeches/Toasts */
+        .toast-card {
+            border: 1px solid var(--secondary);
+            border-left: 3px solid var(--accent);
+            padding: 10px 16px; margin-bottom: 10px;
+            page-break-inside: avoid; border-radius: 0 3px 3px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .toast-info { flex: 1; }
+        .toast-speaker {
+            font-family: var(--heading-font); font-size: 15px; color: var(--primary);
+        }
+        .toast-type {
+            font-size: 10px; color: var(--accent); text-transform: uppercase;
+            letter-spacing: 0.5px; font-weight: 600;
+        }
+        .toast-meta {
+            text-align: right; font-size: 11px; color: #999;
+        }
+
+        /* Key songs */
+        .song-highlight {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-bottom: 1px dotted #e8e2da;
+            font-size: 13px;
+        }
+        .song-moment {
+            font-weight: 600; color: var(--primary);
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .song-detail { color: #444; }
+
+        .cue-checkbox {
+            width: 16px; height: 16px; accent-color: var(--primary);
+        }
+
+        .footer-note {
+            text-align: center; font-size: 10px; color: #ccc; margin-top: 30px;
+            padding-top: 12px; border-top: 1px solid var(--secondary); letter-spacing: 0.5px;
+        }
+
+        .empty-message {
+            text-align: center; color: #999; font-style: italic; padding: 30px 20px;
+        }
+
+        @page { size: letter; margin: 0.6in 0.5in; }
+
+        .skip-link {
+            position: absolute; left: -9999px; top: auto;
+            width: 1px; height: 1px; overflow: hidden;
+            font-size: 14px; padding: 10px;
+        }
+        .skip-link:focus {
+            position: static; width: auto; height: auto;
+            overflow: visible; background: var(--primary); color: #fff;
+            display: inline-block; margin-bottom: 10px;
+        }
+
+        .print-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+        .cue-checkbox:focus-visible, .kit-checkbox:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+        @media print {
+            .print-btn { display: none !important;
+            }
+
+            .share-form-inline {
+                display: none !important; }
+            body { padding: 0; font-size: 12px; }
+            .print-header h1 { font-size: 20px; }
+            .event-table th, .event-table td { font-size: 11px; padding: 6px 8px; }
+            * { color-adjust: exact; -webkit-print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
+    <button class="print-btn" onclick="window.print()">Print</button>
+    <a class="print-btn" href="?format=pdf" role="button" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+    {% set share_document_type = 'reception_script' %}{% include 'print/_share_button.html' %}
+
+    <main id="main-content">
+    <div class="print-header">
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Reception Run Sheet</h1>
+        <div style="font-family: var(--heading-font); font-size: 14px; color: #777; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+    </div>
+
+    {% set has_content = false %}
+
+    <!-- Reception Timeline -->
+    {% if reception_items %}
+    {% set has_content = true %}
+    <h2 class="section-title">Reception Timeline</h2>
+    <table class="event-table">
+        <caption class="sr-only">Reception timeline</caption>
+        <thead>
+            <tr>
+                <th scope="col" style="width: 90px;">Time</th>
+                <th scope="col">Event</th>
+                <th scope="col">Details</th>
+                <th scope="col" style="width: 50px;">Done</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in reception_items %}
+            <tr>
+                <td class="event-time">
+                    {% if item.scheduled_time %}
+                    {{ item.scheduled_time.strftime('%I:%M %p') }}
+                    {% else %}
+                    &mdash;
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="event-name">{{ item.item_name }}</span>
+                    {% if item.announcement_script %}
+                    <div style="margin-top: 4px; padding: 6px 10px; background: rgba(212, 197, 178, 0.1); border-left: 2px solid var(--accent); font-size: 11px; color: #555; font-style: italic; white-space: pre-line;">{{ item.announcement_script }}</div>
+                    {% endif %}
+                </td>
+                <td style="color: #666;">{{ item.description or '' }}</td>
+                <td style="text-align: center;"><input type="checkbox" class="cue-checkbox" aria-label="Mark as done"></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Key Songs -->
+    {% set key_moments = ['first_dance', 'parent_dance', 'cake_cutting', 'last_dance', 'bouquet_toss', 'garter_toss'] %}
+    {% set key_songs = [] %}
+    {% for song in songs %}
+        {% if song.moment in key_moments %}
+            {% if key_songs.append(song) %}{% endif %}
+        {% endif %}
+    {% endfor %}
+
+    {% if key_songs or (reception and reception.first_dance_song) %}
+    {% set has_content = true %}
+    <h2 class="section-title">Key Music Cues</h2>
+    {% if reception and reception.first_dance_song %}
+    <div class="song-highlight">
+        <span class="song-moment">First Dance</span>
+        <span class="song-detail">{{ reception.first_dance_song }}</span>
+    </div>
+    {% endif %}
+    {% for song in key_songs|sort(attribute='order') %}
+    <div class="song-highlight">
+        <span class="song-moment">{{ song.moment|replace('_', ' ')|title }}</span>
+        <span class="song-detail">{{ song.title }}{% if song.artist %} &mdash; {{ song.artist }}{% endif %}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Speeches & Toasts -->
+    {% if speeches %}
+    {% set has_content = true %}
+    <h2 class="section-title">Speeches &amp; Toasts</h2>
+    {% for speech in speeches|sort(attribute='order') %}
+    <div class="toast-card">
+        <div class="toast-info">
+            <div class="toast-type">{{ speech.speech_type|title if speech.speech_type else 'Speech' }}</div>
+            <div class="toast-speaker">{{ speech.speaker_name }}</div>
+        </div>
+        <div class="toast-meta">
+            {% if speech.order %}#{{ speech.order }}{% endif %}
+            {% if speech.duration_minutes %}<br>~{{ speech.duration_minutes }} min{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Reception Details -->
+    {% if reception and (reception.catering_style or reception.bar_service or reception.cake_flavor or reception.cocktail_hour_notes) %}
+    {% set has_content = true %}
+    <h2 class="section-title">Reception Details</h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 15px;">
+        {% if reception.catering_style %}
+        <div style="width: calc(50% - 6px); padding: 8px 12px; border: 1px solid var(--secondary); border-radius: 3px;">
+            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); font-weight: 600;">Catering Style</div>
+            <div style="font-size: 13px; color: #444;">{{ reception.catering_style|title }}</div>
+        </div>
+        {% endif %}
+        {% if reception.bar_service %}
+        <div style="width: calc(50% - 6px); padding: 8px 12px; border: 1px solid var(--secondary); border-radius: 3px;">
+            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); font-weight: 600;">Bar Service</div>
+            <div style="font-size: 13px; color: #444;">{{ reception.bar_service|title }}</div>
+        </div>
+        {% endif %}
+        {% if reception.cake_flavor %}
+        <div style="width: calc(50% - 6px); padding: 8px 12px; border: 1px solid var(--secondary); border-radius: 3px;">
+            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); font-weight: 600;">Cake</div>
+            <div style="font-size: 13px; color: #444;">{{ reception.cake_flavor }}{% if reception.cake_design %} — {{ reception.cake_design }}{% endif %}</div>
+        </div>
+        {% endif %}
+        {% if reception.music_type %}
+        <div style="width: calc(50% - 6px); padding: 8px 12px; border: 1px solid var(--secondary); border-radius: 3px;">
+            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); font-weight: 600;">Music</div>
+            <div style="font-size: 13px; color: #444;">{{ reception.music_type|title }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if not has_content %}
+    <p class="empty-message">No reception details to display.</p>
+    {% endif %}
+
+    <div class="footer-note">
+        {{ wedding.couple_names }}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
+    </div>
+    </main>
+</body>
+</html>

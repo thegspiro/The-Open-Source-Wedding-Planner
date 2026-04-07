@@ -3,7 +3,10 @@
 {% block content %}
 <div class="page-header">
     <h1>Photography Shot List</h1>
-    <a href="{{ url_for('photos_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Shot</a>
+    <div class="header-actions">
+        <a href="{{ url_for('photos_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Shot</a>
+        <a href="{{ url_for('export_photos_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
+    </div>
 </div>
 
 {% if shots %}

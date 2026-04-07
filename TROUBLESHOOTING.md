@@ -12,16 +12,17 @@ Common issues, edge cases, and their solutions.
 
 **Cause:** SQLAlchemy's `db.create_all()` creates new tables but does **not** add columns to existing tables. If a model gains a new field (e.g., `social_groups` on Guest, `table_role` on SeatingTable), existing databases won't have the column.
 
-**Fix:** Run the migration SQL manually or delete the database to recreate:
+**Fix (recommended):** Run Flask-Migrate to apply pending schema changes:
 
-```sql
--- Option A: Add missing columns manually
-ALTER TABLE guest ADD COLUMN social_groups TEXT;
-ALTER TABLE guest ADD COLUMN household_group VARCHAR(100);
-ALTER TABLE seating_table ADD COLUMN table_size VARCHAR(50);
-ALTER TABLE seating_table ADD COLUMN table_role VARCHAR(20) DEFAULT 'guest';
-ALTER TABLE seating_table ADD COLUMN x_position INTEGER DEFAULT 0;
-ALTER TABLE seating_table ADD COLUMN y_position INTEGER DEFAULT 0;
+```bash
+# Option A: Apply migrations (preserves all data)
+flask db upgrade
+```
+
+If you are running in Docker, execute the command inside the container:
+
+```bash
+docker exec -it wedding-organizer flask db upgrade
 ```
 
 ```bash
@@ -29,6 +30,8 @@ ALTER TABLE seating_table ADD COLUMN y_position INTEGER DEFAULT 0;
 rm instance/wedding_organizer.db
 docker-compose restart
 ```
+
+> **Legacy note:** Before Flask-Migrate was available, missing columns had to be added with manual `ALTER TABLE` statements. This is no longer necessary -- `flask db upgrade` handles schema changes automatically.
 
 ### Database locked errors
 
@@ -211,6 +214,72 @@ docker-compose up -d --build
 # Check logs for specific error
 docker-compose logs -f
 ```
+
+### Checking application health
+
+The application exposes a `/health` endpoint for monitoring:
+
+```bash
+# Check health from the host
+curl http://localhost:5000/health
+
+# Check Docker's built-in health status
+docker inspect --format='{{.State.Health.Status}}' wedding-organizer
+```
+
+**Healthy response:** `{"status": "healthy", "database": "connected"}`
+**Unhealthy response:** `{"status": "unhealthy", "database": "...error..."}` (HTTP 503)
+
+### SECRET_KEY warning in logs
+
+**Symptom:** Logs show `WARNING: Using default SECRET_KEY. This is insecure for production!`
+
+**Cause:** You're running with the default secret key, which is insecure.
+
+**Fix:**
+```bash
+# Generate a secure key
+python3 -c "import secrets; print(secrets.token_hex(32))"
+
+# Copy .env.example and set the key
+cp .env.example .env
+# Edit .env and paste your generated key as SECRET_KEY=...
+
+# Restart
+docker-compose restart
+```
+
+---
+
+## Backups & Data Recovery
+
+### Creating and restoring backups
+
+A backup script is included at `scripts/backup.sh`:
+
+```bash
+# Make executable (first time only)
+chmod +x scripts/backup.sh
+
+# Create a backup
+./scripts/backup.sh
+
+# Restore from the latest backup
+./scripts/backup.sh --restore latest
+
+# Restore from a specific file
+./scripts/backup.sh --restore backups/wedding_organizer_20260101_020000.db
+```
+
+### Automating daily backups
+
+```bash
+# Add to crontab for daily backups at 2 AM
+crontab -e
+0 2 * * * /path/to/the-open-source-wedding-planner/scripts/backup.sh
+```
+
+The script keeps the last 30 backups and automatically cleans up older ones.
 
 ---
 

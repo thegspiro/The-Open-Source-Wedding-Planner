@@ -41,6 +41,29 @@
             <input type="text" id="phone" name="phone" value="{{ person.phone or '' }}">
         </div>
 
+        <div class="form-group">
+            <label for="name_pronunciation">Name Pronunciation</label>
+            <input type="text" id="name_pronunciation" name="name_pronunciation" value="{{ person.name_pronunciation or '' }}" placeholder="e.g., AH-lee-sha, phonetic guide for DJ/MC" maxlength="200">
+            <p class="help-text">Phonetic guide for DJ/MC announcements</p>
+        </div>
+
+        <h2>Getting Ready</h2>
+        <div class="form-group">
+            <label for="getting_ready_location">Getting Ready Location</label>
+            <input type="text" id="getting_ready_location" name="getting_ready_location" value="{{ person.getting_ready_location or '' }}" placeholder="e.g., Bridal Suite, Hotel Room 301">
+        </div>
+
+        <div class="form-group">
+            <label for="getting_ready_address">Getting Ready Address</label>
+            <textarea id="getting_ready_address" name="getting_ready_address" rows="2" placeholder="Full address of getting-ready location">{{ person.getting_ready_address or '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="getting_ready_time">Getting Ready Time</label>
+            <input type="time" id="getting_ready_time" name="getting_ready_time" value="{{ person.getting_ready_time.strftime('%H:%M') if person.getting_ready_time else '' }}">
+            <p class="help-text">When this person starts getting ready</p>
+        </div>
+
         <div class="form-actions">
             <button type="submit" class="btn-primary">Save Changes</button>
             <a href="{{ url_for('people_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>

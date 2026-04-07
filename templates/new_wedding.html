@@ -14,9 +14,26 @@
 
     <form method="POST">
         <div class="form-group">
-            <label>Couple Names</label>
-            <input type="text" name="couple_names" required placeholder="e.g., Sarah & James">
+            <label>How many people are getting married?</label>
+            <select name="num_people" id="num_people" onchange="updateNameFields()">
+                <option value="2" selected>2 people</option>
+                <option value="3">3 people</option>
+                <option value="4">4 people</option>
+                <option value="5">5 people</option>
+            </select>
         </div>
+
+        <div id="name-fields">
+            <div class="form-group">
+                <label>Person 1 Name</label>
+                <input type="text" name="person_0_name" required placeholder="e.g., Sarah">
+            </div>
+            <div class="form-group">
+                <label>Person 2 Name</label>
+                <input type="text" name="person_1_name" required placeholder="e.g., James">
+            </div>
+        </div>
+
         <div class="form-group">
             <label>Wedding Date</label>
             <input type="date" name="wedding_date" required>
@@ -31,4 +48,19 @@
         </div>
     </form>
 </div>
+
+<script>
+function updateNameFields() {
+    const num = parseInt(document.getElementById('num_people').value);
+    const container = document.getElementById('name-fields');
+    container.innerHTML = '';
+    for (let i = 0; i < num; i++) {
+        const div = document.createElement('div');
+        div.className = 'form-group';
+        div.innerHTML = '<label>Person ' + (i + 1) + ' Name</label>' +
+            '<input type="text" name="person_' + i + '_name" required placeholder="e.g., ' + ['Sarah', 'James', 'Alex', 'Jordan', 'Casey'][i] + '">';
+        container.appendChild(div);
+    }
+}
+</script>
 {% endblock %}

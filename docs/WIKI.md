@@ -49,7 +49,13 @@ wedding-organizer/
 ├── instance/               # SQLite database (auto-created)
 ├── docker-compose.yml
 ├── Dockerfile
+├── .env.example            # Environment configuration reference
+├── scripts/backup.sh       # Database backup and restore script
 └── docs/                   # Documentation
+    ├── WIKI.md             # This file
+    ├── TRAINING.md         # User training guide
+    ├── DEPLOYMENT-GUIDES.md # Platform-specific deployment guides
+    └── REVERSE-PROXY.md    # SSL/reverse proxy configurations
 ```
 
 ### Key Design Decisions

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Venue Information - {{ wedding.couple_names }}</title>
+    <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--body-font);
+            color: #3a3a3a;
+            line-height: 1.6;
+            padding: 20px 40px;
+            background: #fff;
+        }
+
+        .print-btn {
+            display: inline-block; padding: 8px 20px; background: var(--primary);
+            color: #fff; border: none; cursor: pointer; font-size: 14px;
+            margin-bottom: 20px; font-family: var(--body-font); border-radius: 4px;
+        }
+        .print-btn:hover { opacity: 0.85; }
+
+        .print-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+        .cue-checkbox:focus-visible, .kit-checkbox:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+        .skip-link {
+            position: absolute; left: -9999px; top: auto;
+            width: 1px; height: 1px; overflow: hidden;
+            font-size: 14px; padding: 10px;
+        }
+        .skip-link:focus {
+            position: static; width: auto; height: auto;
+            overflow: visible; background: var(--primary); color: #fff;
+            display: inline-block; margin-bottom: 10px;
+        }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+        .print-header {
+            text-align: center; padding: 25px 20px 20px; margin-bottom: 25px;
+            border-bottom: 2px solid var(--secondary);
+        }
+        .print-header::before {
+            content: ''; display: block; width: 50px; height: 2px;
+            background: var(--accent); margin: 0 auto 12px;
+        }
+        .monogram {
+            font-family: var(--heading-font); font-size: 30px; color: var(--primary);
+            letter-spacing: 4px; margin-bottom: 6px;
+        }
+        .print-header h1 {
+            font-family: var(--heading-font); font-size: 24px; font-weight: normal;
+            color: var(--primary); letter-spacing: 2px; margin-bottom: 4px;
+        }
+        .print-header .wedding-date {
+            font-size: 12px; color: #999; letter-spacing: 1px; text-transform: uppercase;
+        }
+
+        .venue-card {
+            border: 1px solid var(--secondary);
+            border-left: 4px solid var(--primary);
+            padding: 18px 22px;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .venue-type {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .venue-name {
+            font-family: var(--heading-font);
+            font-size: 20px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .venue-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0;
+        }
+
+        .venue-detail {
+            width: 50%;
+            padding: 4px 0;
+            font-size: 12px;
+        }
+
+        .venue-detail-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #999;
+            font-weight: 600;
+        }
+
+        .venue-detail-value {
+            color: #444;
+        }
+
+        .venue-detail-full {
+            width: 100%;
+            padding: 4px 0;
+            font-size: 12px;
+        }
+
+        .section-title {
+            font-family: var(--heading-font);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--primary);
+            border-bottom: 1px solid var(--secondary);
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+            margin-top: 25px;
+        }
+
+        /* Vendor venues */
+        .vendor-venue-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .vendor-venue-card {
+            border: 1px solid var(--secondary);
+            border-left: 3px solid var(--accent);
+            padding: 10px 14px;
+            width: calc(50% - 6px);
+            page-break-inside: avoid;
+            border-radius: 0 3px 3px 0;
+        }
+
+        .vendor-venue-card .vv-category {
+            font-size: 9px; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--accent); font-weight: 600; margin-bottom: 2px;
+        }
+        .vendor-venue-card .vv-name {
+            font-family: var(--heading-font); font-size: 14px; color: var(--primary); margin-bottom: 4px;
+        }
+        .vendor-venue-card .vv-detail {
+            font-size: 11px; color: #666; margin-bottom: 2px;
+        }
+
+        .footer-note {
+            text-align: center; font-size: 10px; color: #ccc; margin-top: 30px;
+            padding-top: 12px; border-top: 1px solid var(--secondary); letter-spacing: 0.5px;
+        }
+
+        .empty-message {
+            text-align: center; color: #999; font-style: italic; padding: 30px 20px;
+        }
+
+        @page { size: letter; margin: 0.6in 0.5in; }
+
+        @media print {
+            * { color-adjust: exact; -webkit-print-color-adjust: exact; }
+            .print-btn { display: none !important;
+            }
+
+            .share-form-inline {
+                display: none !important; }
+            .skip-link { display: none !important; }
+            body { padding: 0; font-size: 12px; }
+            .print-header h1 { font-size: 20px; }
+            .venue-card { padding: 12px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
+    <button class="print-btn" onclick="window.print()">Print</button>
+    <a class="print-btn" href="?format=pdf" role="button" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+    {% set share_document_type = 'venue_info' %}{% include 'print/_share_button.html' %}
+
+    <main id="main-content">
+    <div class="print-header">
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Venue Information</h1>
+        <div style="font-family: var(--heading-font); font-size: 14px; color: #777; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+    </div>
+
+    {% set has_content = false %}
+
+    <!-- Ceremony Venue -->
+    {% if ceremony and ceremony.venue_name %}
+    {% set has_content = true %}
+    <div class="venue-card">
+        <div class="venue-type">Ceremony Venue</div>
+        <div class="venue-name">{{ ceremony.venue_name }}</div>
+        <div class="venue-details">
+            {% if ceremony.venue_address %}
+            <div class="venue-detail-full">
+                <div class="venue-detail-label">Address</div>
+                <div class="venue-detail-value">{{ ceremony.venue_address }}</div>
+            </div>
+            {% endif %}
+            {% if ceremony.venue_contact %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Contact</div>
+                <div class="venue-detail-value">{{ ceremony.venue_contact }}</div>
+            </div>
+            {% endif %}
+            {% if ceremony.venue_phone %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Phone</div>
+                <div class="venue-detail-value">{{ ceremony.venue_phone }}</div>
+            </div>
+            {% endif %}
+            {% if ceremony.start_time %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Ceremony Time</div>
+                <div class="venue-detail-value">{{ ceremony.start_time.strftime('%I:%M %p') }}</div>
+            </div>
+            {% endif %}
+            {% if ceremony.duration_minutes %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Duration</div>
+                <div class="venue-detail-value">~{{ ceremony.duration_minutes }} minutes</div>
+            </div>
+            {% endif %}
+            {% if ceremony.venue_load_in_time %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Vendor Load-In</div>
+                <div class="venue-detail-value">{{ ceremony.venue_load_in_time.strftime('%I:%M %p') }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% if ceremony.venue_rules %}
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dotted #e8e2da;">
+            <div class="venue-detail-label">Venue Rules &amp; Restrictions</div>
+            <div class="venue-detail-value" style="white-space: pre-line;">{{ ceremony.venue_rules }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Reception Venue -->
+    {% if reception and reception.venue_name %}
+    {% set has_content = true %}
+    <div class="venue-card">
+        <div class="venue-type">Reception Venue</div>
+        <div class="venue-name">{{ reception.venue_name }}</div>
+        <div class="venue-details">
+            {% if reception.venue_address %}
+            <div class="venue-detail-full">
+                <div class="venue-detail-label">Address</div>
+                <div class="venue-detail-value">{{ reception.venue_address }}</div>
+            </div>
+            {% endif %}
+            {% if reception.venue_contact %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Contact</div>
+                <div class="venue-detail-value">{{ reception.venue_contact }}</div>
+            </div>
+            {% endif %}
+            {% if reception.venue_phone %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Phone</div>
+                <div class="venue-detail-value">{{ reception.venue_phone }}</div>
+            </div>
+            {% endif %}
+            {% if reception.start_time %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Start Time</div>
+                <div class="venue-detail-value">{{ reception.start_time.strftime('%I:%M %p') }}</div>
+            </div>
+            {% endif %}
+            {% if reception.end_time %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">End Time</div>
+                <div class="venue-detail-value">{{ reception.end_time.strftime('%I:%M %p') }}</div>
+            </div>
+            {% endif %}
+            {% if reception.venue_capacity %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Capacity</div>
+                <div class="venue-detail-value">{{ reception.venue_capacity }} guests</div>
+            </div>
+            {% endif %}
+            {% if reception.expected_guest_count %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Expected Guests</div>
+                <div class="venue-detail-value">{{ reception.expected_guest_count }}</div>
+            </div>
+            {% endif %}
+            {% if reception.venue_load_in_time %}
+            <div class="venue-detail">
+                <div class="venue-detail-label">Vendor Load-In</div>
+                <div class="venue-detail-value">{{ reception.venue_load_in_time.strftime('%I:%M %p') }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% if reception.venue_rules %}
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dotted #e8e2da;">
+            <div class="venue-detail-label">Venue Rules &amp; Restrictions</div>
+            <div class="venue-detail-value" style="white-space: pre-line;">{{ reception.venue_rules }}</div>
+        </div>
+        {% endif %}
+        {% if reception.after_party_venue %}
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dotted #e8e2da;">
+            <div class="venue-detail-label">After-Party</div>
+            <div class="venue-detail-value">
+                {{ reception.after_party_venue }}
+                {% if reception.after_party_address %}<br>{{ reception.after_party_address }}{% endif %}
+                {% if reception.after_party_start_time %}<br>Starts at {{ reception.after_party_start_time.strftime('%I:%M %p') }}{% endif %}
+                {% if reception.after_party_notes %}<br><span style="color: #888; font-style: italic;">{{ reception.after_party_notes }}</span>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Venue Vendors (type = venue) -->
+    {% set venue_vendors = vendors|selectattr('category', 'equalto', 'venue')|list if vendors else [] %}
+    {% if venue_vendors %}
+    {% set has_content = true %}
+    <h2 class="section-title">Additional Venue Details</h2>
+    <div class="vendor-venue-grid">
+        {% for vendor in venue_vendors %}
+        <div class="vendor-venue-card">
+            <div class="vv-category">Venue</div>
+            <div class="vv-name">{{ vendor.business_name }}</div>
+            {% if vendor.contact_name %}
+            <div class="vv-detail"><strong>Contact:</strong> {{ vendor.contact_name }}</div>
+            {% endif %}
+            {% if vendor.phone %}
+            <div class="vv-detail"><strong>Phone:</strong> {{ vendor.phone }}</div>
+            {% endif %}
+            {% if vendor.email %}
+            <div class="vv-detail"><strong>Email:</strong> {{ vendor.email }}</div>
+            {% endif %}
+            {% if vendor.service_location %}
+            <div class="vv-detail"><strong>Location:</strong> {{ vendor.service_location }}</div>
+            {% endif %}
+            {% if vendor.setup_instructions %}
+            <div class="vv-detail"><strong>Setup:</strong> {{ vendor.setup_instructions }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Accommodations with parking info -->
+    {% set parking = accommodations|selectattr('accommodation_type', 'equalto', 'parking')|list if accommodations else [] %}
+    {% if parking %}
+    {% set has_content = true %}
+    <h2 class="section-title">Parking</h2>
+    <div class="vendor-venue-grid">
+        {% for p in parking %}
+        <div class="vendor-venue-card">
+            <div class="vv-category">Parking</div>
+            <div class="vv-name">{{ p.name }}</div>
+            {% if p.address %}
+            <div class="vv-detail">{{ p.address }}</div>
+            {% endif %}
+            {% if p.rate %}
+            <div class="vv-detail"><strong>Rate:</strong> {{ p.rate }}</div>
+            {% endif %}
+            {% if p.notes %}
+            <div class="vv-detail">{{ p.notes }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not has_content %}
+    <p class="empty-message">No venue information to display.</p>
+    {% endif %}
+
+    <div class="footer-note">
+        {{ wedding.couple_names }}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
+    </div>
+    </main>
+</body>
+</html>

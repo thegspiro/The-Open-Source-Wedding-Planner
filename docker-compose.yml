@@ -6,9 +6,12 @@ services:
       - "5000:5000"
     volumes:
       - ./instance:/app/instance
+    env_file:
+      - path: .env
+        required: false
     environment:
-      - SECRET_KEY=your-secret-key-change-in-production
-      # Uncomment to enable email
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      # Uncomment to enable email (or set in .env file)
       # - SMTP_HOST=smtp.gmail.com
       # - SMTP_PORT=587
       # - SMTP_USER=your-email@gmail.com

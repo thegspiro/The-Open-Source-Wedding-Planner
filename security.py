@@ -220,6 +220,8 @@ def init_session_security(app):
 # Pre-compiled patterns
 _EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 _PHONE_RE = re.compile(r'^[\d\s\-\+\(\)\.]{7,20}$')
+_TIME_RE = re.compile(r'^([01]?\d|2[0-3]):([0-5]\d)$')
+_TIME_AMPM_RE = re.compile(r'^([01]?\d):([0-5]\d)\s*(AM|PM|am|pm)$')
 
 
 def sanitize_string(value, max_length=500):
@@ -244,6 +246,74 @@ def validate_phone(phone):
     if not phone:
         return True  # phone is optional in most places
     return bool(_PHONE_RE.match(phone))
+
+
+def validate_time_string(time_str):
+    """Validate a time string in HH:MM or HH:MM AM/PM format.
+
+    Returns a datetime.time object if valid, or None if invalid.
+    Empty/None input returns None (time fields are optional).
+    """
+    if not time_str:
+        return None
+    time_str = str(time_str).strip()
+    if not time_str:
+        return None
+
+    from datetime import datetime as _dt
+
+    # Try 24-hour format first (HTML time inputs send HH:MM)
+    m = _TIME_RE.match(time_str)
+    if m:
+        try:
+            return _dt.strptime(time_str, '%H:%M').time()
+        except ValueError:
+            return None
+
+    # Try 12-hour AM/PM format
+    m = _TIME_AMPM_RE.match(time_str)
+    if m:
+        try:
+            return _dt.strptime(time_str, '%I:%M %p').time()
+        except ValueError:
+            return None
+
+    return None
+
+
+def validate_name_pronunciation(text):
+    """Validate and sanitize a name pronunciation field.
+
+    Returns (is_valid, sanitized_value).
+    Empty input is valid (field is optional).
+    """
+    if not text:
+        return True, ''
+    text = str(text).strip()
+    if len(text) > 200:
+        return False, ''
+    # Strip HTML tags and control characters, keep letters, digits,
+    # spaces, hyphens, apostrophes, periods, parentheses, slashes
+    sanitized = re.sub(r'[<>&;]', '', text)
+    sanitized = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', sanitized)
+    return True, sanitized
+
+
+def validate_text_field(text, max_length=500, field_name='Field'):
+    """Generic text field validator with length check and sanitization.
+
+    Returns (is_valid, sanitized_value, error_message).
+    Empty input is valid (returns empty string).
+    """
+    if not text:
+        return True, '', ''
+    text = str(text).strip()
+    if len(text) > max_length:
+        return False, '', f'{field_name} must be {max_length} characters or fewer.'
+    # Strip HTML tags and control characters
+    sanitized = re.sub(r'[<>&;]', '', text)
+    sanitized = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', sanitized)
+    return True, sanitized, ''
 
 
 def validate_password_strength(password):

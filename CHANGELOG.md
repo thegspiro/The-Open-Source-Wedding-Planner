@@ -4,6 +4,157 @@ All notable changes to the Wedding Organizer are documented in this file.
 
 ---
 
+## [2.10.0] - 2026-04-06 — Enhanced Data Capture & Template Integration
+
+### Added
+
+#### New Model Fields
+- **Wedding**: `phone` field for couple's primary contact number
+- **Person**: `name_pronunciation`, `getting_ready_location`, `getting_ready_address`, `getting_ready_time` fields
+- **Ceremony**: `venue_rules` (text), `venue_load_in_time` for vendor load-in scheduling
+- **CeremonyTimelineItem**: `music` field for per-item music cues during ceremony
+- **Reception**: `venue_rules`, `venue_load_in_time`, `after_party_venue`, `after_party_address`, `after_party_start_time`, `after_party_notes`
+- **ReceptionTimelineItem**: `announcement_script` for MC/DJ speaking notes
+- **BridalPartyMember**: `name_pronunciation` for correct introductions
+- **Vendor**: `arrival_time`, `overtime_rate` for day-of coordination
+- **WeddingParticipant**: `name_pronunciation`
+- **EmergencyKitItem**: new model for user-customizable emergency kit items with category, packed status, and notes
+
+#### Template Updates
+- **Ceremony Program**: displays per-item music cues (♩ symbol) in ceremony order
+- **Bridal Party**: shows name pronunciation guides next to member names
+- **Emergency Kit Checklist**: integrates user's custom EmergencyKitItem records alongside the static checklist
+- **Venue Information**: shows venue rules, vendor load-in times, and after-party details
+- **Vendor Contacts**: includes arrival time and overtime rate columns
+- **Reception Run Sheet**: displays announcement scripts inline with timeline events
+- **Personal Timeline**: shows getting-ready location and time in personal note
+
+---
+
+## [2.9.0] - 2026-04-06 — Complete Wedding Day Document Suite & Print Center
+
+### Added
+
+#### Print Center
+- **Print Center page** (`/wedding/<id>/print`) - a single hub linking to all 19 printable documents, organized by category (Day-Of Essentials, Ceremony & Reception, People & Vendors, Financial)
+- **"Print Center" button** on the wedding dashboard replacing individual print links
+
+#### 14 New Print Templates (all with wedding branding, PDF support)
+
+**Day-Of Essentials:**
+- **Ceremony Program** - processional order, readings with full text, ceremony music, officiant details, wedding party by side, ceremony script
+- **Music Cue Sheet** - complete playlist organized by moment (processional, first dance, dinner, dancing, etc.) with do-not-play list and checkboxes
+- **Guest List** - full guest list with RSVP status, meal choices, dietary restrictions, table assignments, and summary counts (landscape)
+- **Tips & Payment Tracker** - vendor tip amounts, envelope status, payment method, with totals row
+- **Hair & Makeup Schedule** - time-ordered appointments with stylist contacts, service badges, and style notes
+
+**Coordinator & Vendor Documents:**
+- **Wedding Party Info Sheet** - names, roles, contact info, processional order, responsibilities, grouped by side
+- **Venue Information Sheet** - ceremony & reception venue details consolidated with addresses, contacts, timing, parking
+- **Decor & Setup Plan** - reception theme, centerpieces, lighting, floral arrangements table, and setup instructions from inventory
+- **MC/DJ Reception Run Sheet** - reception timeline, key music cues, speeches/toast order, catering and bar details
+- **Emergency Kit Checklist** - comprehensive supplies packing list (60+ items across 6 categories: fashion fixes, health, beauty, tools, food, documents)
+
+**Planning & Reference:**
+- **Rehearsal Schedule** - rehearsal dinner venue details, ceremony walkthrough order, processional lineup
+- **Transportation & Accommodations** - hotel blocks with booking codes, recommended hotels, shuttles, parking, organized by type
+- **Contingency/Backup Plans** - all backup plans organized by category (weather, vendor, venue, emergency, etc.)
+- **Budget Summary** - budget overview cards (total/estimated/actual/paid/remaining), expenses by category with payment status
+
+### Changed
+- Dashboard "Export & Print" section now links to Print Center instead of individual print pages
+- Fixed `wedding.date` references to `wedding.wedding_date` across all print templates
+
+---
+
+## [2.8.0] - 2026-04-06 — Beautiful Personalized Print Templates
+
+### Changed
+- **Redesigned all 5 print templates** (timeline, seating chart, emergency contacts, vendor contacts, shot list) with elegant wedding-appropriate styling
+- **Wedding branding integration** - print templates now use the couple's custom colors (primary, secondary, accent), fonts, and monogram from Wedding Branding settings
+- **Elegant typography** - switched from generic Georgia to Palatino/Optima font stack with proper letter-spacing and hierarchy
+- **Decorative elements** - ornamental dividers, accent-colored borders, monogram display in headers
+- **Contextual design** - seating chart styled as guest-facing display ("Please Find Your Seat"), shot list as a working photographer checklist, emergency contacts as a quick-reference card layout
+- **Smart defaults** - templates look beautiful even without branding configured (warm gold/champagne palette)
+- **Consistent footer** - simplified footers show couple names and date without "Printed from" branding
+
+---
+
+## [2.7.0] - 2026-04-06 — Server-Side PDF Generation
+
+### Added
+- **WeasyPrint PDF generation** for all 8 print-ready pages (timeline, vendor contacts, shot list, emergency contacts, seating chart, inventory bins, inventory all, inventory labels)
+- **"Download PDF" button** on all print pages alongside existing "Print" button
+- **`?format=pdf` query parameter** on all print routes - append to any print URL to get a PDF download
+- WeasyPrint system dependencies in Dockerfile (libpango, libcairo, libharfbuzz, libgdk-pixbuf)
+
+### Changed
+- Updated `requirements.txt` with `weasyprint==62.3`
+- Updated Dockerfile to install system libraries needed for PDF rendering
+- All print routes now use `_render_or_pdf()` helper for consistent HTML/PDF output
+
+---
+
+## [2.6.0] - 2026-04-06 — Comprehensive Import/Export System
+
+### Added
+
+#### CSV Imports (4 modules)
+- **Guest CSV import** with file upload - bulk add guests from spreadsheets
+- **Vendor CSV import** - batch add vendors from CSV files
+- **Task CSV import** - import task lists with flexible date parsing (YYYY-MM-DD, MM/DD/YYYY, etc.)
+- **Budget CSV import** - import expenses with auto-creation of budget if needed
+- **Sample CSV templates** - downloadable template files with example data for guests, vendors, tasks, and budget
+- **"Download Template" buttons** on guests, vendors, tasks, and budget pages
+
+#### CSV Exports (9 new modules)
+- **Bridal party export** - name, role, side, contact, responsibilities, gift tracking
+- **Registry export** - items, stores, prices, purchase status
+- **Music/playlist export** - songs, artists, moments, Spotify URLs
+- **Photography shot list export** - categories, descriptions, priority, capture status
+- **Attire export** - garments, designers, sizes, fittings
+- **Gift tracking export** - events, givers, values, thank-you status
+- **Flowers/decor export** - arrangements, recipients, quantities, costs
+- **Speeches/toasts export** - speakers, types, order, duration
+- **Wedding favors export** - descriptions, quantities, costs, assembly status
+
+#### Full Wedding JSON Export/Import
+- **Export entire wedding** as a single JSON file from the dashboard - includes ALL modules (ceremony, reception, honeymoon, guests, vendors, budget, tasks, bridal party, registry, music, photos, flowers, attire, gifts, speeches, favors, tips, contingency plans, accommodations, timeline, hair/makeup, guest groups, inventory, seating tables, vendor communication logs, and more)
+- **Import wedding from JSON** - restore or transfer a complete wedding plan between instances
+- **Export/Import buttons** on the wedding dashboard
+
+#### UI Updates
+- Export CSV buttons added to 9 additional module pages (bridal party, registry, music, photos, attire, gifts, flowers, speeches, favors)
+- Import CSV buttons with inline file upload on guests, vendors, tasks, and budget pages
+- All import buttons use hidden file inputs for clean UX - click to browse, auto-submit on selection
+
+---
+
+## [2.5.0] - 2026-04-06 — Installation Docs, Deployment Guides & Infrastructure
+
+### Added
+- **`.env.example`** - Environment configuration reference with all supported variables and examples for Gmail, Outlook, SendGrid, and Amazon SES
+- **`INSTALL.md`** - Comprehensive installation guide covering Docker, local development, production deployment, database backups, and updating
+- **`docs/DEPLOYMENT-GUIDES.md`** - Platform-specific deployment guides for Unraid (3 methods), Proxmox (LXC, VM, bare metal), Synology NAS, Kubernetes (full manifests), Raspberry Pi, VPS (DigitalOcean/Linode/Hetzner), TrueNAS Scale, and Docker Swarm
+- **`docs/REVERSE-PROXY.md`** - Ready-to-use reverse proxy configurations for Nginx + Let's Encrypt, Traefik (automatic SSL), Caddy (simplest SSL), and Cloudflare Tunnel
+- **`scripts/backup.sh`** - Automated database backup and restore script with rotation (keeps last 30 backups), cron-ready
+- **`CONTRIBUTING.md`** - Developer guide with local setup, project structure, code style, database migration guidance, and PR process
+- **`/health` endpoint** - Returns application and database health status (200 healthy / 503 unhealthy) for monitoring and container orchestration
+- **`HEALTHCHECK` in Dockerfile** - Container health monitoring that polls `/health` every 30 seconds
+- **Multi-architecture Docker build instructions** - Documentation for building images for amd64, arm64, and armv7 using Docker Buildx
+- **Startup SECRET_KEY warning** - Application logs a warning with fix instructions when running with a default insecure secret key
+
+### Changed
+- **`docker-compose.yml`** - Added optional `.env` file support (`required: false` for backwards compatibility), SECRET_KEY now reads from environment with fallback
+- **`app.py`** - Activated `python-dotenv` (`load_dotenv()`) so `.env` files work for both Docker and local development
+- **`README.md`** - Updated Quick Start with git clone and `.env` setup, reorganized documentation section with links to all new guides, added backup instructions
+- **`QUICKSTART.md`** - Updated email section to use `.env` instead of editing `docker-compose.yml`, added setup instructions for Outlook, SendGrid, and Amazon SES, updated help links
+- **`TROUBLESHOOTING.md`** - Added sections for health check usage, SECRET_KEY warning resolution, and backup/restore documentation
+- **`docs/WIKI.md`** - Updated project structure to include new files and directories
+- **`.gitignore`** - Added `backups/` directory
+
+---
+
 ## [2.4.0] - 2026-03-04 — Social Group Tagging for Smarter Seating
 
 ### Added
