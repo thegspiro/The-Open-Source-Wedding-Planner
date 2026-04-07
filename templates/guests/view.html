@@ -32,7 +32,7 @@
     <h3>Online RSVP Portal</h3>
     {% if wedding.rsvp_enabled and wedding.rsvp_token %}
         <p style="margin-bottom: 0.5rem; color: var(--color-text-light); font-size: 0.9rem;">Share this link with your guests so they can RSVP online:</p>
-        <div class="portal-link">{{ request.host_url }}rsvp/{{ wedding.rsvp_token }}</div>
+        <div class="portal-link">{% if wedding.public_url %}{{ wedding.public_url }}/rsvp/{{ wedding.rsvp_token }}{% else %}{{ request.host_url }}rsvp/{{ wedding.rsvp_token }}{% endif %}</div>
         {% if wedding.rsvp_deadline %}
         <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.5rem;">Deadline: {{ wedding.rsvp_deadline.strftime('%B %d, %Y') }}</p>
         {% endif %}

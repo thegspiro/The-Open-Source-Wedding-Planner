@@ -1,0 +1,71 @@
+{% extends "embed/base.html" %}
+{% block title %}Events - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<h1>{{ wedding.couple_names }}</h1>
+<p class="subtitle">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</p>
+
+{% if wedding.ceremony %}
+<div class="card">
+    <h2>Ceremony</h2>
+    {% if wedding.ceremony.venue_name %}
+    <p class="detail"><strong>Venue:</strong> {{ wedding.ceremony.venue_name }}</p>
+    {% endif %}
+    {% if wedding.ceremony.venue_address %}
+    <p class="detail"><strong>Address:</strong> {{ wedding.ceremony.venue_address }}</p>
+    {% endif %}
+    {% if wedding.ceremony.ceremony_date %}
+    <p class="detail"><strong>Date:</strong> {{ wedding.ceremony.ceremony_date.strftime('%B %d, %Y') }}</p>
+    {% endif %}
+    {% if wedding.ceremony.start_time %}
+    <p class="detail"><strong>Time:</strong> {{ wedding.ceremony.start_time }}</p>
+    {% endif %}
+    {% if wedding.ceremony.ceremony_style %}
+    <p class="detail"><strong>Style:</strong> {{ wedding.ceremony.ceremony_style|title }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if wedding.reception %}
+<div class="card">
+    <h2>Reception</h2>
+    {% if wedding.reception.venue_name %}
+    <p class="detail"><strong>Venue:</strong> {{ wedding.reception.venue_name }}</p>
+    {% endif %}
+    {% if wedding.reception.venue_address %}
+    <p class="detail"><strong>Address:</strong> {{ wedding.reception.venue_address }}</p>
+    {% endif %}
+    {% if wedding.reception.start_time %}
+    <p class="detail"><strong>Start:</strong> {{ wedding.reception.start_time }}</p>
+    {% endif %}
+    {% if wedding.reception.end_time %}
+    <p class="detail"><strong>End:</strong> {{ wedding.reception.end_time }}</p>
+    {% endif %}
+    {% if wedding.reception.catering_style %}
+    <p class="detail"><strong>Dining:</strong> {{ wedding.reception.catering_style|title }}</p>
+    {% endif %}
+    {% if wedding.reception.bar_service %}
+    <p class="detail"><strong>Bar:</strong> {{ wedding.reception.bar_service|title }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if wedding.rehearsal_dinner and wedding.rehearsal_dinner.venue_name %}
+<div class="card">
+    <h2>Rehearsal Dinner</h2>
+    <p class="detail"><strong>Venue:</strong> {{ wedding.rehearsal_dinner.venue_name }}</p>
+    {% if wedding.rehearsal_dinner.venue_address %}
+    <p class="detail"><strong>Address:</strong> {{ wedding.rehearsal_dinner.venue_address }}</p>
+    {% endif %}
+    {% if wedding.rehearsal_dinner.date %}
+    <p class="detail"><strong>Date:</strong> {{ wedding.rehearsal_dinner.date.strftime('%B %d, %Y') }}</p>
+    {% endif %}
+    {% if wedding.rehearsal_dinner.time %}
+    <p class="detail"><strong>Time:</strong> {{ wedding.rehearsal_dinner.time }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if not wedding.ceremony and not wedding.reception %}
+<p class="empty">Event details coming soon!</p>
+{% endif %}
+{% endblock %}

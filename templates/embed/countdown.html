@@ -1,0 +1,51 @@
+{% extends "embed/base.html" %}
+{% block title %}Countdown - {{ wedding.couple_names }}{% endblock %}
+{% block extra_head %}
+<style>
+    .countdown-container { text-align: center; padding: 1.5rem 0; }
+    .countdown-grid { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; }
+    .countdown-unit { text-align: center; }
+    .countdown-num {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: {% if wedding.branding and wedding.branding.primary_color %}{{ wedding.branding.primary_color }}{% else %}#b76e79{% endif %};
+        line-height: 1;
+    }
+    .countdown-label { font-size: 0.8rem; color: #8b7f76; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+    .countdown-done { font-size: 1.3rem; color: {% if wedding.branding and wedding.branding.primary_color %}{{ wedding.branding.primary_color }}{% else %}#b76e79{% endif %}; font-weight: 600; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="countdown-container">
+    <h1>{{ wedding.couple_names }}</h1>
+    <p class="subtitle">{{ wedding.wedding_date.strftime('%B %d, %Y') }}</p>
+    <div id="countdown" class="countdown-grid"></div>
+</div>
+
+<script>
+(function() {
+    var weddingDate = new Date('{{ wedding.wedding_date.strftime("%Y-%m-%dT%H:%M:%S") }}');
+    var container = document.getElementById('countdown');
+
+    function update() {
+        var now = new Date();
+        var diff = weddingDate - now;
+        if (diff <= 0) {
+            container.innerHTML = '<p class="countdown-done">The big day is here!</p>';
+            return;
+        }
+        var days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        var hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        var seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        container.innerHTML =
+            '<div class="countdown-unit"><div class="countdown-num">' + days + '</div><div class="countdown-label">Days</div></div>' +
+            '<div class="countdown-unit"><div class="countdown-num">' + hours + '</div><div class="countdown-label">Hours</div></div>' +
+            '<div class="countdown-unit"><div class="countdown-num">' + minutes + '</div><div class="countdown-label">Minutes</div></div>' +
+            '<div class="countdown-unit"><div class="countdown-num">' + seconds + '</div><div class="countdown-label">Seconds</div></div>';
+    }
+    update();
+    setInterval(update, 1000);
+})();
+</script>
+{% endblock %}

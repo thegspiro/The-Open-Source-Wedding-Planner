@@ -1,0 +1,29 @@
+{% extends "embed/base.html" %}
+{% block title %}Registry - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<h1>{{ wedding.couple_names }}</h1>
+<p class="subtitle">Gift Registry</p>
+
+{% if items %}
+<div class="grid">
+    {% for item in items %}
+    {% if not item.quantity_purchased or item.quantity_purchased < (item.quantity or 1) %}
+    <div class="card">
+        <h3>{{ item.item_name }}</h3>
+        {% if item.store %}
+        <p class="detail"><strong>Store:</strong> {{ item.store }}</p>
+        {% endif %}
+        {% if item.price %}
+        <p class="detail"><strong>Price:</strong> ${{ "{:,.2f}".format(item.price) }}</p>
+        {% endif %}
+        {% if item.url %}
+        <p><a href="{{ item.url }}" target="_blank" rel="noopener">View Item &rarr;</a></p>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% else %}
+<p class="empty">Registry details coming soon!</p>
+{% endif %}
+{% endblock %}

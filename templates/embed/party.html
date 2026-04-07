@@ -1,0 +1,25 @@
+{% extends "embed/base.html" %}
+{% block title %}Wedding Party - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<h1>{{ wedding.couple_names }}</h1>
+<p class="subtitle">Wedding Party</p>
+
+{% if members %}
+<div class="grid">
+    {% for m in members %}
+    <div class="card" style="text-align: center;">
+        <span class="badge">{{ m.title|replace('_', ' ')|title if m.title else 'Member' }}</span>
+        <h3 style="margin-top: 0.5rem;">{{ m.name }}</h3>
+        {% if m.role %}
+        <p class="detail">{{ m.role }}</p>
+        {% endif %}
+        {% if m.side %}
+        <p class="detail" style="font-style: italic;">{{ m.side }}'s side</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="empty">Wedding party details coming soon!</p>
+{% endif %}
+{% endblock %}

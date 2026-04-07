@@ -3615,7 +3615,10 @@ def guest_links(wedding_id):
 
     checkin_url = None
     if wedding.rsvp_token:
-        checkin_url = url_for('guest_checkin', rsvp_token=wedding.rsvp_token, _external=True)
+        if wedding.public_url:
+            checkin_url = f'{wedding.public_url}/checkin/{wedding.rsvp_token}'
+        else:
+            checkin_url = url_for('guest_checkin', rsvp_token=wedding.rsvp_token, _external=True)
 
     return render_template('checkin/guest_links.html',
         wedding=wedding, guests=guests, checkin_url=checkin_url)
@@ -7872,6 +7875,99 @@ def custom_rsvp_questions_delete(wedding_id, question_id):
     db.session.commit()
     flash('Question removed.', 'success')
     return redirect(url_for('custom_rsvp_questions_view', wedding_id=wedding_id))
+
+
+# ============================================
+# PUBLIC ACCESS / EMBED SETTINGS
+# ============================================
+
+def get_public_base_url(wedding):
+    """Get the public base URL for a wedding's embeddable pages."""
+    if wedding.public_url:
+        return wedding.public_url.rstrip('/')
+    return request.host_url.rstrip('/')
+
+
+@app.route('/wedding/<int:wedding_id>/public-access', methods=['GET', 'POST'])
+@login_required
+def public_access_settings(wedding_id):
+    """Configure public URL / reverse proxy settings and enable embeds."""
+    wedding = get_wedding_or_403(wedding_id)
+    if request.method == 'POST':
+        public_url = request.form.get('public_url', '').strip().rstrip('/')
+        wedding.public_url = public_url if public_url else None
+        wedding.embed_enabled = request.form.get('embed_enabled') == 'on'
+        if wedding.embed_enabled and not wedding.embed_token:
+            wedding.embed_token = generate_token()
+        db.session.commit()
+        flash('Public access settings saved!', 'success')
+        return redirect(url_for('public_access_settings', wedding_id=wedding_id))
+
+    # Build embed URLs for display
+    embed_urls = {}
+    if wedding.embed_enabled and wedding.embed_token:
+        base = get_public_base_url(wedding)
+        embed_urls = {
+            'events': f'{base}/embed/{wedding.embed_token}/events',
+            'rsvp': f'{base}/rsvp/{wedding.rsvp_token}' if wedding.rsvp_token else None,
+            'registry': f'{base}/embed/{wedding.embed_token}/registry',
+            'travel': f'{base}/embed/{wedding.embed_token}/travel',
+            'countdown': f'{base}/embed/{wedding.embed_token}/countdown',
+            'party': f'{base}/embed/{wedding.embed_token}/party',
+        }
+
+    return render_template('public_access/settings.html', wedding=wedding,
+                         embed_urls=embed_urls)
+
+
+# ============================================
+# EMBEDDABLE PUBLIC PAGES (NO LOGIN REQUIRED)
+# ============================================
+
+def get_embed_wedding(token):
+    """Look up a wedding by embed token, ensuring embeds are enabled."""
+    wedding = Wedding.query.filter_by(embed_token=token).first_or_404()
+    if not wedding.embed_enabled:
+        abort(404)
+    return wedding
+
+
+@app.route('/embed/<token>/events')
+def embed_events(token):
+    """Public embeddable event details page."""
+    wedding = get_embed_wedding(token)
+    return render_template('embed/events.html', wedding=wedding)
+
+
+@app.route('/embed/<token>/registry')
+def embed_registry(token):
+    """Public embeddable registry page."""
+    wedding = get_embed_wedding(token)
+    items = wedding.registry_items
+    return render_template('embed/registry.html', wedding=wedding, items=items)
+
+
+@app.route('/embed/<token>/travel')
+def embed_travel(token):
+    """Public embeddable travel & accommodations page."""
+    wedding = get_embed_wedding(token)
+    accommodations = wedding.accommodations if hasattr(wedding, 'accommodations') else []
+    return render_template('embed/travel.html', wedding=wedding, accommodations=accommodations)
+
+
+@app.route('/embed/<token>/countdown')
+def embed_countdown(token):
+    """Public embeddable countdown timer."""
+    wedding = get_embed_wedding(token)
+    return render_template('embed/countdown.html', wedding=wedding)
+
+
+@app.route('/embed/<token>/party')
+def embed_party(token):
+    """Public embeddable wedding party page."""
+    wedding = get_embed_wedding(token)
+    members = wedding.bridal_party
+    return render_template('embed/party.html', wedding=wedding, members=members)
 
 
 # ============================================
