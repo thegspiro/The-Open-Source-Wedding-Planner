@@ -3,7 +3,7 @@ services:
     build: .
     container_name: wedding-organizer
     ports:
-      - "5000:5000"
+      - "4345:4345"
     volumes:
       - ./instance:/app/instance
     env_file:
