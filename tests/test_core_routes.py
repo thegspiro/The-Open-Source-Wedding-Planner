@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import patch
-from models import db, Wedding, WeddingAccess, EmergencyKitItem
+from models import db, Wedding, WeddingAccess, EmergencyKitItem, Person
 
 
 # ---------------------------------------------------------------------------
@@ -94,12 +94,14 @@ class TestCreateWedding:
             sess['user_id'] = user_id
 
         resp = client.post('/wedding/new', data={
-            'couple_names': 'Jane & Joe',
+            'num_people': '2',
+            'person_0_name': 'Jane',
+            'person_1_name': 'Joe',
             'wedding_date': '2026-09-15',
             'email': 'jane.joe@example.com',
         }, follow_redirects=False)
 
-        # Should redirect to onboarding
+        # Should redirect to onboarding step2
         assert resp.status_code == 302
 
         # Verify the wedding was created with owner access and emergency kit seeded
@@ -107,6 +109,12 @@ class TestCreateWedding:
             wedding = Wedding.query.filter_by(couple_names='Jane & Joe').first()
             assert wedding is not None
             assert wedding.email == 'jane.joe@example.com'
+
+            # Verify Person records were created at wedding creation
+            people = Person.query.filter_by(wedding_id=wedding.id).order_by(Person.display_order).all()
+            assert len(people) == 2
+            assert people[0].name == 'Jane'
+            assert people[1].name == 'Joe'
 
             access = WeddingAccess.query.filter_by(
                 user_id=user_id, wedding_id=wedding.id

@@ -560,7 +560,19 @@ def new_wedding():
             return redirect(url_for('wedding_dashboard', wedding_id=existing[0].id))
 
     if request.method == 'POST':
-        couple_names = request.form['couple_names']
+        num_people = int(request.form.get('num_people', 2))
+        names = []
+        for i in range(num_people):
+            name = request.form.get(f'person_{i}_name', '').strip()
+            if name:
+                names.append(name)
+
+        # Auto-generate couple_names display string from individual names
+        if len(names) == 2:
+            couple_names = f'{names[0]} & {names[1]}'
+        else:
+            couple_names = ', '.join(names[:-1]) + f' & {names[-1]}' if len(names) > 1 else names[0] if names else 'Wedding'
+
         wedding_date = datetime.strptime(request.form['wedding_date'], '%Y-%m-%d')
         email = request.form['email']
 
@@ -573,6 +585,16 @@ def new_wedding():
         db.session.add(wedding)
         db.session.commit()
 
+        # Create Person records from names collected at creation
+        for i, name in enumerate(names):
+            person = Person(
+                wedding_id=wedding.id,
+                name=name,
+                display_order=i + 1
+            )
+            db.session.add(person)
+        db.session.commit()
+
         # Give the current user owner access
         access = WeddingAccess(user_id=user.id, wedding_id=wedding.id, role='owner')
         db.session.add(access)
@@ -582,7 +604,7 @@ def new_wedding():
         seed_default_emergency_kit(wedding.id)
 
         flash(f'Wedding created! Let\'s set up some details.', 'success')
-        return redirect(url_for('onboarding_step1', wedding_id=wedding.id))
+        return redirect(url_for('onboarding_step2', wedding_id=wedding.id))
 
     return render_template('new_wedding.html')
 
@@ -593,57 +615,41 @@ def new_wedding():
 @app.route('/wedding/<int:wedding_id>/onboarding/step1', methods=['GET', 'POST'])
 @login_required
 def onboarding_step1(wedding_id):
-    """Step 1: How many people are getting married?"""
-    wedding = get_wedding_or_403(wedding_id)
-    
-    if request.method == 'POST':
-        num_people = int(request.form.get('num_people', 2))
-        # Store in session for next step
-        
-        session['onboarding_num_people'] = num_people
-        return redirect(url_for('onboarding_step2', wedding_id=wedding_id))
-    
-    return render_template('onboarding/step1.html', wedding=wedding)
+    """Step 1: Redirect to step 2 - people are now created at wedding creation."""
+    get_wedding_or_403(wedding_id)
+    return redirect(url_for('onboarding_step2', wedding_id=wedding_id))
 
 @app.route('/wedding/<int:wedding_id>/onboarding/step2', methods=['GET', 'POST'])
 @login_required
 def onboarding_step2(wedding_id):
-    """Step 2: Collect information about each person"""
+    """Step 2: Collect additional details for each person (names already set at creation)"""
     wedding = get_wedding_or_403(wedding_id)
-    
-    num_people = session.get('onboarding_num_people', 2)
-    
+
+    people = Person.query.filter_by(wedding_id=wedding_id).order_by(Person.display_order).all()
+
     if request.method == 'POST':
-        # Create Person records for each individual
-        for i in range(num_people):
-            name = request.form.get(f'person_{i}_name')
+        # Update existing Person records with additional details
+        for i, person in enumerate(people):
             title = request.form.get(f'person_{i}_title')
             pronouns = request.form.get(f'person_{i}_pronouns')
             side_label = request.form.get(f'person_{i}_side_label')
-            
-            if name:  # Only create if name provided
-                person = Person(
-                    wedding_id=wedding_id,
-                    name=name,
-                    title=title if title != 'other' else request.form.get(f'person_{i}_title_custom'),
-                    preferred_pronouns=pronouns,
-                    side_label=side_label,
-                    display_order=i+1
-                )
-                db.session.add(person)
-        
+
+            person.title = title if title != 'other' else request.form.get(f'person_{i}_title_custom')
+            person.preferred_pronouns = pronouns
+            person.side_label = side_label
+
         db.session.commit()
-        
+
         # Mark people module as complete
         modules = json.loads(wedding.modules_completed or '[]')
         if 'people' not in modules:
             modules.append('people')
             wedding.modules_completed = json.dumps(modules)
             db.session.commit()
-        
+
         return redirect(url_for('onboarding_step3', wedding_id=wedding_id))
-    
-    return render_template('onboarding/step2.html', wedding=wedding, num_people=num_people)
+
+    return render_template('onboarding/step2.html', wedding=wedding, people=people)
 
 @app.route('/wedding/<int:wedding_id>/onboarding/step3', methods=['GET', 'POST'])
 @login_required
