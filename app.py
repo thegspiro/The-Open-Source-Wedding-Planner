@@ -97,7 +97,10 @@ def health_check():
 # Note: db.create_all() is kept for initial setup / development convenience.
 # For production schema changes, use Flask-Migrate: flask db migrate / flask db upgrade
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+    except Exception:
+        pass
 
     # Seed traditional elements if none exist
     if TraditionalElement.query.count() == 0:
