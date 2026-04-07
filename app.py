@@ -14,7 +14,7 @@ from models import (
     ActivityLog, Comment,
     InventoryItem, InventoryBin, EmergencyKitItem,
     BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES,
-    TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES,
+    TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES, VenueFixture, VENUE_FIXTURE_TYPES,
     INVENTORY_CATEGORIES, INVENTORY_AREAS
 )
 from flask_migrate import Migrate
@@ -1472,6 +1472,7 @@ def guest_add(wedding_id):
             guest_type=request.form.get('guest_type'),
             side=request.form.get('side'),
             dietary_restrictions=request.form.get('dietary_restrictions'),
+            accessibility_needs=request.form.get('accessibility_needs'),
             household_group=request.form.get('household_group'),
             social_groups=request.form.get('social_groups'),
             guest_token=generate_token()
@@ -1495,6 +1496,7 @@ def guest_edit(wedding_id, guest_id):
         guest.guest_type = request.form.get('guest_type')
         guest.side = request.form.get('side')
         guest.dietary_restrictions = request.form.get('dietary_restrictions')
+        guest.accessibility_needs = request.form.get('accessibility_needs')
         guest.rsvp_status = request.form.get('rsvp_status')
         guest.meal_choice = request.form.get('meal_choice')
         guest.invitation_sent = request.form.get('invitation_sent') == 'on'
@@ -4027,49 +4029,403 @@ def guest_group_remove_guest(wedding_id, group_id, guest_id):
     return redirect(url_for('guest_groups_view', wedding_id=wedding_id))
 
 
+def compute_table_pixel_size(table, scale=1.4):
+    """Return (width_px, height_px) for a table at the given scale."""
+    ref = TABLE_SIZE_REFERENCE.get(table.table_size)
+    shape = table.table_shape or 'round'
+    cap = table.capacity
+    if ref:
+        if shape in ('round', 'oval'):
+            tw = ref.get('diameter', 60) * scale
+            th = tw if shape == 'round' else tw * 0.67
+        elif shape == 'rectangular':
+            tw = ref.get('length', 72) * scale
+            th = ref.get('width', 30) * scale
+        elif shape == 'square':
+            tw = ref.get('side', 48) * scale
+            th = tw
+        else:
+            tw = ref.get('length', 96) * scale
+            th = ref.get('width', 30) * scale
+    else:
+        if shape in ('round', 'oval'):
+            diameter = 24 + cap * 5
+            tw = diameter * scale
+            th = tw if shape == 'round' else tw * 0.67
+        elif shape in ('rectangular', 'serpentine'):
+            tw = (48 + max(0, cap - 4) * 12) * scale
+            th = 30 * scale
+        elif shape == 'square':
+            side = 24 + cap * 6
+            tw = side * scale
+            th = tw
+        else:
+            diameter = 24 + cap * 5
+            tw = diameter * scale
+            th = tw
+    return (round(tw), round(th))
+
+
+# Real-world spacing constants (inches)
+CHAIR_PUSHBACK_INCHES = 24   # space from table edge to back of pushed-out chair
+AISLE_CLEARANCE_INCHES = 42  # comfortable aisle between chair backs
+
+
+def compute_grid_position(index, table, scale=1.4, cols=4, offset_x=50, offset_y=50):
+    """Compute (x, y) position for a table in a grid layout with proper spacing.
+
+    Spacing accounts for table size + chair pushback + aisle clearance
+    so tables don't overlap on the canvas.
+    """
+    tw, th = compute_table_pixel_size(table, scale)
+    # Edge-to-edge clearance in pixels
+    clearance = (CHAIR_PUSHBACK_INCHES * 2 + AISLE_CLEARANCE_INCHES) * scale
+    # Cell size = table + surrounding clearance
+    cell_w = tw + clearance
+    cell_h = th + clearance
+    col = index % cols
+    row = index // cols
+    x = offset_x + col * cell_w
+    y = offset_y + row * cell_h
+    return (round(x), round(y))
+
+
+def compute_table_floor_data(tables, scale=1.4):
+    """Compute SVG floor plan rendering data for a list of tables.
+
+    Returns a dict keyed by table.id with dimensions, center point,
+    and chair positions (with filled/empty status).
+    """
+    import math
+    CHAIR_GAP = 14
+    PAD = 22
+
+    result = {}
+    for table in tables:
+        ref = TABLE_SIZE_REFERENCE.get(table.table_size)
+        shape = table.table_shape or 'round'
+        cap = table.capacity
+        assigned_count = len(table.assigned_guests)
+
+        if ref:
+            if shape in ('round', 'oval'):
+                tw = ref.get('diameter', 60) * scale
+                th = tw if shape == 'round' else tw * 0.67
+            elif shape == 'rectangular':
+                tw = ref.get('length', 72) * scale
+                th = ref.get('width', 30) * scale
+            elif shape == 'square':
+                tw = ref.get('side', 48) * scale
+                th = tw
+            else:
+                tw = ref.get('length', 96) * scale
+                th = ref.get('width', 30) * scale
+        else:
+            # Fallback: estimate from capacity using real-world table sizes
+            # Round: 2→36", 4→48", 6→48", 8→60", 10→72", 12→84"
+            # Rectangular: width ~30", length scales with capacity
+            if shape in ('round', 'oval'):
+                diameter = 24 + cap * 5  # inches, matches industry standards
+                tw = diameter * scale
+                th = tw if shape == 'round' else tw * 0.67
+            elif shape in ('rectangular', 'serpentine'):
+                tw = (48 + max(0, cap - 4) * 12) * scale  # length grows with seats
+                th = 30 * scale  # standard banquet width
+            elif shape == 'square':
+                side = 24 + cap * 6  # inches
+                tw = side * scale
+                th = tw
+            else:
+                diameter = 24 + cap * 5
+                tw = diameter * scale
+                th = tw
+
+        tw = round(tw)
+        th = round(th)
+        svg_w = tw + PAD * 2
+        svg_h = th + PAD * 2
+        cx = svg_w / 2
+        cy = svg_h / 2
+
+        chairs = []
+        one_sided = ref.get('one_sided', False) if ref else False
+
+        if shape in ('round', 'oval'):
+            rx = tw / 2 + CHAIR_GAP
+            ry = th / 2 + CHAIR_GAP
+            for i in range(cap):
+                angle = (2 * math.pi * i / cap) - math.pi / 2
+                x = round(cx + rx * math.cos(angle), 1)
+                y = round(cy + ry * math.sin(angle), 1)
+                chairs.append({'x': x, 'y': y, 'filled': i < assigned_count})
+        elif shape == 'square':
+            # Square: distribute evenly around all 4 sides
+            perimeter = 4 * tw
+            spacing = perimeter / cap if cap > 0 else perimeter
+            for i in range(cap):
+                dist = spacing * i + spacing / 2
+                if dist < tw:
+                    x, y = PAD + dist, PAD - CHAIR_GAP
+                elif dist < 2 * tw:
+                    x, y = PAD + tw + CHAIR_GAP, PAD + (dist - tw)
+                elif dist < 3 * tw:
+                    x, y = PAD + tw - (dist - 2 * tw), PAD + tw + CHAIR_GAP
+                else:
+                    x, y = PAD - CHAIR_GAP, PAD + tw - (dist - 3 * tw)
+                chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': i < assigned_count})
+        else:
+            # Rectangular/serpentine: chairs along long sides only
+            if one_sided:
+                # Head table: all chairs on one side (front, facing audience)
+                spacing = tw / cap if cap > 0 else tw
+                for i in range(cap):
+                    x = PAD + spacing * i + spacing / 2
+                    y = PAD + th + CHAIR_GAP
+                    chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': i < assigned_count})
+            else:
+                # Standard banquet: split chairs between top and bottom long sides
+                top_count = cap // 2
+                bottom_count = cap - top_count
+                # Top side (left to right)
+                if top_count > 0:
+                    spacing = tw / top_count
+                    for i in range(top_count):
+                        x = PAD + spacing * i + spacing / 2
+                        y = PAD - CHAIR_GAP
+                        chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': len(chairs) < assigned_count})
+                # Bottom side (left to right)
+                if bottom_count > 0:
+                    spacing = tw / bottom_count
+                    for i in range(bottom_count):
+                        x = PAD + spacing * i + spacing / 2
+                        y = PAD + th + CHAIR_GAP
+                        chairs.append({'x': round(x, 1), 'y': round(y, 1), 'filled': len(chairs) < assigned_count})
+
+        # Apply rotation (swap dimensions and rotate chair positions)
+        rotation = getattr(table, 'rotation', 0) or 0
+        if rotation in (90, 270):
+            # Swap table dimensions and SVG bounds
+            tw, th = th, tw
+            svg_w = tw + PAD * 2
+            svg_h = th + PAD * 2
+            new_cx = svg_w / 2
+            new_cy = svg_h / 2
+            # Rotate each chair around the center
+            cos_a = math.cos(math.radians(rotation))
+            sin_a = math.sin(math.radians(rotation))
+            for chair in chairs:
+                dx = chair['x'] - cx
+                dy = chair['y'] - cy
+                chair['x'] = round(new_cx + dx * cos_a - dy * sin_a, 1)
+                chair['y'] = round(new_cy + dx * sin_a + dy * cos_a, 1)
+            cx, cy = new_cx, new_cy
+
+        result[table.id] = {
+            'tw': tw, 'th': th,
+            'svg_w': svg_w, 'svg_h': svg_h,
+            'cx': cx, 'cy': cy,
+            'chairs': chairs,
+            'rotation': rotation,
+        }
+    return result
+
+
 @app.route('/wedding/<int:wedding_id>/seating-chart')
 @login_required
 def seating_chart(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     reception = wedding.reception
     tables = reception.seating_tables if reception else []
-    all_attending = [g for g in wedding.guests if g.rsvp_status == 'accepted']
-    unassigned = [g for g in all_attending if not g.table_id]
+    fixtures = reception.venue_fixtures if reception else []
+    all_guests = wedding.guests
+    all_attending = [g for g in all_guests if g.rsvp_status == 'accepted']
+    # Unassigned includes all guests without a table (regardless of RSVP status)
+    unassigned = [g for g in all_guests if not g.table_id and g.rsvp_status != 'declined']
+    # Count guests awaiting RSVP who are assigned to tables
+    pending_assigned = [g for g in all_guests if g.table_id and g.rsvp_status != 'accepted']
     preferences = SeatingPreference.query.filter_by(wedding_id=wedding_id).all()
 
     # Build stats
     total_capacity = sum(t.capacity for t in tables)
     total_attending = len(all_attending)
-    total_assigned = total_attending - len(unassigned)
+    total_assigned = len([g for g in all_guests if g.table_id])
 
-    # Check for constraint violations
+    # Check for constraint violations (using dict lookup instead of nested loop)
+    guest_table_map = {g.id: g.table_id for g in all_guests}
     violations = []
     for pref in preferences:
-        guest_table = None
-        other_table = None
-        for g in all_attending:
-            if g.id == pref.guest_id:
-                guest_table = g.table_id
-            if g.id == pref.other_guest_id:
-                other_table = g.table_id
+        guest_table = guest_table_map.get(pref.guest_id)
+        other_table = guest_table_map.get(pref.other_guest_id)
         if guest_table and other_table:
             if pref.preference_type == 'together' and guest_table != other_table:
                 violations.append(f'{pref.guest.name} and {pref.other_guest.name} should sit together but are at different tables')
             elif pref.preference_type == 'apart' and guest_table == other_table:
                 violations.append(f'{pref.guest.name} and {pref.other_guest.name} should sit apart but are at the same table')
 
+    # Flag guests assigned to tables who haven't accepted RSVP
+    if pending_assigned:
+        for g in pending_assigned:
+            violations.append(f'{g.name} is assigned to a table but RSVP status is "{g.rsvp_status or "pending"}"')
+
+    # Detect "lonely" guests — assigned to a table but share no household, social group, or side with tablemates
+    lonely_guests = []
+    for table in tables:
+        assigned = table.assigned_guests
+        if len(assigned) <= 1:
+            continue
+        for guest in assigned:
+            guest_tags = set()
+            if guest.household_group:
+                guest_tags.add(('household', guest.household_group.strip().lower()))
+            if guest.social_groups:
+                for tag in guest.social_groups.split(','):
+                    tag = tag.strip()
+                    if tag:
+                        guest_tags.add(('social', tag.lower()))
+            if guest.side:
+                guest_tags.add(('side', guest.side.strip().lower()))
+
+            has_connection = False
+            for other in assigned:
+                if other.id == guest.id:
+                    continue
+                other_tags = set()
+                if other.household_group:
+                    other_tags.add(('household', other.household_group.strip().lower()))
+                if other.social_groups:
+                    for tag in other.social_groups.split(','):
+                        tag = tag.strip()
+                        if tag:
+                            other_tags.add(('social', tag.lower()))
+                if other.side:
+                    other_tags.add(('side', other.side.strip().lower()))
+                if guest_tags & other_tags:
+                    has_connection = True
+                    break
+
+            if not has_connection and guest_tags:
+                table_name = table.table_name or f'Table {table.table_number}'
+                lonely_guests.append(f'{guest.name} at {table_name} — doesn\'t share a group, household, or side with any tablemate')
+
     stats = {
         'total_capacity': total_capacity,
         'total_attending': total_attending,
         'total_assigned': total_assigned,
         'total_unassigned': len(unassigned),
+        'pending_rsvp_assigned': len(pending_assigned),
+        'lonely_guest_count': len(lonely_guests),
         'capacity_surplus': total_capacity - total_attending,
     }
 
+    table_floor_data = compute_table_floor_data(tables)
+
+    # Compute fixture pixel data
+    SCALE = 1.4
+    fixture_floor_data = {}
+    for f in fixtures:
+        fw = round(f.width_inches * SCALE)
+        fh = round(f.height_inches * SCALE)
+        fixture_floor_data[f.id] = {'w': fw, 'h': fh}
+
+    # Compute canvas size to fit all tables and fixtures with padding
+    canvas_w = 900  # minimum width
+    canvas_h = 600  # minimum height
+    for table in tables:
+        fd = table_floor_data[table.id]
+        right = (table.x_position or 0) + fd['svg_w'] + 20
+        bottom = (table.y_position or 0) + fd['svg_h'] + 40
+        canvas_w = max(canvas_w, right)
+        canvas_h = max(canvas_h, bottom)
+    for f in fixtures:
+        ffd = fixture_floor_data[f.id]
+        right = (f.x_position or 0) + ffd['w'] + 20
+        bottom = (f.y_position or 0) + ffd['h'] + 40
+        canvas_w = max(canvas_w, right)
+        canvas_h = max(canvas_h, bottom)
+
+    # Detect tables that are too close together (overlapping clearance zones)
+    import math
+    min_clearance_px = (CHAIR_PUSHBACK_INCHES * 2 + 24) * SCALE  # bare minimum: chairs + 24" passage
+    # ADA requires 36" clear aisle for wheelchair access
+    ada_min_px = 36 * SCALE
+    proximity_warnings = []
+    accessibility_warnings = []
+
+    # Collect all obstacle bounding boxes (tables + fixtures)
+    obstacles = []
+    for table in tables:
+        fd = table_floor_data[table.id]
+        ox = (table.x_position or 0) + (fd['svg_w'] - fd['tw']) / 2
+        oy = (table.y_position or 0) + (fd['svg_h'] - fd['th']) / 2
+        obstacles.append({
+            'name': table.table_name or f'Table {table.table_number}',
+            'x': ox, 'y': oy, 'w': fd['tw'], 'h': fd['th'],
+            'is_table': True,
+        })
+    for f in fixtures:
+        ffd = fixture_floor_data[f.id]
+        obstacles.append({
+            'name': f.label or VENUE_FIXTURE_TYPES.get(f.fixture_type, {}).get('label', f.fixture_type),
+            'x': f.x_position or 0, 'y': f.y_position or 0,
+            'w': ffd['w'], 'h': ffd['h'],
+            'is_table': False,
+        })
+
+    for i, o1 in enumerate(obstacles):
+        for o2 in obstacles[i+1:]:
+            dx = abs((o1['x'] + o1['w']/2) - (o2['x'] + o2['w']/2))
+            dy = abs((o1['y'] + o1['h']/2) - (o2['y'] + o2['h']/2))
+            edge_dx = max(0, dx - o1['w']/2 - o2['w']/2)
+            edge_dy = max(0, dy - o1['h']/2 - o2['h']/2)
+            edge_dist = math.sqrt(edge_dx**2 + edge_dy**2)
+
+            # Table-to-table needs chair clearance
+            if o1['is_table'] and o2['is_table']:
+                if edge_dist < min_clearance_px:
+                    real_inches = round(edge_dist / SCALE)
+                    proximity_warnings.append(
+                        f'{o1["name"]} and {o2["name"]} are too close ({real_inches}" apart — need at least 84" for chairs + aisle)'
+                    )
+
+            # Any pair: check ADA wheelchair clearance (36")
+            if edge_dist < ada_min_px:
+                real_inches = round(edge_dist / SCALE)
+                accessibility_warnings.append(
+                    f'{o1["name"]} and {o2["name"]} have only {real_inches}" clearance — wheelchairs need at least 36"'
+                )
+
+    # Dietary balance warnings — flag tables where >60% of guests share a restriction
+    dietary_warnings = []
+    for table in tables:
+        guests = table.assigned_guests
+        if len(guests) < 3:
+            continue
+        restriction_counts = {}
+        for g in guests:
+            if g.dietary_restrictions:
+                for r in g.dietary_restrictions.split(','):
+                    r = r.strip().lower()
+                    if r:
+                        restriction_counts[r] = restriction_counts.get(r, 0) + 1
+        for restriction, count in restriction_counts.items():
+            if count >= len(guests) * 0.6 and count >= 3:
+                tname = table.table_name or f'Table {table.table_number}'
+                dietary_warnings.append(
+                    f'{tname}: {count}/{len(guests)} guests have "{restriction}" — consider spreading dietary needs across tables'
+                )
+
     return render_template('seating/chart.html', wedding=wedding, tables=tables,
+                         fixtures=fixtures,
                          unassigned_guests=unassigned, preferences=preferences,
-                         violations=violations, stats=stats,
-                         table_size_ref=TABLE_SIZE_REFERENCE, table_roles=TABLE_ROLES)
+                         violations=violations, lonely_guests=lonely_guests, stats=stats,
+                         proximity_warnings=proximity_warnings,
+                         accessibility_warnings=accessibility_warnings,
+                         dietary_warnings=dietary_warnings,
+                         canvas_w=round(canvas_w), canvas_h=round(canvas_h),
+                         table_size_ref=TABLE_SIZE_REFERENCE, table_roles=TABLE_ROLES,
+                         table_floor_data=table_floor_data,
+                         fixture_floor_data=fixture_floor_data,
+                         fixture_types=VENUE_FIXTURE_TYPES)
 
 
 @app.route('/wedding/<int:wedding_id>/seating-chart/table/add', methods=['POST'])
@@ -4106,10 +4462,12 @@ def seating_table_add(wedding_id):
         table_shape=shape,
         table_size=size,
         table_role=request.form.get('table_role', 'guest'),
-        x_position=50 + (existing_count % 4) * 220,
-        y_position=50 + (existing_count // 4) * 200,
         notes=request.form.get('notes', '')
     )
+    # Compute proper grid position based on table dimensions
+    pos_x, pos_y = compute_grid_position(existing_count, table)
+    table.x_position = pos_x
+    table.y_position = pos_y
     db.session.add(table)
     db.session.commit()
     log_activity(wedding_id, 'added', 'table', f'Table {table_number}')
@@ -4164,6 +4522,13 @@ def seating_tables_bulk_add(wedding_id):
     ref = TABLE_SIZE_REFERENCE.get(preset, TABLE_SIZE_REFERENCE['round_60'])
 
     added = 0
+    grid_index = 0  # tracks position in the guest table grid
+    # Compute clearance for the selected table type
+    clearance_px = (CHAIR_PUSHBACK_INCHES * 2 + AISLE_CLEARANCE_INCHES) * 1.4
+
+    # Determine where guest tables start (below head table if present)
+    guest_start_y = 50
+
     # Optionally add head table first
     if include_head:
         existing += 1
@@ -4173,17 +4538,27 @@ def seating_tables_bulk_add(wedding_id):
             table_name='Head Table',
             capacity=request.form.get('head_capacity', 8, type=int),
             table_shape='rectangular',
-            table_size='banquet_8ft',
+            table_size='head_16ft',
             table_role='head',
-            x_position=350,
-            y_position=30,
         )
+        head_tw, head_th = compute_table_pixel_size(head)
+        head.x_position = 50
+        head.y_position = 30
+        guest_start_y = 30 + head_th + clearance_px
         db.session.add(head)
         added += 1
 
-    # Add guest tables in a grid layout
+    # Add guest tables in a grid layout with proper spacing
+    # Build a temporary table object to compute its pixel size
+    sample = SeatingTable(table_shape=ref['shape'], table_size=preset, capacity=ref['capacity'])
+    sample_tw, sample_th = compute_table_pixel_size(sample)
+    cell_w = sample_tw + clearance_px
+    cell_h = sample_th + clearance_px
+
     for i in range(count):
         existing += 1
+        col = i % 4
+        row = i // 4
         table = SeatingTable(
             reception_id=reception.id,
             table_number=str(existing),
@@ -4192,13 +4567,14 @@ def seating_tables_bulk_add(wedding_id):
             table_shape=ref['shape'],
             table_size=preset,
             table_role='guest',
-            x_position=50 + (i % 4) * 220,
-            y_position=180 + (i // 4) * 200,
+            x_position=round(50 + col * cell_w),
+            y_position=round(guest_start_y + row * cell_h),
         )
         db.session.add(table)
         added += 1
+        grid_index = i
 
-    # Optionally add kids table
+    # Optionally add kids table (placed after the last guest table)
     if include_kids:
         existing += 1
         kids = SeatingTable(
@@ -4209,9 +4585,12 @@ def seating_tables_bulk_add(wedding_id):
             table_shape='round',
             table_size='round_60',
             table_role='kids',
-            x_position=50 + (count % 4) * 220,
-            y_position=180 + (count // 4) * 200,
         )
+        next_i = grid_index + 1
+        kids_col = next_i % 4
+        kids_row = next_i // 4
+        kids.x_position = round(50 + kids_col * cell_w)
+        kids.y_position = round(guest_start_y + kids_row * cell_h)
         db.session.add(kids)
         added += 1
 
@@ -4229,7 +4608,19 @@ def seating_assign(wedding_id):
     guest = Guest.query.get_or_404(guest_id)
     guest.table_id = table_id if table_id else None
     db.session.commit()
-    flash(f'{guest.name} assigned!', 'success')
+    msg = f'{guest.name} assigned!'
+    category = 'success'
+    if table_id:
+        warnings = []
+        table = SeatingTable.query.get(table_id)
+        if table and len(table.assigned_guests) > table.capacity:
+            warnings.append(f'table is now over capacity ({len(table.assigned_guests)}/{table.capacity})')
+        if guest.rsvp_status != 'accepted':
+            warnings.append(f'RSVP status is "{guest.rsvp_status or "pending"}"')
+        if warnings:
+            msg += ' Note: ' + '; '.join(warnings) + '.'
+            category = 'warning'
+    flash(msg, category)
     return redirect(url_for('seating_chart', wedding_id=wedding_id))
 
 
@@ -4248,12 +4639,20 @@ def seating_unassign(wedding_id, guest_id):
 def seating_bulk_assign(wedding_id):
     table_id = request.form.get('table_id', type=int)
     guest_ids = request.form.getlist('guest_ids')
+    assigned = 0
+    pending_count = 0
     for gid in guest_ids:
         guest = Guest.query.get(int(gid))
         if guest:
             guest.table_id = table_id
+            assigned += 1
+            if guest.rsvp_status != 'accepted':
+                pending_count += 1
     db.session.commit()
-    flash(f'{len(guest_ids)} guests assigned!', 'success')
+    msg = f'{assigned} guests assigned!'
+    if pending_count:
+        msg += f' ({pending_count} have not yet accepted their RSVP.)'
+    flash(msg, 'success' if pending_count == 0 else 'warning')
     return redirect(url_for('seating_chart', wedding_id=wedding_id))
 
 
@@ -4283,6 +4682,88 @@ def seating_update_position(wedding_id):
     return jsonify({'status': 'ok'})
 
 
+@app.route('/wedding/<int:wedding_id>/seating-chart/table/<int:table_id>/rotate', methods=['POST'])
+@login_required
+def seating_table_rotate(wedding_id, table_id):
+    """AJAX endpoint to rotate a table by 90 degrees."""
+    table = SeatingTable.query.get_or_404(table_id)
+    current = table.rotation or 0
+    table.rotation = (current + 90) % 360
+    db.session.commit()
+    return jsonify({'status': 'ok', 'rotation': table.rotation})
+
+
+# --- Venue Fixtures (dance floor, bar, stage, etc.) ---
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/fixture/add', methods=['POST'])
+@login_required
+def fixture_add(wedding_id):
+    wedding = get_wedding_or_403(wedding_id)
+    reception = wedding.reception
+    if not reception:
+        flash('Please set up reception details first.', 'warning')
+        return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+    fixture_type = request.form.get('fixture_type', '')
+    preset = VENUE_FIXTURE_TYPES.get(fixture_type)
+
+    if preset:
+        width = preset['width']
+        height = preset['height']
+        label = preset['label']
+    else:
+        width = request.form.get('width_inches', 72, type=int)
+        height = request.form.get('height_inches', 36, type=int)
+        label = request.form.get('label', 'Custom Fixture')
+
+    # Place below existing tables/fixtures
+    y_offset = 50
+    for t in reception.seating_tables:
+        y_offset = max(y_offset, (t.y_position or 0) + 150)
+    for f in reception.venue_fixtures:
+        y_offset = max(y_offset, (f.y_position or 0) + 100)
+
+    fixture = VenueFixture(
+        reception_id=reception.id,
+        fixture_type=fixture_type or 'custom',
+        label=request.form.get('label', '') or label,
+        width_inches=width,
+        height_inches=height,
+        x_position=50,
+        y_position=round(y_offset + 30),
+        notes=request.form.get('notes', ''),
+    )
+    db.session.add(fixture)
+    db.session.commit()
+    flash(f'{fixture.label} added to floor plan!', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/fixture/<int:fixture_id>/delete', methods=['POST'])
+@login_required
+def fixture_delete(wedding_id, fixture_id):
+    get_wedding_or_403(wedding_id)
+    fixture = VenueFixture.query.get_or_404(fixture_id)
+    db.session.delete(fixture)
+    db.session.commit()
+    flash('Fixture removed from floor plan.', 'success')
+    return redirect(url_for('seating_chart', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/seating-chart/fixture/update-position', methods=['POST'])
+@login_required
+def fixture_update_position(wedding_id):
+    """AJAX endpoint for drag-and-drop fixture positioning."""
+    fixture_id = request.json.get('fixture_id')
+    x = request.json.get('x')
+    y = request.json.get('y')
+    fixture = VenueFixture.query.get_or_404(fixture_id)
+    fixture.x_position = x
+    fixture.y_position = y
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
 # --- Seating Preferences (together/apart) ---
 
 @app.route('/wedding/<int:wedding_id>/seating-chart/preferences')
@@ -4308,7 +4789,18 @@ def seating_preference_add(wedding_id):
         flash('Cannot create a preference for the same guest.', 'warning')
         return redirect(url_for('seating_preferences', wedding_id=wedding_id))
 
-    # Check for duplicate
+    # Check for contradictory reverse preference (A→B "together" vs B→A "apart")
+    reverse = SeatingPreference.query.filter_by(
+        wedding_id=wedding_id, guest_id=other_guest_id, other_guest_id=guest_id
+    ).first()
+    if reverse and reverse.preference_type != pref_type:
+        guest = Guest.query.get(guest_id)
+        other = Guest.query.get(other_guest_id)
+        flash(f'Conflict: {other.name} & {guest.name} already have a "{reverse.preference_type}" preference. '
+              f'Remove it first before adding a "{pref_type}" preference.', 'warning')
+        return redirect(url_for('seating_preferences', wedding_id=wedding_id))
+
+    # Check for duplicate (same direction)
     existing = SeatingPreference.query.filter_by(
         wedding_id=wedding_id, guest_id=guest_id, other_guest_id=other_guest_id
     ).first()
@@ -4386,10 +4878,13 @@ def seating_auto_assign(wedding_id):
         flash('No guests to assign.', 'info')
         return redirect(url_for('seating_chart', wedding_id=wedding_id))
 
-    # Load preferences
+    # Load preferences (sorted by priority so higher-priority constraints are processed first)
     prefs = SeatingPreference.query.filter_by(wedding_id=wedding_id).all()
-    together_pairs = [(p.guest_id, p.other_guest_id) for p in prefs if p.preference_type == 'together']
-    apart_pairs = [(p.guest_id, p.other_guest_id) for p in prefs if p.preference_type == 'apart']
+    together_pairs = sorted(
+        [(p.guest_id, p.other_guest_id, p.priority) for p in prefs if p.preference_type == 'together'],
+        key=lambda x: -x[2]  # highest priority first
+    )
+    apart_pairs = [(p.guest_id, p.other_guest_id, p.priority) for p in prefs if p.preference_type == 'apart']
 
     # Build guest groups using Union-Find for "together" constraints
     guest_ids = {g.id for g in guests_to_assign}
@@ -4406,25 +4901,28 @@ def seating_auto_assign(wedding_id):
         if ra != rb:
             parent[ra] = rb
 
-    # Merge from "together" preferences
-    for a, b in together_pairs:
+    # Merge from "together" preferences (already sorted by priority, highest first)
+    for a, b, priority in together_pairs:
         if a in guest_ids and b in guest_ids:
             union(a, b)
 
-    # Also merge by household_group
+    # Also merge by household_group (case-insensitive, whitespace-normalized)
     household_map = {}
     for g in guests_to_assign:
         if g.household_group:
-            if g.household_group in household_map:
-                union(g.id, household_map[g.household_group])
+            key = g.household_group.strip().lower()
+            if key in household_map:
+                union(g.id, household_map[key])
             else:
-                household_map[g.household_group] = g.id
+                household_map[key] = g.id
 
-    # Also group plus-ones with their hosts
-    name_to_id = {g.name: g.id for g in guests_to_assign}
+    # Also group plus-ones with their hosts (case-insensitive, whitespace-normalized)
+    name_to_id = {g.name.strip().lower(): g.id for g in guests_to_assign if g.name}
     for g in guests_to_assign:
-        if g.is_plus_one and g.plus_one_of and g.plus_one_of in name_to_id:
-            union(g.id, name_to_id[g.plus_one_of])
+        if g.is_plus_one and g.plus_one_of:
+            host_key = g.plus_one_of.strip().lower()
+            if host_key in name_to_id:
+                union(g.id, name_to_id[host_key])
 
     # Build actual groups
     from collections import defaultdict
@@ -4432,11 +4930,12 @@ def seating_auto_assign(wedding_id):
     for g in guests_to_assign:
         groups[find(g.id)].append(g)
 
-    # Build apart-set (which group roots must not share a table)
-    apart_roots = set()
-    for a, b in apart_pairs:
+    # Build apart-set (which group roots must not share a table) with priority
+    apart_roots = {}  # (root_a, root_b) -> priority
+    for a, b, priority in apart_pairs:
         if a in guest_ids and b in guest_ids:
-            apart_roots.add((find(a), find(b)))
+            key = (find(a), find(b))
+            apart_roots[key] = max(apart_roots.get(key, 0), priority)
 
     # --- Social Group Affinity ---
     # Build a map: group_root -> set of social tags
@@ -4482,16 +4981,26 @@ def seating_auto_assign(wedding_id):
     # Sort groups by traits for smart placement
     guest_lookup = {g.id: g for g in guests_to_assign}
 
+    # Track which groups have accessibility needs
+    groups_with_accessibility = set()
+    for root, members in groups.items():
+        if any(g.accessibility_needs for g in members):
+            groups_with_accessibility.add(root)
+
     def group_sort_key(grp):
-        """Priority: kids first (for kids table), then family, then friends."""
+        """Priority: accessibility first, kids next, then family, then friends."""
+        root = find(grp[0].id)
+        has_accessibility = root in groups_with_accessibility
         types = [g.guest_type for g in grp]
+        if has_accessibility:
+            return (0, 0, -len(grp))
         if any(t == 'child' or t == 'kid' for t in types):
-            return (0, -len(grp))
+            return (0, 1, -len(grp))
         if any(t == 'family' for t in types):
-            return (1, -len(grp))
+            return (1, 0, -len(grp))
         if any(t == 'vip' for t in types):
-            return (2, -len(grp))
-        return (3, -len(grp))
+            return (2, 0, -len(grp))
+        return (3, 0, -len(grp))
 
     sorted_groups = sorted(groups.values(), key=group_sort_key)
 
@@ -4506,17 +5015,25 @@ def seating_auto_assign(wedding_id):
         """Check if placing this group at this table violates constraints."""
         if table_counts.get(table.id, 0) + group_size > table.capacity:
             return False
-        # Check apart constraints
+        # Check apart constraints (respect priority — only block if priority >= 3)
         for assigned_root in table_assignments[table.id]:
-            if (group_root, assigned_root) in apart_roots or (assigned_root, group_root) in apart_roots:
+            priority = apart_roots.get((group_root, assigned_root), 0) or apart_roots.get((assigned_root, group_root), 0)
+            if priority >= 3:
                 return False
         return True
+
+    # Sort tables by table_number for accessibility preference (lower = closer to entrance)
+    tables_by_number = sorted(tables, key=lambda t: t.table_number)
 
     def table_affinity(group_root, table):
         """Score how well this group fits at this table based on who's already there."""
         score = 0
         for existing_root in table_assignments[table.id]:
             score += affinity_score(group_root, existing_root)
+        # Boost score for lower-numbered tables when group has accessibility needs
+        if group_root in groups_with_accessibility:
+            idx = tables_by_number.index(table) if table in tables_by_number else len(tables)
+            score += max(0, len(tables) - idx)  # higher score for lower table numbers
         return score
 
     def place_group(grp, table):
@@ -4760,11 +5277,24 @@ def print_emergency_contacts(wedding_id):
 @app.route('/wedding/<int:wedding_id>/print/seating')
 @login_required
 def print_seating(wedding_id):
-    """Printable seating chart."""
+    """Printable seating chart with visual floor plan."""
     wedding = get_wedding_or_403(wedding_id)
     tables = wedding.reception.seating_tables if wedding.reception else []
+    fixtures = wedding.reception.venue_fixtures if wedding.reception else []
+    table_floor_data = compute_table_floor_data(tables, scale=1.0)
+    fixture_floor_data = {}
+    scale = 1.4
+    for f in fixtures:
+        fixture_floor_data[f.id] = {
+            'w': int(f.width_inches * scale),
+            'h': int(f.height_inches * scale),
+        }
     return _render_or_pdf('print/seating.html', f'seating_{wedding_id}.pdf',
-                          wedding=wedding, tables=tables)
+                          wedding=wedding, tables=tables,
+                          table_floor_data=table_floor_data,
+                          fixtures=fixtures,
+                          fixture_floor_data=fixture_floor_data,
+                          fixture_types=VENUE_FIXTURE_TYPES)
 
 @app.route('/wedding/<int:wedding_id>/print')
 @login_required
@@ -4821,7 +5351,14 @@ def _get_print_context(document_type, wedding):
         ctx['vendors'] = wedding.vendors
         ctx['participants'] = wedding.participants
     elif document_type == 'seating':
-        ctx['tables'] = wedding.reception.seating_tables if wedding.reception else []
+        tables = wedding.reception.seating_tables if wedding.reception else []
+        fixtures = wedding.reception.venue_fixtures if wedding.reception else []
+        ctx['tables'] = tables
+        ctx['table_floor_data'] = compute_table_floor_data(tables, scale=1.0)
+        ctx['fixtures'] = fixtures
+        scale = 1.4
+        ctx['fixture_floor_data'] = {f.id: {'w': int(f.width_inches * scale), 'h': int(f.height_inches * scale)} for f in fixtures}
+        ctx['fixture_types'] = VENUE_FIXTURE_TYPES
     elif document_type == 'ceremony_program':
         ceremony = wedding.ceremony
         ctx['ceremony'] = ceremony

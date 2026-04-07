@@ -265,6 +265,7 @@ class Reception(db.Model):
     timeline_items = db.relationship('ReceptionTimelineItem', backref='reception', lazy=True, cascade='all, delete-orphan')
     menu_items = db.relationship('MenuItem', backref='reception', lazy=True, cascade='all, delete-orphan')
     seating_tables = db.relationship('SeatingTable', backref='reception', lazy=True, cascade='all, delete-orphan')
+    venue_fixtures = db.relationship('VenueFixture', backref='reception', lazy=True, cascade='all, delete-orphan')
 
 class ReceptionTimelineItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -296,10 +297,143 @@ class SeatingTable(db.Model):
     table_role = db.Column(db.String(50))  # head, sweetheart, kings, guest, kids, vip
     x_position = db.Column(db.Float, default=0)  # for visual floor plan
     y_position = db.Column(db.Float, default=0)  # for visual floor plan
+    rotation = db.Column(db.Integer, default=0)   # degrees (0, 90, 180, 270)
     notes = db.Column(db.Text)
 
     # Relationship
     assigned_guests = db.relationship('Guest', backref='seating_table', lazy=True)
+
+
+class VenueFixture(db.Model):
+    """Non-table elements on the floor plan: dance floor, stage, bar, catering, etc."""
+    id = db.Column(db.Integer, primary_key=True)
+    reception_id = db.Column(db.Integer, db.ForeignKey('reception.id'), nullable=False)
+    fixture_type = db.Column(db.String(50), nullable=False)  # key into VENUE_FIXTURE_TYPES
+    label = db.Column(db.String(200))  # custom label override
+    width_inches = db.Column(db.Integer, nullable=False)   # real-world width
+    height_inches = db.Column(db.Integer, nullable=False)  # real-world depth
+    x_position = db.Column(db.Float, default=0)
+    y_position = db.Column(db.Float, default=0)
+    notes = db.Column(db.Text)
+
+
+# Venue fixture presets with typical real-world dimensions (inches)
+VENUE_FIXTURE_TYPES = {
+    'dance_floor_12': {
+        'label': "12' Dance Floor",
+        'category': 'entertainment',
+        'width': 144, 'height': 144,
+        'icon': 'dance',
+    },
+    'dance_floor_15': {
+        'label': "15' Dance Floor",
+        'category': 'entertainment',
+        'width': 180, 'height': 180,
+        'icon': 'dance',
+    },
+    'dance_floor_18': {
+        'label': "18' Dance Floor",
+        'category': 'entertainment',
+        'width': 216, 'height': 216,
+        'icon': 'dance',
+    },
+    'stage_8x4': {
+        'label': "8'×4' Stage / Riser",
+        'category': 'entertainment',
+        'width': 96, 'height': 48,
+        'icon': 'stage',
+    },
+    'stage_12x8': {
+        'label': "12'×8' Stage",
+        'category': 'entertainment',
+        'width': 144, 'height': 96,
+        'icon': 'stage',
+    },
+    'dj_booth': {
+        'label': 'DJ Booth',
+        'category': 'entertainment',
+        'width': 72, 'height': 36,
+        'icon': 'dj',
+    },
+    'band_area': {
+        'label': 'Band / Live Music Area',
+        'category': 'entertainment',
+        'width': 144, 'height': 96,
+        'icon': 'stage',
+    },
+    'bar_8ft': {
+        'label': "8' Bar",
+        'category': 'food_drink',
+        'width': 96, 'height': 30,
+        'icon': 'bar',
+    },
+    'bar_12ft': {
+        'label': "12' Bar",
+        'category': 'food_drink',
+        'width': 144, 'height': 30,
+        'icon': 'bar',
+    },
+    'buffet_8ft': {
+        'label': "8' Buffet / Catering Table",
+        'category': 'food_drink',
+        'width': 96, 'height': 30,
+        'icon': 'buffet',
+    },
+    'buffet_12ft': {
+        'label': "12' Buffet / Catering Table",
+        'category': 'food_drink',
+        'width': 144, 'height': 30,
+        'icon': 'buffet',
+    },
+    'dessert_table': {
+        'label': 'Dessert / Cake Table',
+        'category': 'food_drink',
+        'width': 60, 'height': 30,
+        'icon': 'cake',
+    },
+    'gift_table': {
+        'label': 'Gift Table',
+        'category': 'other',
+        'width': 72, 'height': 30,
+        'icon': 'gift',
+    },
+    'photo_booth': {
+        'label': 'Photo Booth',
+        'category': 'entertainment',
+        'width': 96, 'height': 72,
+        'icon': 'photo',
+    },
+    'guest_book_table': {
+        'label': 'Guest Book / Sign-In Table',
+        'category': 'other',
+        'width': 48, 'height': 24,
+        'icon': 'book',
+    },
+    'entrance': {
+        'label': 'Entrance / Doorway',
+        'category': 'access',
+        'width': 72, 'height': 12,
+        'icon': 'entrance',
+    },
+    'exit': {
+        'label': 'Exit / Emergency Exit',
+        'category': 'access',
+        'width': 72, 'height': 12,
+        'icon': 'exit',
+    },
+    'restrooms': {
+        'label': 'Restrooms',
+        'category': 'access',
+        'width': 48, 'height': 48,
+        'icon': 'restroom',
+    },
+    'wheelchair_ramp': {
+        'label': 'Wheelchair Ramp / Accessible Entry',
+        'category': 'access',
+        'width': 60, 'height': 36,
+        'icon': 'accessible',
+    },
+}
 
 
 class SeatingPreference(db.Model):
@@ -339,13 +473,27 @@ SUGGESTED_GROUP_TYPES = [
 
 # Table size reference data (inches)
 TABLE_SIZE_REFERENCE = {
+    # Round tables
     'round_48': {'shape': 'round', 'label': '48" Round', 'capacity': 6, 'diameter': 48},
     'round_60': {'shape': 'round', 'label': '60" Round (5ft)', 'capacity': 8, 'diameter': 60},
     'round_72': {'shape': 'round', 'label': '72" Round (6ft)', 'capacity': 10, 'diameter': 72},
     'round_84': {'shape': 'round', 'label': '84" Round (7ft)', 'capacity': 12, 'diameter': 84},
+    # Standard banquet tables (30" wide, chairs on long sides)
+    'banquet_4ft': {'shape': 'rectangular', 'label': '4ft Banquet', 'capacity': 4, 'length': 48, 'width': 30},
     'banquet_6ft': {'shape': 'rectangular', 'label': '6ft Banquet', 'capacity': 6, 'length': 72, 'width': 30},
     'banquet_8ft': {'shape': 'rectangular', 'label': '8ft Banquet', 'capacity': 8, 'length': 96, 'width': 30},
+    # Long / farm / harvest tables
+    'farm_10ft': {'shape': 'rectangular', 'label': '10ft Farm Table', 'capacity': 10, 'length': 120, 'width': 36},
+    'farm_12ft': {'shape': 'rectangular', 'label': '12ft Farm Table', 'capacity': 12, 'length': 144, 'width': 36},
+    'farm_16ft': {'shape': 'rectangular', 'label': '16ft Harvest Table', 'capacity': 16, 'length': 192, 'width': 36},
+    # King's tables (wider, for bridal party)
     'kings_8ft': {'shape': 'rectangular', 'label': "8ft King's Table", 'capacity': 10, 'length': 96, 'width': 42},
+    'kings_12ft': {'shape': 'rectangular', 'label': "12ft King's Table", 'capacity': 14, 'length': 144, 'width': 42},
+    # Head table (one-sided seating, longer)
+    'head_12ft': {'shape': 'rectangular', 'label': '12ft Head Table', 'capacity': 6, 'length': 144, 'width': 30, 'one_sided': True},
+    'head_16ft': {'shape': 'rectangular', 'label': '16ft Head Table', 'capacity': 8, 'length': 192, 'width': 30, 'one_sided': True},
+    'head_24ft': {'shape': 'rectangular', 'label': '24ft Head Table', 'capacity': 12, 'length': 288, 'width': 30, 'one_sided': True},
+    # Other shapes
     'square_48': {'shape': 'square', 'label': '48" Square', 'capacity': 4, 'side': 48},
     'sweetheart': {'shape': 'round', 'label': 'Sweetheart (couple)', 'capacity': 2, 'diameter': 36},
 }
@@ -502,6 +650,9 @@ class Guest(db.Model):
     rsvp_notes = db.Column(db.Text)  # guest notes from RSVP form
     guest_token = db.Column(db.String(64), unique=True)  # token for cookie-based guest identification
     
+    # Accessibility
+    accessibility_needs = db.Column(db.Text)  # e.g., "wheelchair", "hearing", "mobility", "near exit"
+
     # Plus One
     is_plus_one = db.Column(db.Boolean, default=False)
     plus_one_of = db.Column(db.String(200))

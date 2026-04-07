@@ -97,6 +97,68 @@
             margin: 20px auto 0;
         }
 
+        .section-title {
+            font-family: var(--heading-font);
+            font-size: 18px;
+            font-weight: normal;
+            color: var(--primary);
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+        }
+
+        .floor-plan-section {
+            margin-bottom: 30px;
+            page-break-after: always;
+        }
+
+        .floor-plan-print {
+            position: relative;
+            min-height: 400px;
+            border: 1px solid var(--secondary);
+            border-radius: 4px;
+            background: #fcfaf7;
+            padding: 10px;
+        }
+
+        .floor-table {
+            position: absolute;
+            text-align: center;
+        }
+
+        .floor-table svg {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .floor-table-label {
+            font-size: 8px;
+            color: #888;
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+        }
+
+        .floor-fixture {
+            position: absolute;
+            border: 1.5px dashed #bbb;
+            border-radius: 3px;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .floor-fixture.cat-entertainment { border-color: #7b1fa2; background: #f3e5f5; }
+        .floor-fixture.cat-food_drink { border-color: #e65100; background: #fff3e0; }
+        .floor-fixture.cat-access { border-color: #1565c0; background: #e3f2fd; }
+        .floor-fixture-icon { font-size: 14px; line-height: 1; }
+        .floor-fixture-label { font-size: 7px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; text-align: center; }
+
         .tables-grid {
             display: flex;
             flex-wrap: wrap;
@@ -255,7 +317,57 @@
         <div class="header-border"></div>
     </div>
 
+    {# Visual Floor Plan #}
+    {% if tables and table_floor_data %}
+    <div class="floor-plan-section">
+        <h2 class="section-title">Floor Plan</h2>
+        <div class="floor-plan-print">
+            {% for table in tables %}
+            {% set fd = table_floor_data[table.id] %}
+            {% set shape = table.table_shape or 'round' %}
+            {% set assigned_count = table.assigned_guests|length %}
+            <div class="floor-table" style="left: {{ table.x_position * 0.7 if table.x_position else 0 }}px; top: {{ table.y_position * 0.7 if table.y_position else 0 }}px; width: {{ fd.svg_w }}px;">
+                <svg width="{{ fd.svg_w }}" height="{{ fd.svg_h }}" viewBox="0 0 {{ fd.svg_w }} {{ fd.svg_h }}">
+                    {% if shape == 'round' %}
+                    <circle cx="{{ fd.cx }}" cy="{{ fd.cy }}" r="{{ fd.tw / 2 }}" fill="#f8f6f3" stroke="#8B7355" stroke-width="2" />
+                    {% elif shape == 'oval' %}
+                    <ellipse cx="{{ fd.cx }}" cy="{{ fd.cy }}" rx="{{ fd.tw / 2 }}" ry="{{ fd.th / 2 }}" fill="#f8f6f3" stroke="#8B7355" stroke-width="2" />
+                    {% elif shape in ('rectangular', 'serpentine') %}
+                    <rect x="22" y="22" width="{{ fd.tw }}" height="{{ fd.th }}" rx="{% if shape == 'serpentine' %}{{ fd.th / 2 }}{% else %}4{% endif %}" fill="#f8f6f3" stroke="#8B7355" stroke-width="2" />
+                    {% elif shape == 'square' %}
+                    <rect x="22" y="22" width="{{ fd.tw }}" height="{{ fd.th }}" rx="3" fill="#f8f6f3" stroke="#8B7355" stroke-width="2" />
+                    {% endif %}
+                    <text x="{{ fd.cx }}" y="{{ fd.cy + 1 }}" text-anchor="middle" dominant-baseline="middle" font-family="serif" font-size="11" font-weight="bold" fill="#3a3a3a">{{ table.table_number }}</text>
+                    {% for chair in fd.chairs %}
+                    <circle cx="{{ chair.x }}" cy="{{ chair.y }}" r="4.5" fill="{% if chair.filled %}#8B7355{% else %}#fff{% endif %}" stroke="{% if chair.filled %}#6b5540{% else %}#ccc{% endif %}" stroke-width="1" />
+                    {% endfor %}
+                </svg>
+                <div class="floor-table-label">{% if table.table_name %}{{ table.table_name }}{% else %}Table {{ table.table_number }}{% endif %}</div>
+            </div>
+            {% endfor %}
+
+            {# Venue Fixtures #}
+            {% if fixtures and fixture_floor_data %}
+            {% for f in fixtures %}
+            {% set ffd = fixture_floor_data[f.id] %}
+            {% set ft = fixture_types.get(f.fixture_type, {}) %}
+            {% set icon = ft.get('icon', '') %}
+            <div class="floor-fixture cat-{{ ft.get('category', 'other') }}"
+                 style="left: {{ f.x_position * 0.7 if f.x_position else 0 }}px; top: {{ f.y_position * 0.7 if f.y_position else 0 }}px; width: {{ ffd.w }}px; height: {{ ffd.h }}px;">
+                <div class="floor-fixture-icon">
+                    {% if icon == 'dance' %}&#x1F3B6;{% elif icon == 'stage' %}&#x1F3A4;{% elif icon == 'dj' %}&#x1F3A7;{% elif icon == 'bar' %}&#x1F378;{% elif icon == 'buffet' %}&#x1F37D;{% elif icon == 'cake' %}&#x1F382;{% elif icon == 'gift' %}&#x1F381;{% elif icon == 'photo' %}&#x1F4F7;{% elif icon == 'book' %}&#x1F4D6;{% elif icon == 'entrance' %}&#x1F6AA;{% elif icon == 'exit' %}&#x1F6AA;{% elif icon == 'restroom' %}&#x1F6BB;{% elif icon == 'accessible' %}&#x267F;{% else %}&#x25A0;{% endif %}
+                </div>
+                <div class="floor-fixture-label">{{ f.label or ft.get('label', f.fixture_type) }}</div>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Guest List by Table #}
     {% if tables %}
+    <h2 class="section-title">Guest Assignments</h2>
     <div class="tables-grid">
         {% for table in tables %}
         <div class="table-card">

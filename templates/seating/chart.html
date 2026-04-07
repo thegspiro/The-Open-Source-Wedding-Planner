@@ -38,6 +38,12 @@
         <div class="stat-num {% if stats.capacity_surplus < 0 %}budget-over{% endif %}">{{ stats.capacity_surplus }}</div>
         <div>Spare Seats</div>
     </div>
+    {% if stats.pending_rsvp_assigned > 0 %}
+    <div class="stat-box">
+        <div class="stat-num budget-over">{{ stats.pending_rsvp_assigned }}</div>
+        <div>Awaiting RSVP</div>
+    </div>
+    {% endif %}
 </div>
 
 {# Constraint Violations #}
@@ -46,6 +52,50 @@
     <h3>Seating Constraint Violations</h3>
     {% for v in violations %}
     <div class="budget-warning">{{ v }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# Proximity Warnings #}
+{% if proximity_warnings %}
+<div class="budget-warnings" style="margin-bottom: 1.5rem; border-color: #f0c8a0; background: #fef8f0;">
+    <h3>Table Spacing Issues ({{ proximity_warnings|length }})</h3>
+    <p class="form-help" style="margin-top: 0;">These tables are too close for comfortable seating. Guests need room to push back chairs and walk between tables. Drag them apart on the floor plan or adjust positions.</p>
+    {% for warning in proximity_warnings %}
+    <div class="budget-warning" style="color: #8a6520;">{{ warning }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# Wheelchair Accessibility Warnings #}
+{% if accessibility_warnings %}
+<div class="budget-warnings" style="margin-bottom: 1.5rem; border-color: #a0c8f0; background: #f0f6fe;">
+    <h3>&#9855; Wheelchair Accessibility Issues ({{ accessibility_warnings|length }})</h3>
+    <p class="form-help" style="margin-top: 0;">ADA requires at least 36" (3ft) clear aisle for wheelchair access between all obstacles. Drag items apart to create accessible pathways.</p>
+    {% for warning in accessibility_warnings %}
+    <div class="budget-warning" style="color: #1565c0;">{{ warning }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# Dietary Balance Warnings #}
+{% if dietary_warnings %}
+<div class="budget-warnings" style="margin-bottom: 1.5rem; border-color: #c9d4a0; background: #f8faf0;">
+    <h3>Dietary Balance Issues ({{ dietary_warnings|length }})</h3>
+    <p class="form-help" style="margin-top: 0;">These tables have a high concentration of the same dietary restriction. Consider distributing guests with special dietary needs more evenly.</p>
+    {% for warning in dietary_warnings %}
+    <div class="budget-warning" style="color: #5d6b1f;">{{ warning }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# Lonely Guest Warnings #}
+{% if lonely_guests %}
+<div class="budget-warnings" style="margin-bottom: 1.5rem; border-color: #c9d1d9; background: #f6f8fa;">
+    <h3>Guests Who May Not Know Anyone at Their Table ({{ lonely_guests|length }})</h3>
+    <p class="form-help" style="margin-top: 0;">These guests don't share a social group, household, or side with anyone at their table. Consider moving them near someone they know.</p>
+    {% for warning in lonely_guests %}
+    <div class="budget-warning" style="color: #57606a;">{{ warning }}</div>
     {% endfor %}
 </div>
 {% endif %}
@@ -144,6 +194,68 @@
     </div>
 </div>
 
+{# Venue Fixtures Section #}
+<div class="module-section">
+    <h2>Venue Fixtures</h2>
+    <p class="form-help">Add non-table elements to the floor plan: dance floor, bar, buffet, stage, entrances, etc. These help plan the full layout and check wheelchair accessibility.</p>
+
+    <div class="seating-add-panels">
+        <div class="seating-add-panel">
+            <h3>Add Fixture</h3>
+            <form method="POST" action="{{ url_for('fixture_add', wedding_id=wedding.id) }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fixture Type</label>
+                        <select name="fixture_type" id="fixture-type-select">
+                            <optgroup label="Entertainment">
+                                {% for key, ft in fixture_types.items() if ft.category == 'entertainment' %}
+                                <option value="{{ key }}">{{ ft.label }} ({{ ft.width }}"&times;{{ ft.height }}")</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Food &amp; Drink">
+                                {% for key, ft in fixture_types.items() if ft.category == 'food_drink' %}
+                                <option value="{{ key }}">{{ ft.label }} ({{ ft.width }}"&times;{{ ft.height }}")</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Access &amp; Navigation">
+                                {% for key, ft in fixture_types.items() if ft.category == 'access' %}
+                                <option value="{{ key }}">{{ ft.label }} ({{ ft.width }}"&times;{{ ft.height }}")</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Other">
+                                {% for key, ft in fixture_types.items() if ft.category == 'other' %}
+                                <option value="{{ key }}">{{ ft.label }} ({{ ft.width }}"&times;{{ ft.height }}")</option>
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Custom Label (optional)</label>
+                        <input type="text" name="label" placeholder="Override default name">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary btn-small">Add to Floor Plan</button>
+            </form>
+        </div>
+
+        {% if fixtures %}
+        <div class="seating-add-panel">
+            <h3>Current Fixtures</h3>
+            <ul class="fixture-list">
+                {% for f in fixtures %}
+                <li>
+                    <span>{{ f.label or fixture_types.get(f.fixture_type, {}).get('label', f.fixture_type) }} <small class="form-help">({{ f.width_inches }}"&times;{{ f.height_inches }}")</small></span>
+                    <form method="POST" action="{{ url_for('fixture_delete', wedding_id=wedding.id, fixture_id=f.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-tiny">&times;</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 {# Auto-Assign Section #}
 {% if tables %}
 <div class="module-section">
@@ -172,22 +284,95 @@
 
 {# Visual Floor Plan #}
 <div class="module-section">
-    <h2>Floor Plan <small class="form-help">(drag tables to reposition)</small></h2>
-    {% if tables %}
-    <div class="seating-floor" id="floor-plan">
+    <h2>Floor Plan <small class="form-help">(drag to reposition, scroll to zoom)</small></h2>
+    <div class="floor-controls">
+        <button class="btn-secondary btn-tiny" id="zoom-in" title="Zoom In">&#x2795;</button>
+        <button class="btn-secondary btn-tiny" id="zoom-out" title="Zoom Out">&#x2796;</button>
+        <button class="btn-secondary btn-tiny" id="zoom-reset" title="Reset Zoom">Reset</button>
+        <span class="form-help" id="zoom-level" style="margin-left:0.5rem;">100%</span>
+    </div>
+
+    {# Legend #}
+    {% if tables or fixtures %}
+    <div class="floor-legend">
+        <span class="legend-item"><span class="legend-dot legend-dot-filled"></span> Assigned</span>
+        <span class="legend-item"><span class="legend-dot legend-dot-empty"></span> Open seat</span>
+        <span class="legend-swatch" style="border-color: var(--color-primary);">Guest</span>
+        <span class="legend-swatch" style="border-color: #7b5a8e;">Head</span>
+        <span class="legend-swatch" style="border-color: var(--color-accent);">VIP</span>
+        <span class="legend-swatch" style="border-color: var(--color-success);">Kids</span>
+        <span class="legend-swatch" style="border-color: #8d6e63;">King's</span>
+        {% if fixtures %}
+        <span style="color: var(--color-text-muted);">|</span>
+        <span class="legend-swatch fixture-legend-entertainment">Entertainment</span>
+        <span class="legend-swatch fixture-legend-food">Food/Drink</span>
+        <span class="legend-swatch fixture-legend-access">Access</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if tables or fixtures %}
+    <div class="seating-floor" id="floor-plan" style="min-width: {{ canvas_w }}px; min-height: {{ canvas_h }}px;">
         {% for table in tables %}
-        <div class="seating-table-card {% if table.assigned_guests|length > table.capacity %}over-capacity{% endif %}"
+        {% set fd = table_floor_data[table.id] %}
+        {% set assigned_count = table.assigned_guests|length %}
+        {% set cap = table.capacity %}
+        {% set shape = table.table_shape or 'round' %}
+
+        <div class="seating-table-card {% if assigned_count > cap %}over-capacity{% endif %}"
              data-table-id="{{ table.id }}"
-             style="left: {{ table.x_position or 0 }}px; top: {{ table.y_position or 0 }}px;">
-            <div class="table-icon table-shape-{{ table.table_shape or 'round' }} table-role-{{ table.table_role or 'guest' }}">
-                <span class="table-num">{{ table.table_number }}</span>
-            </div>
+             style="left: {{ table.x_position or 0 }}px; top: {{ table.y_position or 0 }}px; width: {{ fd.svg_w }}px;">
+            <svg width="{{ fd.svg_w }}" height="{{ fd.svg_h }}" viewBox="0 0 {{ fd.svg_w }} {{ fd.svg_h }}" class="table-svg">
+                {# Table shape #}
+                {% if shape == 'round' %}
+                <circle cx="{{ fd.cx }}" cy="{{ fd.cy }}" r="{{ fd.tw / 2 }}"
+                        class="table-surface table-role-{{ table.table_role or 'guest' }}" />
+                {% elif shape == 'oval' %}
+                <ellipse cx="{{ fd.cx }}" cy="{{ fd.cy }}" rx="{{ fd.tw / 2 }}" ry="{{ fd.th / 2 }}"
+                         class="table-surface table-role-{{ table.table_role or 'guest' }}" />
+                {% elif shape in ('rectangular', 'serpentine') %}
+                <rect x="22" y="22" width="{{ fd.tw }}" height="{{ fd.th }}"
+                      rx="{% if shape == 'serpentine' %}{{ fd.th / 2 }}{% else %}6{% endif %}"
+                      class="table-surface table-role-{{ table.table_role or 'guest' }}" />
+                {% elif shape == 'square' %}
+                <rect x="22" y="22" width="{{ fd.tw }}" height="{{ fd.th }}" rx="4"
+                      class="table-surface table-role-{{ table.table_role or 'guest' }}" />
+                {% endif %}
+
+                {# Table number label #}
+                <text x="{{ fd.cx }}" y="{{ fd.cy + 1 }}" text-anchor="middle" dominant-baseline="middle"
+                      class="table-num-text">{{ table.table_number }}</text>
+
+                {# Chair dots — positions computed in backend #}
+                {% for chair in fd.chairs %}
+                <circle cx="{{ chair.x }}" cy="{{ chair.y }}" r="6"
+                        class="chair-dot {% if chair.filled %}chair-filled{% else %}chair-empty{% endif %}" />
+                {% endfor %}
+            </svg>
             <div class="table-label">
                 {% if table.table_name %}{{ table.table_name }}{% else %}Table {{ table.table_number }}{% endif %}
             </div>
-            <div class="table-capacity {% if table.assigned_guests|length > table.capacity %}warning{% endif %}">
-                {{ table.assigned_guests|length }}/{{ table.capacity }}
+            <div class="table-capacity {% if assigned_count > cap %}warning{% endif %}">
+                {{ assigned_count }}/{{ cap }}
             </div>
+            {% if shape in ('rectangular', 'serpentine', 'oval') %}
+            <button class="rotate-btn" data-table-id="{{ table.id }}" title="Rotate 90°">&#x21BB;</button>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        {# Venue Fixtures #}
+        {% for f in fixtures %}
+        {% set ffd = fixture_floor_data[f.id] %}
+        {% set ft = fixture_types.get(f.fixture_type, {}) %}
+        {% set icon = ft.get('icon', '') %}
+        <div class="venue-fixture-card fixture-cat-{{ ft.get('category', 'other') }}"
+             data-fixture-id="{{ f.id }}"
+             style="left: {{ f.x_position or 0 }}px; top: {{ f.y_position or 0 }}px; width: {{ ffd.w }}px; height: {{ ffd.h }}px;">
+            <div class="fixture-icon">
+                {% if icon == 'dance' %}&#x1F3B6;{% elif icon == 'stage' %}&#x1F3A4;{% elif icon == 'dj' %}&#x1F3A7;{% elif icon == 'bar' %}&#x1F378;{% elif icon == 'buffet' %}&#x1F37D;{% elif icon == 'cake' %}&#x1F382;{% elif icon == 'gift' %}&#x1F381;{% elif icon == 'photo' %}&#x1F4F7;{% elif icon == 'book' %}&#x1F4D6;{% elif icon == 'entrance' %}&#x1F6AA;{% elif icon == 'exit' %}&#x1F6AA;{% elif icon == 'restroom' %}&#x1F6BB;{% elif icon == 'accessible' %}&#x267F;{% else %}&#x25A0;{% endif %}
+            </div>
+            <div class="fixture-label">{{ f.label or ft.get('label', f.fixture_type) }}</div>
         </div>
         {% endfor %}
     </div>
@@ -213,6 +398,8 @@
                 </h3>
                 <span class="table-capacity {% if table.assigned_guests|length > table.capacity %}warning{% endif %}">
                     {{ table.assigned_guests|length }}/{{ table.capacity }}
+                    {% set spare = table.capacity - table.assigned_guests|length %}
+                    {% if spare > 0 %}<span class="spare-seats-tag">{{ spare }} spare</span>{% elif spare < 0 %}<span class="over-capacity-tag">{{ -spare }} over</span>{% endif %}
                     {% if table.table_shape %} &middot; {{ table.table_shape|title }}{% endif %}
                 </span>
             </div>
@@ -223,6 +410,8 @@
                 <li>
                     <span class="guest-info">
                         {{ guest.name }}
+                        {% if guest.rsvp_status != 'accepted' %}<span class="rsvp-tag rsvp-{{ guest.rsvp_status or 'pending' }}">{{ guest.rsvp_status or 'pending' }}</span>{% endif %}
+                        {% if guest.accessibility_needs %}<span class="accessibility-tag" title="{{ guest.accessibility_needs }}">&#9855; {{ guest.accessibility_needs }}</span>{% endif %}
                         {% if guest.social_groups %}{% for tag in guest.social_groups.split(',') %}<span class="social-tag">{{ tag.strip() }}</span>{% endfor %}{% endif %}
                         {% if guest.dietary_restrictions %}<span class="dietary-tag">{{ guest.dietary_restrictions }}</span>{% endif %}
                         {% if guest.meal_choice %}<span class="meal-tag">{{ guest.meal_choice }}</span>{% endif %}
@@ -242,8 +431,52 @@
             {% endif %}
 
             <div class="table-detail-actions">
-                <form method="POST" action="{{ url_for('seating_table_delete', wedding_id=wedding.id, table_id=table.id) }}" class="form-inline">
-                    <button type="submit" class="btn-danger btn-tiny" onclick="return confirm('Delete this table? Guests will be unassigned.')">Delete Table</button>
+                <button class="btn-secondary btn-tiny" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">Edit</button>
+                <div class="table-edit-form" style="display:none;">
+                    <form method="POST" action="{{ url_for('seating_table_edit', wedding_id=wedding.id, table_id=table.id) }}">
+                        <div class="form-row" style="gap:0.5rem; margin-top:0.5rem;">
+                            <div class="form-group" style="flex:1;">
+                                <label>Name</label>
+                                <input type="text" name="table_name" value="{{ table.table_name or '' }}" placeholder="Custom name">
+                            </div>
+                            <div class="form-group" style="flex:0 0 70px;">
+                                <label>Seats</label>
+                                <input type="number" name="capacity" value="{{ table.capacity }}" min="1" max="30">
+                            </div>
+                        </div>
+                        <div class="form-row" style="gap:0.5rem;">
+                            <div class="form-group" style="flex:1;">
+                                <label>Shape</label>
+                                <select name="table_shape">
+                                    {% for s in ['round','rectangular','square','oval','serpentine'] %}
+                                    <option value="{{ s }}" {% if table.table_shape == s %}selected{% endif %}>{{ s|title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex:1;">
+                                <label>Role</label>
+                                <select name="table_role">
+                                    {% for key, label in table_roles.items() %}
+                                    <option value="{{ key }}" {% if table.table_role == key %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Size Preset</label>
+                            <select name="table_size">
+                                <option value="">Custom</option>
+                                {% for key, ref in table_size_ref.items() %}
+                                <option value="{{ key }}" {% if table.table_size == key %}selected{% endif %}>{{ ref.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <input type="hidden" name="notes" value="{{ table.notes or '' }}">
+                        <button type="submit" class="btn-primary btn-tiny" style="margin-top:0.25rem;">Save</button>
+                    </form>
+                </div>
+                <form method="POST" action="{{ url_for('seating_table_delete', wedding_id=wedding.id, table_id=table.id) }}" class="form-inline" style="display:inline;">
+                    <button type="submit" class="btn-danger btn-tiny" onclick="return confirm('Delete this table? Guests will be unassigned.')">Delete</button>
                 </form>
             </div>
         </div>
@@ -256,6 +489,36 @@
 <div class="module-section">
     <h2>Unassigned Guests ({{ unassigned_guests|length }})</h2>
     {% if unassigned_guests %}
+
+    {# Search and filter controls #}
+    <div class="guest-filter-bar" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; margin-bottom:1rem;">
+        <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <input type="text" id="guest-search" placeholder="Search by name..." style="width:100%;">
+        </div>
+        <div class="form-group" style="margin:0;">
+            <select id="guest-filter-side">
+                <option value="">All Sides</option>
+                {% set sides = unassigned_guests|map(attribute='side')|select|unique|sort %}
+                {% for s in sides %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+            <select id="guest-filter-rsvp">
+                <option value="">All RSVP</option>
+                <option value="accepted">Accepted</option>
+                <option value="pending">Pending</option>
+                <option value="declined">Declined</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+            <select id="guest-filter-dietary">
+                <option value="">All Dietary</option>
+                <option value="has-dietary">Has Restrictions</option>
+                <option value="no-dietary">No Restrictions</option>
+            </select>
+        </div>
+        <span class="form-help" id="guest-filter-count"></span>
+    </div>
 
     {% if tables %}
     <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
@@ -291,27 +554,31 @@
     </div>
     {% endif %}
 
-    <table class="data-table">
+    <table class="data-table" id="unassigned-table">
         <thead>
             <tr>
                 <th>Guest</th>
+                <th>RSVP</th>
                 <th>Type</th>
                 <th>Side</th>
                 <th>Household</th>
                 <th>Groups</th>
                 <th>Dietary</th>
+                <th>Accessibility</th>
                 {% if tables %}<th>Assign</th>{% endif %}
             </tr>
         </thead>
         <tbody>
             {% for guest in unassigned_guests %}
-            <tr>
+            <tr data-name="{{ guest.name|lower }}" data-side="{{ guest.side or '' }}" data-rsvp="{{ guest.rsvp_status or 'pending' }}" data-dietary="{{ 'has-dietary' if guest.dietary_restrictions else 'no-dietary' }}">
                 <td>{{ guest.name }}{% if guest.is_plus_one %} <small>(+1 of {{ guest.plus_one_of }})</small>{% endif %}</td>
+                <td><span class="rsvp-tag rsvp-{{ guest.rsvp_status or 'pending' }}">{{ guest.rsvp_status or 'pending' }}</span></td>
                 <td>{{ guest.guest_type or '-' }}</td>
                 <td>{{ guest.side or '-' }}</td>
                 <td>{{ guest.household_group or '-' }}</td>
                 <td>{% if guest.social_groups %}{% for tag in guest.social_groups.split(',') %}<span class="social-tag">{{ tag.strip() }}</span> {% endfor %}{% else %}-{% endif %}</td>
                 <td>{{ guest.dietary_restrictions or '-' }}</td>
+                <td>{% if guest.accessibility_needs %}<span class="accessibility-tag">&#9855; {{ guest.accessibility_needs }}</span>{% else %}-{% endif %}</td>
                 {% if tables %}
                 <td>
                     <form method="POST" action="{{ url_for('seating_assign', wedding_id=wedding.id) }}" class="form-inline">
@@ -344,50 +611,190 @@
     <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
 </div>
 
-{# Drag-and-drop JavaScript for floor plan #}
-{% if tables %}
+{# ====== JavaScript ====== #}
+
+{# Toast notification for save feedback #}
+<div id="save-toast" class="save-toast">Saved</div>
+
+{# Floor plan: drag-and-drop, touch support, zoom, rotation #}
+{% if tables or fixtures %}
 <script>
 (function() {
     var floor = document.getElementById('floor-plan');
     if (!floor) return;
-    var dragging = null, offsetX = 0, offsetY = 0;
+    var dragging = null, offsetX = 0, offsetY = 0, hasMoved = false;
+    var toast = document.getElementById('save-toast');
+    var zoomLevel = 1;
 
-    floor.querySelectorAll('.seating-table-card').forEach(function(card) {
-        card.addEventListener('mousedown', function(e) {
+    function showToast(msg) {
+        toast.textContent = msg || 'Saved';
+        toast.classList.add('show');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(function() { toast.classList.remove('show'); }, 1500);
+    }
+
+    function getPointer(e) {
+        if (e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        return { x: e.clientX, y: e.clientY };
+    }
+
+    function initDrag(card) {
+        card.dataset.prevX = parseInt(card.style.left) || 0;
+        card.dataset.prevY = parseInt(card.style.top) || 0;
+
+        function startDrag(e) {
+            if (e.target.classList.contains('rotate-btn')) return;
             dragging = card;
+            hasMoved = false;
+            var p = getPointer(e);
             var rect = card.getBoundingClientRect();
-            offsetX = e.clientX - rect.left;
-            offsetY = e.clientY - rect.top;
+            offsetX = p.x - rect.left;
+            offsetY = p.y - rect.top;
             card.style.zIndex = 100;
             e.preventDefault();
-        });
-    });
+        }
+        card.addEventListener('mousedown', startDrag);
+        card.addEventListener('touchstart', startDrag, { passive: false });
+    }
 
-    document.addEventListener('mousemove', function(e) {
+    floor.querySelectorAll('.seating-table-card').forEach(initDrag);
+    floor.querySelectorAll('.venue-fixture-card').forEach(initDrag);
+
+    function onMove(e) {
         if (!dragging) return;
+        hasMoved = true;
+        var p = getPointer(e);
         var floorRect = floor.getBoundingClientRect();
-        var x = e.clientX - floorRect.left - offsetX;
-        var y = e.clientY - floorRect.top - offsetY;
-        x = Math.max(0, Math.min(x, floor.offsetWidth - 100));
-        y = Math.max(0, Math.min(y, floor.offsetHeight - 80));
-        dragging.style.left = x + 'px';
-        dragging.style.top = y + 'px';
-    });
+        var x = (p.x - floorRect.left - offsetX) / zoomLevel;
+        var y = (p.y - floorRect.top - offsetY) / zoomLevel;
+        x = Math.max(0, Math.min(x, floor.scrollWidth / zoomLevel - dragging.offsetWidth));
+        y = Math.max(0, Math.min(y, floor.scrollHeight / zoomLevel - dragging.offsetHeight));
+        dragging.style.left = Math.round(x) + 'px';
+        dragging.style.top = Math.round(y) + 'px';
+        e.preventDefault();
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: false });
 
-    document.addEventListener('mouseup', function() {
+    function onEnd() {
         if (!dragging) return;
         dragging.style.zIndex = '';
-        var tableId = dragging.dataset.tableId;
-        var x = parseInt(dragging.style.left);
-        var y = parseInt(dragging.style.top);
-        fetch('{{ url_for("seating_update_position", wedding_id=wedding.id) }}', {
+        if (!hasMoved) { dragging = null; return; }
+        var card = dragging;
+        var x = parseInt(card.style.left);
+        var y = parseInt(card.style.top);
+        var prevX = card.dataset.prevX;
+        var prevY = card.dataset.prevY;
+        var isFixture = !!card.dataset.fixtureId;
+        var url = isFixture
+            ? '{{ url_for("fixture_update_position", wedding_id=wedding.id) }}'
+            : '{{ url_for("seating_update_position", wedding_id=wedding.id) }}';
+        var body = isFixture
+            ? {fixture_id: parseInt(card.dataset.fixtureId), x: x, y: y}
+            : {table_id: parseInt(card.dataset.tableId), x: x, y: y};
+        fetch(url, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({table_id: parseInt(tableId), x: x, y: y})
+            body: JSON.stringify(body)
+        }).then(function(resp) {
+            if (!resp.ok) throw new Error('Save failed');
+            card.dataset.prevX = x;
+            card.dataset.prevY = y;
+            showToast('Position saved');
+        }).catch(function() {
+            card.style.left = (prevX || 0) + 'px';
+            card.style.top = (prevY || 0) + 'px';
+            showToast('Save failed!');
         });
         dragging = null;
+    }
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+
+    // Zoom controls
+    var zoomLabel = document.getElementById('zoom-level');
+    function setZoom(level) {
+        zoomLevel = Math.max(0.25, Math.min(2, level));
+        floor.style.transform = 'scale(' + zoomLevel + ')';
+        floor.style.transformOrigin = 'top left';
+        if (zoomLabel) zoomLabel.textContent = Math.round(zoomLevel * 100) + '%';
+    }
+    var zoomIn = document.getElementById('zoom-in');
+    var zoomOut = document.getElementById('zoom-out');
+    var zoomReset = document.getElementById('zoom-reset');
+    if (zoomIn) zoomIn.addEventListener('click', function() { setZoom(zoomLevel + 0.1); });
+    if (zoomOut) zoomOut.addEventListener('click', function() { setZoom(zoomLevel - 0.1); });
+    if (zoomReset) zoomReset.addEventListener('click', function() { setZoom(1); });
+
+    // Mouse wheel zoom on floor plan
+    floor.parentElement.addEventListener('wheel', function(e) {
+        if (!e.ctrlKey && !e.metaKey) return;
+        e.preventDefault();
+        setZoom(zoomLevel + (e.deltaY < 0 ? 0.1 : -0.1));
+    }, { passive: false });
+
+    // Rotation buttons
+    floor.querySelectorAll('.rotate-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var tableId = btn.dataset.tableId;
+            fetch('/wedding/{{ wedding.id }}/seating-chart/table/' + tableId + '/rotate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            }).then(function(resp) {
+                if (!resp.ok) throw new Error('Rotate failed');
+                return resp.json();
+            }).then(function(data) {
+                showToast('Rotated to ' + data.rotation + '°');
+                setTimeout(function() { location.reload(); }, 500);
+            }).catch(function() {
+                showToast('Rotate failed!');
+            });
+        });
     });
 })();
 </script>
 {% endif %}
+
+{# Guest search/filter JavaScript #}
+<script>
+(function() {
+    var search = document.getElementById('guest-search');
+    var filterSide = document.getElementById('guest-filter-side');
+    var filterRsvp = document.getElementById('guest-filter-rsvp');
+    var filterDietary = document.getElementById('guest-filter-dietary');
+    var countLabel = document.getElementById('guest-filter-count');
+    var table = document.getElementById('unassigned-table');
+    if (!table) return;
+    var rows = table.querySelectorAll('tbody tr');
+
+    function applyFilters() {
+        var q = (search ? search.value.toLowerCase() : '');
+        var side = filterSide ? filterSide.value : '';
+        var rsvp = filterRsvp ? filterRsvp.value : '';
+        var dietary = filterDietary ? filterDietary.value : '';
+        var shown = 0;
+        rows.forEach(function(row) {
+            var show = true;
+            if (q && row.dataset.name.indexOf(q) === -1) show = false;
+            if (side && row.dataset.side !== side) show = false;
+            if (rsvp && row.dataset.rsvp !== rsvp) show = false;
+            if (dietary && row.dataset.dietary !== dietary) show = false;
+            row.style.display = show ? '' : 'none';
+            if (show) shown++;
+        });
+        if (countLabel) {
+            if (q || side || rsvp || dietary) {
+                countLabel.textContent = shown + ' of ' + rows.length + ' shown';
+            } else {
+                countLabel.textContent = '';
+            }
+        }
+    }
+    if (search) search.addEventListener('input', applyFilters);
+    if (filterSide) filterSide.addEventListener('change', applyFilters);
+    if (filterRsvp) filterRsvp.addEventListener('change', applyFilters);
+    if (filterDietary) filterDietary.addEventListener('change', applyFilters);
+})();
+</script>
 {% endblock %}
