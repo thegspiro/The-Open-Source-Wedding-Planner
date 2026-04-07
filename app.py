@@ -12,7 +12,7 @@ from models import (
     ContingencyPlan, TipItem, Gift,
     VendorNote, VendorQuote, SpeechToast, WeddingFavor,
     ActivityLog, Comment,
-    InventoryItem, InventoryBin, EmergencyKitItem,
+    InventoryItem, InventoryBin, EmergencyKitItem, WeddingElement,
     BUDGET_TEMPLATES, POST_WEDDING_TASKS, INVITATION_WORDING_TEMPLATES,
     TABLE_SIZE_REFERENCE, TABLE_ROLES, SUGGESTED_GROUP_TYPES, VenueFixture, VENUE_FIXTURE_TYPES,
     INVENTORY_CATEGORIES, INVENTORY_AREAS
