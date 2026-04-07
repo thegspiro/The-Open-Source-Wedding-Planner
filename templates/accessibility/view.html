@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Accessibility Planner - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Guest Accessibility Planner</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('accessibility_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Item</a>
+        <form method="POST" action="{{ url_for('accessibility_populate_defaults', wedding_id=wedding.id) }}" class="form-inline">
+            <button type="submit" class="btn-secondary btn-small">Load Default Checklist</button>
+        </form>
+    </div>
+</div>
+
+<p class="form-help">1 in 4 people has a disability, plus elderly guests and those with injuries. Plan accommodations proactively so every guest feels welcome. Add an accommodation question to your RSVP via <a href="{{ url_for('custom_rsvp_questions_view', wedding_id=wedding.id) }}">Custom RSVP Questions</a>.</p>
+
+{% if items %}
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-num">{{ total }}</div>
+        <div class="stat-label">Total Items</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ arranged }}</div>
+        <div class="stat-label">Arranged/Confirmed</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ total - arranged }}</div>
+        <div class="stat-label">Still Needed</div>
+    </div>
+</div>
+
+{% set category_labels = {'mobility': 'Mobility & Physical Access', 'hearing': 'Hearing & Audio', 'vision': 'Vision & Signage', 'sensory': 'Sensory & Neurodivergent', 'dietary': 'Dietary & Allergens', 'seating': 'Seating & Comfort', 'other': 'Other Accommodations'} %}
+
+{% for cat, cat_items in categories.items() %}
+<div class="module-section">
+    <h2>{{ category_labels.get(cat, cat|title) }} ({{ cat_items|selectattr('status', 'ne', 'needed')|list|length }}/{{ cat_items|length }})</h2>
+    {% for item in cat_items %}
+    <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--color-border);">
+        <form method="POST" action="{{ url_for('accessibility_toggle', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline">
+            <button type="submit" class="btn-small {% if item.status == 'confirmed' %}btn-success{% elif item.status == 'arranged' %}btn-primary{% else %}btn-secondary{% endif %}">
+                {{ item.status|title }}
+            </button>
+        </form>
+        <div style="flex: 1;">
+            <strong>{{ item.item_name }}</strong>
+            {% if item.assigned_to %}<small> ({{ item.assigned_to }})</small>{% endif %}
+            {% if item.vendor %}<small> | Vendor: {{ item.vendor }}</small>{% endif %}
+            {% if item.notes %}<br><small class="expense-note">{{ item.notes }}</small>{% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('accessibility_delete', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline">
+            <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete?')">Delete</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+{% else %}
+<div class="empty-state">
+    <h2>No Accessibility Items Yet</h2>
+    <p>Load our default checklist of 15 common accessibility accommodations covering mobility, hearing, vision, sensory needs, and dietary requirements.</p>
+    <div class="form-actions">
+        <form method="POST" action="{{ url_for('accessibility_populate_defaults', wedding_id=wedding.id) }}" class="form-inline">
+            <button type="submit" class="btn-primary">Load Default Checklist (15 items)</button>
+        </form>
+        <a href="{{ url_for('accessibility_add', wedding_id=wedding.id) }}" class="btn-secondary">Add Custom Item</a>
+    </div>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

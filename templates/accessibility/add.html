@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Add Accessibility Item - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Add Accessibility Item</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">
+        <div class="form-group">
+            <label>Accommodation *</label>
+            <input type="text" name="item_name" required placeholder="e.g., Wheelchair ramp at ceremony entrance">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Category</label>
+                <select name="category">
+                    <option value="mobility">Mobility & Physical Access</option>
+                    <option value="hearing">Hearing & Audio</option>
+                    <option value="vision">Vision & Signage</option>
+                    <option value="sensory">Sensory & Neurodivergent</option>
+                    <option value="dietary">Dietary & Allergens</option>
+                    <option value="seating">Seating & Comfort</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Assigned To</label>
+                <input type="text" name="assigned_to" placeholder="Who is responsible?">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Vendor / Provider</label>
+                <input type="text" name="vendor" placeholder="e.g., venue coordinator, interpreter service">
+            </div>
+            <div class="form-group">
+                <label>Cost ($)</label>
+                <input type="number" name="cost" step="0.01" min="0">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="2" placeholder="Details, specific guest needs, etc."></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Item</button>
+            <a href="{{ url_for('accessibility_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
