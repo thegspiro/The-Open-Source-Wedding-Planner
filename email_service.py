@@ -1,3 +1,4 @@
+import logging
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -5,6 +6,8 @@ from email.mime.application import MIMEApplication
 from datetime import datetime
 from html import escape
 import os
+
+logger = logging.getLogger(__name__)
 
 def send_reminder_email(to_email, couple_names, task_title, task_description, due_date):
     smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
@@ -14,7 +17,7 @@ def send_reminder_email(to_email, couple_names, task_title, task_description, du
     from_email = os.environ.get('FROM_EMAIL', smtp_user)
 
     if not smtp_user or not smtp_password:
-        print(f"Email not configured. Would send to {to_email} for: {task_title}")
+        logger.info("Email not configured. Would send to %s for: %s", to_email, task_title)
         return
 
     try:
@@ -59,9 +62,9 @@ def send_reminder_email(to_email, couple_names, task_title, task_description, du
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
-        print(f"Email sent to {to_email}")
+        logger.info("Email sent to %s", to_email)
     except Exception as e:
-        print(f"Error sending email: {e}")
+        logger.error("Error sending email: %s", e)
 
 
 def send_guest_email(to_email, guest_name, couple_names, wedding_date,
@@ -79,7 +82,7 @@ def send_guest_email(to_email, guest_name, couple_names, wedding_date,
     from_email = os.environ.get('FROM_EMAIL', smtp_user)
 
     if not smtp_user or not smtp_password:
-        print(f"Email not configured. Would send to {to_email}: {subject}")
+        logger.info("Email not configured. Would send to %s: %s", to_email, subject)
         return False
 
     try:
@@ -140,10 +143,10 @@ def send_guest_email(to_email, guest_name, couple_names, wedding_date,
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
-        print(f"Guest email sent to {to_email}")
+        logger.info("Guest email sent to %s", to_email)
         return True
     except Exception as e:
-        print(f"Error sending guest email: {e}")
+        logger.error("Error sending guest email: %s", e)
         return False
 
 
@@ -169,7 +172,7 @@ def send_pdf_email(to_email, subject, body_text, pdf_bytes, pdf_filename, from_e
         from_email = os.environ.get('FROM_EMAIL', smtp_user)
 
     if not smtp_user or not smtp_password:
-        print(f"Email not configured. Would send PDF '{pdf_filename}' to {to_email}")
+        logger.info("Email not configured. Would send PDF '%s' to %s", pdf_filename, to_email)
         return False
 
     try:
@@ -190,8 +193,8 @@ def send_pdf_email(to_email, subject, body_text, pdf_bytes, pdf_filename, from_e
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
-        print(f"PDF email sent to {to_email}: {pdf_filename}")
+        logger.info("PDF email sent to %s: %s", to_email, pdf_filename)
         return True
     except Exception as e:
-        print(f"Error sending PDF email: {e}")
+        logger.error("Error sending PDF email: %s", e)
         return False
