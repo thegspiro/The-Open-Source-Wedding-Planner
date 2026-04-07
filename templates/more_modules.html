@@ -142,6 +142,9 @@
     <a href="{{ url_for('inventory_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">📦</div><h3>Inventory &amp; Items</h3><p class="stat-label">Track items, bins &amp; setup</p>
     </a>
+    <a href="{{ url_for('pre_wedding_events_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🥂</div><h3>Pre-Wedding Events</h3><p class="stat-label">Showers, parties &amp; celebrations</p>
+    </a>
     <a href="{{ url_for('honeymoon_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">✈️</div><h3>Honeymoon</h3><p class="stat-label">Travel &amp; packing</p>
     </a>
@@ -156,6 +159,15 @@
     </a>
     <a href="{{ url_for('contingency_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">🛡️</div><h3>Contingency Plans</h3><p class="stat-label">Backup plans &amp; emergencies</p>
+    </a>
+    <a href="{{ url_for('day_of_contacts_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">📞</div><h3>Day-of Contacts &amp; Tasks</h3><p class="stat-label">Contact sheet &amp; task delegation</p>
+    </a>
+    <a href="{{ url_for('signage_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🪧</div><h3>Wedding Signage</h3><p class="stat-label">Signs &amp; printed materials</p>
+    </a>
+    <a href="{{ url_for('packing_list_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🧳</div><h3>Wedding Day Packing</h3><p class="stat-label">Everything to bring day-of</p>
     </a>
     <a href="{{ url_for('emergency_kit_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">🧰</div><h3>Emergency Kit</h3><p class="stat-label">Day-of supplies checklist</p>
@@ -186,6 +198,18 @@
     </a>
     <a href="{{ url_for('traditional_elements') }}" class="dashboard-card module-link">
         <div class="card-icon">📖</div><h3>Traditional Elements</h3><p class="stat-label">Browse wedding traditions</p>
+    </a>
+</div>
+
+<h2 style="font-family: var(--font-heading); color: var(--color-text); margin: 2rem 0 1rem; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+    <span style="color: var(--color-primary);">&#9679;</span> Post-Wedding &amp; RSVP
+</h2>
+<div class="dashboard-grid">
+    <a href="{{ url_for('name_change_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">📝</div><h3>Name Change Checklist</h3><p class="stat-label">Step-by-step name update guide</p>
+    </a>
+    <a href="{{ url_for('custom_rsvp_questions_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">❓</div><h3>Custom RSVP Questions</h3><p class="stat-label">Song requests, shuttles &amp; more</p>
     </a>
 </div>
 {% endblock %}

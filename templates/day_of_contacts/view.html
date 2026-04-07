@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Day-of Contacts & Tasks - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Day-of Contact Sheet & Tasks</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('day_of_contacts_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Contact</a>
+        <a href="{{ url_for('day_of_tasks_add', wedding_id=wedding.id) }}" class="btn-secondary">+ Add Task</a>
+    </div>
+</div>
+
+<p class="form-help">Your master contact sheet for the wedding day. Print copies for your coordinator, MOH, and best man. Delegate tasks so the couple can enjoy their day!</p>
+
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-num">{{ contacts|length }}</div>
+        <div class="stat-label">Contacts</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ tasks|length }}</div>
+        <div class="stat-label">Tasks</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ tasks|selectattr('completed')|list|length }}</div>
+        <div class="stat-label">Tasks Done</div>
+    </div>
+</div>
+
+<div class="form-actions" style="margin-bottom: 1.5rem;">
+    <form method="POST" action="{{ url_for('day_of_contacts_import_vendors', wedding_id=wedding.id) }}" class="form-inline">
+        <button type="submit" class="btn-secondary btn-small">Import from Vendors</button>
+    </form>
+    <form method="POST" action="{{ url_for('day_of_tasks_populate_defaults', wedding_id=wedding.id) }}" class="form-inline">
+        <button type="submit" class="btn-secondary btn-small">Load Default Tasks</button>
+    </form>
+</div>
+
+<!-- CONTACTS SECTION -->
+<h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem;">Contacts</h2>
+
+{% macro contact_table(contact_list, section_label) %}
+{% if contact_list %}
+<div class="module-section">
+    <h3>{{ section_label }} ({{ contact_list|length }})</h3>
+    <table class="data-table">
+        <thead>
+            <tr><th>Name</th><th>Role</th><th>Phone</th><th>Arrival</th><th>Location</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for c in contact_list %}
+            <tr>
+                <td><strong>{{ c.name }}</strong>{% if c.email %}<br><small>{{ c.email }}</small>{% endif %}</td>
+                <td>{{ c.role }}</td>
+                <td>{{ c.phone or '-' }}</td>
+                <td>{{ c.arrival_time or '-' }}</td>
+                <td>{{ c.setup_location or '-' }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('day_of_contacts_delete', wedding_id=wedding.id, contact_id=c.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endmacro %}
+
+{{ contact_table(vendor_contacts, 'Vendors') }}
+{{ contact_table(party_contacts, 'Wedding Party') }}
+{{ contact_table(family_contacts, 'Family') }}
+{{ contact_table(other_contacts, 'Other') }}
+
+{% if not contacts %}
+<div class="empty-state">
+    <p>No contacts yet. Add contacts manually or import from your vendor list.</p>
+</div>
+{% endif %}
+
+<!-- TASKS SECTION -->
+<h2 style="font-family: var(--font-heading); margin: 2rem 0 1rem;">Task Delegation</h2>
+
+{% macro task_section(task_list, section_label) %}
+{% if task_list %}
+<div class="module-section">
+    <h3>{{ section_label }}</h3>
+    {% for t in task_list %}
+    <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--color-border);">
+        <form method="POST" action="{{ url_for('day_of_tasks_toggle', wedding_id=wedding.id, task_id=t.id) }}" class="form-inline">
+            <button type="submit" class="btn-small {% if t.completed %}btn-success{% else %}btn-secondary{% endif %}">
+                {% if t.completed %}Done{% else %}To Do{% endif %}
+            </button>
+        </form>
+        <div style="flex: 1;">
+            <strong {% if t.completed %}style="text-decoration: line-through; opacity: 0.6;"{% endif %}>{{ t.task }}</strong>
+            {% if t.assigned_to %}<br><small>Assigned to: {{ t.assigned_to }}</small>{% endif %}
+            {% if t.timing %}<small> | {{ t.timing }}</small>{% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('day_of_tasks_delete', wedding_id=wedding.id, task_id=t.id) }}" class="form-inline">
+            <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete?')">Delete</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{{ task_section(setup_tasks, 'Setup & Before Ceremony') }}
+{{ task_section(during_tasks, 'During the Event') }}
+{{ task_section(breakdown_tasks, 'End of Night / Breakdown') }}
+{{ task_section(emergency_tasks, 'Emergency / All Day') }}
+
+{% if not tasks %}
+<div class="empty-state">
+    <p>No tasks yet. Load our default list of 20 common wedding day tasks to get started.</p>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

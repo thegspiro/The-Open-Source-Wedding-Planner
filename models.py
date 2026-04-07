@@ -1399,3 +1399,302 @@ class EmergencyKitItem(db.Model):
     notes = db.Column(db.Text)
 
     wedding = db.relationship('Wedding', backref=db.backref('emergency_kit_items', lazy=True, cascade='all, delete-orphan'))
+
+
+# ============================================
+# PRE-WEDDING EVENTS
+# ============================================
+
+class PreWeddingEvent(db.Model):
+    """Track pre-wedding events: engagement party, bridal shower, bachelor/ette, welcome party, etc."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    event_type = db.Column(db.String(50), nullable=False)  # engagement_party, bridal_shower, bachelor, bachelorette, welcome_party, send_off_brunch, other
+    name = db.Column(db.String(200), nullable=False)
+    date = db.Column(db.Date)
+    time = db.Column(db.String(20))
+    end_time = db.Column(db.String(20))
+    venue_name = db.Column(db.String(200))
+    venue_address = db.Column(db.Text)
+    host_name = db.Column(db.String(200))
+    host_phone = db.Column(db.String(50))
+    host_email = db.Column(db.String(120))
+    expected_guest_count = db.Column(db.Integer)
+    estimated_cost = db.Column(db.Float)
+    actual_cost = db.Column(db.Float)
+    notes = db.Column(db.Text)
+    status = db.Column(db.String(20), default='planning')  # planning, confirmed, completed, cancelled
+
+    wedding = db.relationship('Wedding', backref=db.backref('pre_wedding_events', lazy=True, cascade='all, delete-orphan'))
+
+
+PRE_WEDDING_EVENT_TYPES = [
+    ('engagement_party', 'Engagement Party'),
+    ('bridal_shower', 'Bridal Shower'),
+    ('couples_shower', 'Couples Shower'),
+    ('bachelor', 'Bachelor Party'),
+    ('bachelorette', 'Bachelorette Party'),
+    ('welcome_party', 'Welcome Party / Welcome Drinks'),
+    ('rehearsal_dinner', 'Rehearsal Dinner'),
+    ('send_off_brunch', 'Morning-After / Send-Off Brunch'),
+    ('bridesmaids_luncheon', 'Bridesmaids Luncheon'),
+    ('other', 'Other Event'),
+]
+
+
+# ============================================
+# WEDDING SIGNAGE CHECKLIST
+# ============================================
+
+class SignageItem(db.Model):
+    """Track all signs and printed materials needed for the wedding."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    name = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(50))  # ceremony, reception, directional, informational, other
+    description = db.Column(db.Text)
+    location = db.Column(db.String(200))  # where the sign will be placed
+    size = db.Column(db.String(50))  # e.g., "24x36", "8.5x11"
+    material = db.Column(db.String(100))  # e.g., "acrylic", "chalkboard", "printed", "wood"
+    vendor = db.Column(db.String(200))  # who is making it
+    cost = db.Column(db.Float)
+    status = db.Column(db.String(20), default='needed')  # needed, ordered, received, placed
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('signage_items', lazy=True, cascade='all, delete-orphan'))
+
+
+DEFAULT_SIGNAGE_ITEMS = [
+    ('Welcome Sign', 'ceremony', 'Welcomes guests and confirms they are at the right wedding', 'Venue entrance'),
+    ('Ceremony Program', 'ceremony', 'Order of ceremony events, wedding party names', 'Ceremony seating'),
+    ('Unplugged Ceremony Sign', 'ceremony', 'Asks guests to put away phones during ceremony', 'Ceremony entrance'),
+    ('Reserved Seating Signs', 'ceremony', 'Mark reserved rows for family', 'Front rows'),
+    ('In Loving Memory Sign', 'ceremony', 'Honor deceased loved ones', 'Memorial table'),
+    ('Seating Chart / Escort Display', 'reception', 'Shows guests their table assignments', 'Reception entrance'),
+    ('Table Numbers', 'reception', 'Identify each table', 'Each table'),
+    ('Place Cards', 'reception', 'Individual seat assignments at tables', 'Each place setting'),
+    ('Bar Menu Sign', 'reception', 'Lists drink options and signature cocktails', 'Bar area'),
+    ('Buffet / Food Station Labels', 'reception', 'Label each dish with name and allergen info', 'Food stations'),
+    ('Dessert Table Sign', 'reception', 'Label desserts and cake flavor', 'Dessert table'),
+    ('Guest Book Sign', 'reception', 'Encourages guests to sign the guest book', 'Guest book table'),
+    ('Cards & Gifts Sign', 'reception', 'Directs guests where to leave cards and gifts', 'Gift table'),
+    ('Photo Booth Sign', 'reception', 'Instructions for photo booth and props', 'Photo booth area'),
+    ('Hashtag Sign', 'reception', 'Displays wedding hashtag for social media', 'Reception area'),
+    ('Restroom Directional Signs', 'directional', 'Points guests toward restrooms', 'Hallways'),
+    ('Parking Signs', 'directional', 'Directs guests to parking areas', 'Venue exterior'),
+    ('Cocktail Hour Sign', 'reception', 'Directs guests to cocktail hour location', 'After ceremony'),
+    ('Dance Floor Rules Sign', 'reception', 'Fun sign for the dance floor area', 'Dance floor'),
+    ('Sparkler / Send-Off Sign', 'reception', 'Instructions for sparkler send-off', 'Exit area'),
+    ('Thank You Sign', 'reception', 'Thanks guests as they leave', 'Exit'),
+]
+
+
+# ============================================
+# DAY-OF CONTACT SHEET & TASK DELEGATION
+# ============================================
+
+class DayOfContact(db.Model):
+    """Master contact sheet for the wedding day - vendors, VIPs, and key people."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    name = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(100), nullable=False)  # e.g., "Photographer", "DJ", "Day-of Coordinator", "MOH", "Best Man"
+    category = db.Column(db.String(50))  # vendor, wedding_party, family, coordinator, other
+    phone = db.Column(db.String(50))
+    email = db.Column(db.String(120))
+    arrival_time = db.Column(db.String(20))
+    departure_time = db.Column(db.String(20))
+    setup_location = db.Column(db.String(200))
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('day_of_contacts', lazy=True, cascade='all, delete-orphan'))
+
+
+class DayOfTask(db.Model):
+    """Task delegation for wedding day - who handles what."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    task = db.Column(db.String(300), nullable=False)
+    assigned_to = db.Column(db.String(200))
+    category = db.Column(db.String(50))  # setup, during, breakdown, emergency
+    timing = db.Column(db.String(100))  # e.g., "Before ceremony", "End of night", "During reception"
+    completed = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('day_of_tasks', lazy=True, cascade='all, delete-orphan'))
+
+
+DEFAULT_DAY_OF_TASKS = [
+    ('Transport marriage license and pen to ceremony venue', 'setup', 'Before ceremony'),
+    ('Bring rings to ceremony', 'setup', 'Before ceremony'),
+    ('Set up card box and gift table', 'setup', 'Before reception'),
+    ('Set up guest book and pens', 'setup', 'Before reception'),
+    ('Set up place cards / escort cards', 'setup', 'Before reception'),
+    ('Coordinate vendor arrivals and setup', 'setup', 'Before ceremony'),
+    ('Distribute wedding party bouquets and boutonnieres', 'setup', 'Before ceremony'),
+    ('Ensure tip envelopes are prepared and distributed', 'during', 'During reception'),
+    ('Gather family members for group photos', 'during', 'After ceremony'),
+    ('Bustle the dress before reception', 'during', 'Between ceremony and reception'),
+    ('Collect gifts and cards at end of night', 'breakdown', 'End of night'),
+    ('Transport gifts and cards to safe location', 'breakdown', 'End of night'),
+    ('Collect guest book and any keepsakes', 'breakdown', 'End of night'),
+    ('Return any rented items or decorations', 'breakdown', 'End of night'),
+    ('Settle final vendor payments', 'breakdown', 'End of night'),
+    ('Ensure couple has overnight bag and essentials', 'breakdown', 'End of night'),
+    ('Confirm ride/transportation for couple', 'breakdown', 'End of night'),
+    ('Pack up leftover cake', 'breakdown', 'End of night'),
+    ('Handle emergency situations as point person', 'emergency', 'All day'),
+    ('Be point of contact for vendor questions', 'emergency', 'All day'),
+]
+
+
+# ============================================
+# WEDDING DAY PACKING LIST
+# ============================================
+
+class PackingListItem(db.Model):
+    """Wedding day packing list - everything to bring on the big day."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    item_name = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(50))  # documents, attire, accessories, ceremony, reception, personal, gifts, other
+    packed = db.Column(db.Boolean, default=False)
+    assigned_to = db.Column(db.String(200))  # who is responsible for bringing it
+    notes = db.Column(db.Text)
+
+    wedding = db.relationship('Wedding', backref=db.backref('packing_list_items', lazy=True, cascade='all, delete-orphan'))
+
+
+DEFAULT_PACKING_LIST = [
+    ('Marriage license', 'documents'),
+    ('Pen for signing license', 'documents'),
+    ('Printed vows (backup copy)', 'documents'),
+    ('Vendor contact sheet (printed)', 'documents'),
+    ('Day-of timeline (printed copies)', 'documents'),
+    ('Insurance documents', 'documents'),
+    ('ID / drivers license', 'documents'),
+    ('Wedding rings', 'ceremony'),
+    ('Unity ceremony supplies (candle/sand/wine)', 'ceremony'),
+    ('Ring bearer pillow', 'ceremony'),
+    ('Flower girl petals / basket', 'ceremony'),
+    ('Guest book and pens', 'ceremony'),
+    ('Card box', 'ceremony'),
+    ('Cake topper', 'reception'),
+    ('Cake knife and server', 'reception'),
+    ('Toasting flutes', 'reception'),
+    ('Table numbers', 'reception'),
+    ('Place cards / escort cards', 'reception'),
+    ('Favors', 'reception'),
+    ('Sparklers / send-off supplies', 'reception'),
+    ('Gift table supplies (tablecloth, sign)', 'reception'),
+    ('Welcome sign', 'reception'),
+    ('Dress / suit on hanger', 'attire'),
+    ('Shoes (ceremony)', 'attire'),
+    ('Comfortable shoes (reception)', 'attire'),
+    ('Heel stoppers for grass', 'attire'),
+    ('Veil / headpiece', 'attire'),
+    ('Jewelry', 'accessories'),
+    ('Garter', 'accessories'),
+    ('Cufflinks / tie', 'accessories'),
+    ('Bouquet charm / memorial photo', 'accessories'),
+    ('Undergarments (specific to dress)', 'attire'),
+    ('Steamer / wrinkle spray', 'personal'),
+    ('Phone charger / portable battery', 'personal'),
+    ('Snacks and water for getting ready', 'personal'),
+    ('Cash for emergencies and tips', 'personal'),
+    ('Overnight bag for wedding night', 'personal'),
+    ('Tip envelopes (labeled)', 'gifts'),
+    ('Wedding party gifts', 'gifts'),
+    ('Parent gifts / cards', 'gifts'),
+    ('Spare invitation suite for photos', 'personal'),
+    ('Perfume / cologne', 'personal'),
+    ('Deodorant', 'personal'),
+    ('Breath mints', 'personal'),
+]
+
+
+# ============================================
+# NAME CHANGE CHECKLIST
+# ============================================
+
+class NameChangeTask(db.Model):
+    """Post-wedding name change checklist tracker."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    task_name = db.Column(db.String(300), nullable=False)
+    category = db.Column(db.String(50))  # government, financial, insurance, employment, medical, personal, other
+    completed = db.Column(db.Boolean, default=False)
+    completed_date = db.Column(db.Date)
+    reference_number = db.Column(db.String(100))  # confirmation or reference number
+    notes = db.Column(db.Text)
+    order = db.Column(db.Integer, default=0)
+
+    wedding = db.relationship('Wedding', backref=db.backref('name_change_tasks', lazy=True, cascade='all, delete-orphan'))
+
+
+DEFAULT_NAME_CHANGE_TASKS = [
+    ('Get certified copies of marriage certificate', 'government', 1),
+    ('Update Social Security card (SSA office or online)', 'government', 2),
+    ('Update drivers license / state ID', 'government', 3),
+    ('Update passport', 'government', 4),
+    ('Update voter registration', 'government', 5),
+    ('Update bank accounts (checking, savings)', 'financial', 6),
+    ('Update credit cards', 'financial', 7),
+    ('Update investment / retirement accounts', 'financial', 8),
+    ('Update loan documents (mortgage, auto, student)', 'financial', 9),
+    ('Update health insurance', 'insurance', 10),
+    ('Update auto insurance', 'insurance', 11),
+    ('Update life insurance', 'insurance', 12),
+    ('Update homeowners / renters insurance', 'insurance', 13),
+    ('Update employer / HR records', 'employment', 14),
+    ('Update payroll and direct deposit', 'employment', 15),
+    ('Update professional licenses or certifications', 'employment', 16),
+    ('Update doctor / dentist / medical records', 'medical', 17),
+    ('Update pharmacy records', 'medical', 18),
+    ('Update email signature', 'personal', 19),
+    ('Update social media profiles', 'personal', 20),
+    ('Update subscriptions and memberships', 'personal', 21),
+    ('Update utility accounts', 'personal', 22),
+    ('Update will / estate documents', 'personal', 23),
+    ('Update power of attorney', 'personal', 24),
+    ('Update beneficiaries on all accounts', 'personal', 25),
+    ('Order new checks and address labels', 'personal', 26),
+    ('Update airline frequent flyer accounts', 'personal', 27),
+]
+
+
+# ============================================
+# CUSTOM RSVP QUESTIONS
+# ============================================
+
+class CustomRsvpQuestion(db.Model):
+    """Custom questions to add to the RSVP form beyond meal choice and dietary restrictions."""
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+
+    question_text = db.Column(db.String(500), nullable=False)
+    question_type = db.Column(db.String(20), default='text')  # text, select, checkbox
+    options = db.Column(db.Text)  # JSON array of options for select/checkbox types
+    required = db.Column(db.Boolean, default=False)
+    order = db.Column(db.Integer, default=0)
+    active = db.Column(db.Boolean, default=True)
+
+    wedding = db.relationship('Wedding', backref=db.backref('custom_rsvp_questions', lazy=True, cascade='all, delete-orphan'))
+
+
+class CustomRsvpAnswer(db.Model):
+    """Guest answers to custom RSVP questions."""
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('custom_rsvp_question.id'), nullable=False)
+    guest_id = db.Column(db.Integer, db.ForeignKey('guest.id'), nullable=False)
+
+    answer_text = db.Column(db.Text)
+
+    question = db.relationship('CustomRsvpQuestion', backref=db.backref('answers', lazy=True, cascade='all, delete-orphan'))
+    guest = db.relationship('Guest', backref=db.backref('custom_rsvp_answers', lazy=True, cascade='all, delete-orphan'))

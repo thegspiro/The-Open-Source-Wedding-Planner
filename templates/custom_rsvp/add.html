@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Add RSVP Question - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Add Custom RSVP Question</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST">
+        <div class="form-group">
+            <label>Question *</label>
+            <input type="text" name="question_text" required placeholder="e.g., Any song requests for the DJ?">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Question Type</label>
+                <select name="question_type" id="question_type" onchange="toggleOptions()">
+                    <option value="text">Text (free-form answer)</option>
+                    <option value="select">Dropdown (pick one option)</option>
+                    <option value="checkbox">Checkbox (yes/no)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="required"> Required question
+                </label>
+            </div>
+        </div>
+        <div class="form-group" id="options_group" style="display: none;">
+            <label>Options (one per line)</label>
+            <textarea name="options" rows="4" placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
+            <small class="form-help">Enter each option on a separate line. Only used for dropdown questions.</small>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Question</button>
+            <a href="{{ url_for('custom_rsvp_questions_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function toggleOptions() {
+    var type = document.getElementById('question_type').value;
+    document.getElementById('options_group').style.display = (type === 'select') ? 'block' : 'none';
+}
+</script>
+
+<div class="module-section" style="margin-top: 2rem;">
+    <h3>Suggested Questions</h3>
+    <p class="form-help">Common custom RSVP questions other couples ask:</p>
+    <ul>
+        <li>Any song requests for the DJ/band?</li>
+        <li>Will you need shuttle service from the hotel?</li>
+        <li>Do you have any accessibility needs we should know about?</li>
+        <li>Will you be bringing children? If so, how many?</li>
+        <li>Are you available for the Friday welcome dinner?</li>
+        <li>Are you available for the Sunday brunch?</li>
+        <li>Do you have any food allergies beyond dietary preferences?</li>
+    </ul>
+</div>
+{% endblock %}

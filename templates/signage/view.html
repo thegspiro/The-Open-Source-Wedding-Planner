@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Wedding Signage - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Wedding Signage Checklist</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('signage_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Sign</a>
+        <form method="POST" action="{{ url_for('signage_populate_defaults', wedding_id=wedding.id) }}" class="form-inline">
+            <button type="submit" class="btn-secondary btn-small">Load Default Checklist</button>
+        </form>
+    </div>
+</div>
+
+<p class="form-help">Track all signs and printed materials you need for the wedding day. Don't forget directional signs, menu displays, and guest information!</p>
+
+{% if items %}
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.total }}</div>
+        <div class="stat-label">Total Signs</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.completed }}</div>
+        <div class="stat-label">Ready</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">${{ "{:,.0f}".format(stats.total_cost) }}</div>
+        <div class="stat-label">Total Cost</div>
+    </div>
+</div>
+
+{% macro sign_section(sign_list, section_label) %}
+{% if sign_list %}
+<div class="module-section">
+    <h2>{{ section_label }} ({{ sign_list|length }})</h2>
+    <table class="data-table">
+        <thead>
+            <tr><th>Sign</th><th>Location</th><th>Material</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            {% for item in sign_list %}
+            <tr>
+                <td>
+                    <strong>{{ item.name }}</strong>
+                    {% if item.description %}<br><small class="expense-note">{{ item.description }}</small>{% endif %}
+                </td>
+                <td>{{ item.location or '-' }}</td>
+                <td>{{ item.material or '-' }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('signage_toggle', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline">
+                        <button type="submit" class="btn-small {% if item.status == 'placed' %}btn-success{% elif item.status == 'received' %}btn-primary{% elif item.status == 'ordered' %}btn-secondary{% else %}btn-secondary{% endif %}">
+                            {{ item.status|title }}
+                        </button>
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('signage_delete', wedding_id=wedding.id, item_id=item.id) }}" class="form-inline">
+                        <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endmacro %}
+
+{{ sign_section(ceremony_items, 'Ceremony Signs') }}
+{{ sign_section(reception_items, 'Reception Signs') }}
+{{ sign_section(directional_items, 'Directional Signs') }}
+{{ sign_section(other_items, 'Other Signs') }}
+
+{% else %}
+<div class="empty-state">
+    <h2>No Signs Planned Yet</h2>
+    <p>Start with our default checklist of 21 commonly needed wedding signs, or add your own.</p>
+    <div class="form-actions">
+        <form method="POST" action="{{ url_for('signage_populate_defaults', wedding_id=wedding.id) }}" class="form-inline">
+            <button type="submit" class="btn-primary">Load Default Checklist (21 signs)</button>
+        </form>
+        <a href="{{ url_for('signage_add', wedding_id=wedding.id) }}" class="btn-secondary">Add Custom Sign</a>
+    </div>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

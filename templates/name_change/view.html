@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Name Change Checklist - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Name Change Checklist</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('name_change_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Task</a>
+        <form method="POST" action="{{ url_for('name_change_populate_defaults', wedding_id=wedding.id) }}" class="form-inline">
+            <button type="submit" class="btn-secondary btn-small">Load Default Checklist</button>
+        </form>
+    </div>
+</div>
+
+<p class="form-help">Step-by-step guide for updating your name after the wedding. Start with government IDs, then financial accounts, then everything else. Track confirmation numbers as you go.</p>
+
+{% if tasks %}
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-num">{{ completed }}/{{ total }}</div>
+        <div class="stat-label">Completed</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ total - completed }}</div>
+        <div class="stat-label">Remaining</div>
+    </div>
+</div>
+
+{% set category_labels = {'government': 'Government IDs', 'financial': 'Financial Accounts', 'insurance': 'Insurance', 'employment': 'Employment', 'medical': 'Medical', 'personal': 'Personal & Other'} %}
+
+{% for cat, cat_tasks in categories.items() %}
+<div class="module-section">
+    <h2>{{ category_labels.get(cat, cat|title) }} ({{ cat_tasks|selectattr('completed')|list|length }}/{{ cat_tasks|length }})</h2>
+    {% for task in cat_tasks %}
+    <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--color-border);">
+        <form method="POST" action="{{ url_for('name_change_toggle', wedding_id=wedding.id, task_id=task.id) }}" class="form-inline">
+            <button type="submit" class="btn-small {% if task.completed %}btn-success{% else %}btn-secondary{% endif %}">
+                {% if task.completed %}Done{% else %}To Do{% endif %}
+            </button>
+        </form>
+        <div style="flex: 1;">
+            <span {% if task.completed %}style="text-decoration: line-through; opacity: 0.6;"{% endif %}>{{ task.task_name }}</span>
+            {% if task.reference_number %}<br><small>Ref: {{ task.reference_number }}</small>{% endif %}
+            {% if task.completed_date %}<small> | Completed: {{ task.completed_date.strftime('%b %d, %Y') }}</small>{% endif %}
+            {% if task.notes %}<br><small class="expense-note">{{ task.notes }}</small>{% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('name_change_delete', wedding_id=wedding.id, task_id=task.id) }}" class="form-inline">
+            <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete?')">Delete</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+{% else %}
+<div class="empty-state">
+    <h2>No Name Change Tasks Yet</h2>
+    <p>Load our default checklist of 27 items covering government IDs, financial accounts, insurance, employment, and more.</p>
+    <div class="form-actions">
+        <form method="POST" action="{{ url_for('name_change_populate_defaults', wedding_id=wedding.id) }}" class="form-inline">
+            <button type="submit" class="btn-primary">Load Default Checklist (27 tasks)</button>
+        </form>
+        <a href="{{ url_for('name_change_add', wedding_id=wedding.id) }}" class="btn-secondary">Add Custom Task</a>
+    </div>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}
