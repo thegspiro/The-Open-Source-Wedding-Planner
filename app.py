@@ -635,7 +635,7 @@ def onboarding_step2(wedding_id):
             side_label = request.form.get(f'person_{i}_side_label')
 
             person.title = title if title != 'other' else request.form.get(f'person_{i}_title_custom')
-            person.preferred_pronouns = pronouns
+            person.preferred_pronouns = pronouns if pronouns != 'other' else request.form.get(f'person_{i}_pronouns_custom')
             person.side_label = side_label
 
         db.session.commit()
