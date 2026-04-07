@@ -10,3 +10,7 @@ venv
 .vscode
 .idea
 *.md
+tests/
+Dockerfile
+docker-compose.yml
+requirements-dev.txt

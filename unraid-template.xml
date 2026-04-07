@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>TheOpenSourceWeddingPlanner</Name>
+  <Repository>thegspiro/the-open-source-wedding-planner</Repository>
+  <Registry>https://hub.docker.com/r/thegspiro/the-open-source-wedding-planner</Registry>
+  <Branch>
+    <Tag>latest</Tag>
+    <TagDescription>Latest stable release</TagDescription>
+  </Branch>
+  <Network>bridge</Network>
+  <WebUI>http://[IP]:[PORT:4345]</WebUI>
+  <Icon>https://raw.githubusercontent.com/thegspiro/The-Open-Source-Wedding-Planner/main/static/icon.png</Icon>
+  <Overview>The Open Source Wedding Planner - a self-hosted web app to organize every detail of your wedding including ceremony, reception, guests, budget, vendors, seating, registry, and more.</Overview>
+  <Description>The Open Source Wedding Planner is a comprehensive, self-hosted wedding planning application. Manage your ceremony timeline, reception details, guest list and RSVPs, budget tracking, vendor coordination, seating arrangements, registry, bridal party, honeymoon planning, and much more - all from a single app with no cloud dependency.</Description>
+  <Category>Productivity</Category>
+  <Support>https://github.com/thegspiro/The-Open-Source-Wedding-Planner/issues</Support>
+  <Project>https://github.com/thegspiro/The-Open-Source-Wedding-Planner</Project>
+  <ExtraSearchTerms>wedding planner event organizer ceremony reception guest list budget</ExtraSearchTerms>
+
+  <!-- Port mapping -->
+  <Config Name="WebUI Port" Target="4345" Default="4345" Mode="tcp" Type="Port" Display="always" Required="true" Description="Port for the web interface"/>
+
+  <!-- Persistent storage for SQLite database -->
+  <Config Name="App Data" Target="/app/instance" Default="/mnt/user/appdata/weddingplanner" Mode="rw" Type="Path" Display="always" Required="true" Description="Persistent storage for database and app data"/>
+
+  <!-- Environment variables -->
+  <Config Name="Secret Key" Target="SECRET_KEY" Default="change-me-to-a-random-string" Type="Variable" Display="always" Required="true" Description="Flask session secret key - change this to a random string"/>
+
+  <!-- Optional SMTP settings for email features -->
+  <Config Name="SMTP Host" Target="SMTP_HOST" Default="" Type="Variable" Display="always" Required="false" Description="SMTP server hostname for email notifications (optional)"/>
+  <Config Name="SMTP Port" Target="SMTP_PORT" Default="587" Type="Variable" Display="always" Required="false" Description="SMTP server port"/>
+  <Config Name="SMTP User" Target="SMTP_USER" Default="" Type="Variable" Display="always" Required="false" Description="SMTP username / email address"/>
+  <Config Name="SMTP Password" Target="SMTP_PASSWORD" Default="" Type="Variable" Display="always" Required="false" Description="SMTP password or app-specific password"/>
+  <Config Name="From Email" Target="FROM_EMAIL" Default="" Type="Variable" Display="always" Required="false" Description="Sender email address for outgoing mail"/>
+</Container>
