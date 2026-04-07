@@ -79,7 +79,7 @@
     <div class="share-link-box">
         <p>Anyone with this link can view your wedding details:</p>
         <div class="share-url">
-            <input type="text" id="share-url" value="{{ url_for('shared_wedding_view', token=wedding.share_token, _external=True) }}" readonly>
+            <input type="text" id="share-url" value="{{ url_for('shared_view', token=wedding.share_token, _external=True) }}" readonly>
             <button class="btn-secondary btn-small" onclick="document.getElementById('share-url').select(); document.execCommand('copy');">Copy Link</button>
         </div>
     </div>

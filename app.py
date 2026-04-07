@@ -25,11 +25,11 @@ from flask_migrate import Migrate
 from dotenv import load_dotenv
 load_dotenv()
 
-import random
 from datetime import datetime, timedelta, date
 import os
 import csv
 import io
+import logging
 import secrets
 from email_service import send_reminder_email, send_guest_email, send_pdf_email
 import re
@@ -38,13 +38,15 @@ import time as time_module
 import json
 import math
 from functools import wraps
+
+logger = logging.getLogger(__name__)
 from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission, validate_time_string, validate_name_pronunciation, validate_text_field
 
 __version__ = '2.10.0'
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///wedding_organizer.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///wedding_organizer.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 if app.config['SECRET_KEY'] in ('dev-secret-key-change-in-production', 'your-secret-key-change-in-production', 'change-me-to-a-random-secret-key'):
@@ -68,10 +70,18 @@ def forbidden(e):
     flash(str(e.description) if hasattr(e, 'description') else 'Access denied.', 'error')
     return redirect(url_for('index'))
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('errors/404.html'), 404
+
 @app.errorhandler(429)
 def too_many_requests(e):
     flash(str(e.description) if hasattr(e, 'description') else 'Too many requests.', 'error')
     return redirect(request.referrer or url_for('index'))
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('errors/500.html'), 500
 
 # Health check endpoint for monitoring and container orchestration
 @app.route('/health')
@@ -311,6 +321,27 @@ def get_wedding_or_403(wedding_id):
         abort(403, description='You do not have access to this wedding.')
     g.wedding_role = access.role
     return wedding
+
+
+def get_entity_or_404(model, entity_id, wedding_id):
+    """Get a child entity by ID, verifying it belongs to the given wedding.
+
+    Aborts with 404 if the entity does not exist or does not belong to the wedding.
+    """
+    entity = model.query.get_or_404(entity_id)
+    if hasattr(entity, 'wedding_id') and entity.wedding_id != wedding_id:
+        abort(404)
+    return entity
+
+
+def safe_strptime(value, fmt, default=None):
+    """Safely parse a datetime string, returning default on failure."""
+    if not value:
+        return default
+    try:
+        return datetime.strptime(value, fmt)
+    except (ValueError, TypeError):
+        return default
 
 
 # ============================================
@@ -588,7 +619,10 @@ def new_wedding():
         else:
             couple_names = ', '.join(names[:-1]) + f' & {names[-1]}' if len(names) > 1 else names[0] if names else 'Wedding'
 
-        wedding_date = datetime.strptime(request.form['wedding_date'], '%Y-%m-%d')
+        wedding_date = safe_strptime(request.form.get('wedding_date'), '%Y-%m-%d')
+        if not wedding_date:
+            flash('Please provide a valid wedding date.', 'error')
+            return redirect(request.referrer or url_for('index'))
         email = request.form['email']
 
         wedding = Wedding(
@@ -650,7 +684,7 @@ def onboarding_step2(wedding_id):
             side_label = request.form.get(f'person_{i}_side_label')
 
             person.title = title if title != 'other' else request.form.get(f'person_{i}_title_custom')
-            person.preferred_pronouns = pronouns
+            person.preferred_pronouns = pronouns if pronouns != 'other' else request.form.get(f'person_{i}_pronouns_custom')
             person.side_label = side_label
 
         db.session.commit()
@@ -1262,7 +1296,7 @@ def people_view(wedding_id):
 @login_required
 def person_edit(wedding_id, person_id):
     wedding = get_wedding_or_403(wedding_id)
-    person = Person.query.get_or_404(person_id)
+    person = get_entity_or_404(Person, person_id, wedding_id)
 
     if request.method == 'POST':
         person.name = request.form.get('name')
@@ -1591,16 +1625,28 @@ def guests_view(wedding_id):
 def guest_add(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     if request.method == 'POST':
+        name = sanitize_string(request.form.get('name'), max_length=200)
+        if not name:
+            flash('Guest name is required.', 'error')
+            return render_template('guests/add.html', wedding=wedding)
+        email = request.form.get('email', '').strip()
+        if email and not validate_email(email):
+            flash('Please provide a valid email address.', 'error')
+            return render_template('guests/add.html', wedding=wedding)
+        phone = request.form.get('phone', '').strip()
+        if phone and not validate_phone(phone):
+            flash('Please provide a valid phone number.', 'error')
+            return render_template('guests/add.html', wedding=wedding)
         guest = Guest(
             wedding_id=wedding_id,
-            name=request.form.get('name'),
-            email=request.form.get('email'),
-            phone=request.form.get('phone'),
-            address=request.form.get('address'),
+            name=name,
+            email=email,
+            phone=phone,
+            address=sanitize_string(request.form.get('address'), max_length=500),
             guest_type=request.form.get('guest_type'),
             side=request.form.get('side'),
-            dietary_restrictions=request.form.get('dietary_restrictions'),
-            accessibility_needs=request.form.get('accessibility_needs'),
+            dietary_restrictions=sanitize_string(request.form.get('dietary_restrictions'), max_length=500),
+            accessibility_needs=sanitize_string(request.form.get('accessibility_needs'), max_length=500),
             household_group=request.form.get('household_group'),
             social_groups=request.form.get('social_groups'),
             guest_token=generate_token()
@@ -1615,7 +1661,7 @@ def guest_add(wedding_id):
 @login_required
 def guest_edit(wedding_id, guest_id):
     wedding = get_wedding_or_403(wedding_id)
-    guest = Guest.query.get_or_404(guest_id)
+    guest = get_entity_or_404(Guest, guest_id, wedding_id)
     if request.method == 'POST':
         guest.name = request.form.get('name')
         guest.email = request.form.get('email')
@@ -1657,7 +1703,7 @@ def guest_edit(wedding_id, guest_id):
 def guest_regenerate_token(wedding_id, guest_id):
     """Regenerate a guest's check-in token (invalidates old link)."""
     wedding = get_wedding_or_403(wedding_id)
-    guest = Guest.query.get_or_404(guest_id)
+    guest = get_entity_or_404(Guest, guest_id, wedding_id)
     guest.guest_token = generate_token()
     db.session.commit()
     flash(f'Check-in link regenerated for {guest.name}.', 'success')
@@ -1667,7 +1713,7 @@ def guest_regenerate_token(wedding_id, guest_id):
 @app.route('/wedding/<int:wedding_id>/guests/<int:guest_id>/delete', methods=['POST'])
 @login_required
 def guest_delete(wedding_id, guest_id):
-    guest = Guest.query.get_or_404(guest_id)
+    guest = get_entity_or_404(Guest, guest_id, wedding_id)
     db.session.delete(guest)
     db.session.commit()
     flash('Guest removed.', 'success')
@@ -1715,7 +1761,7 @@ def bridal_party_add(wedding_id):
 @login_required
 def bridal_party_edit(wedding_id, member_id):
     wedding = get_wedding_or_403(wedding_id)
-    member = BridalPartyMember.query.get_or_404(member_id)
+    member = get_entity_or_404(BridalPartyMember, member_id, wedding_id)
     if request.method == 'POST':
         member.name = request.form.get('name')
         member.role = request.form.get('role')
@@ -1750,7 +1796,7 @@ def bridal_party_edit(wedding_id, member_id):
 @app.route('/wedding/<int:wedding_id>/bridal-party/<int:member_id>/delete', methods=['POST'])
 @login_required
 def bridal_party_delete(wedding_id, member_id):
-    member = BridalPartyMember.query.get_or_404(member_id)
+    member = get_entity_or_404(BridalPartyMember, member_id, wedding_id)
     db.session.delete(member)
     db.session.commit()
     flash('Wedding party member removed.', 'success')
@@ -1934,7 +1980,7 @@ def budget_expense_add(wedding_id):
 @login_required
 def budget_expense_edit(wedding_id, expense_id):
     wedding = get_wedding_or_403(wedding_id)
-    expense = BudgetExpense.query.get_or_404(expense_id)
+    expense = get_entity_or_404(BudgetExpense, expense_id, wedding_id)
     if request.method == 'POST':
         expense.category = request.form.get('category')
         expense.item_name = request.form.get('item_name')
@@ -1954,7 +2000,7 @@ def budget_expense_edit(wedding_id, expense_id):
 @app.route('/wedding/<int:wedding_id>/budget/expense/<int:expense_id>/delete', methods=['POST'])
 @login_required
 def budget_expense_delete(wedding_id, expense_id):
-    expense = BudgetExpense.query.get_or_404(expense_id)
+    expense = get_entity_or_404(BudgetExpense, expense_id, wedding_id)
     db.session.delete(expense)
     db.session.commit()
     flash('Expense removed.', 'success')
@@ -1999,7 +2045,7 @@ def vendor_add(wedding_id):
 @login_required
 def vendor_edit(wedding_id, vendor_id):
     wedding = get_wedding_or_403(wedding_id)
-    vendor = Vendor.query.get_or_404(vendor_id)
+    vendor = get_entity_or_404(Vendor, vendor_id, wedding_id)
     if request.method == 'POST':
         vendor.category = request.form.get('category')
         vendor.business_name = request.form.get('business_name')
@@ -2065,7 +2111,7 @@ def vendor_edit(wedding_id, vendor_id):
 @app.route('/wedding/<int:wedding_id>/vendors/<int:vendor_id>/delete', methods=['POST'])
 @login_required
 def vendor_delete(wedding_id, vendor_id):
-    vendor = Vendor.query.get_or_404(vendor_id)
+    vendor = get_entity_or_404(Vendor, vendor_id, wedding_id)
     db.session.delete(vendor)
     db.session.commit()
     flash('Vendor removed.', 'success')
@@ -2093,7 +2139,7 @@ def task_add(wedding_id):
             wedding_id=wedding_id,
             title=request.form.get('title'),
             description=request.form.get('description'),
-            due_date=datetime.strptime(request.form.get('due_date'), '%Y-%m-%d'),
+            due_date=safe_strptime(request.form.get('due_date'), '%Y-%m-%d') or date.today(),
             priority=request.form.get('priority', 'medium'),
             category=request.form.get('category'),
             assigned_to=request.form.get('assigned_to')
@@ -2109,11 +2155,11 @@ def task_add(wedding_id):
 @login_required
 def task_edit(wedding_id, task_id):
     wedding = get_wedding_or_403(wedding_id)
-    task = Task.query.get_or_404(task_id)
+    task = get_entity_or_404(Task, task_id, wedding_id)
     if request.method == 'POST':
         task.title = request.form.get('title')
         task.description = request.form.get('description')
-        task.due_date = datetime.strptime(request.form.get('due_date'), '%Y-%m-%d')
+        task.due_date = safe_strptime(request.form.get('due_date'), '%Y-%m-%d') or task.due_date
         task.priority = request.form.get('priority', 'medium')
         task.category = request.form.get('category')
         task.assigned_to = request.form.get('assigned_to')
@@ -2126,7 +2172,7 @@ def task_edit(wedding_id, task_id):
 @app.route('/wedding/<int:wedding_id>/tasks/<int:task_id>/delete', methods=['POST'])
 @login_required
 def task_delete(wedding_id, task_id):
-    task = Task.query.get_or_404(task_id)
+    task = get_entity_or_404(Task, task_id, wedding_id)
     db.session.delete(task)
     db.session.commit()
     flash('Task deleted.', 'success')
@@ -2175,7 +2221,7 @@ def registry_add(wedding_id):
 @login_required
 def registry_edit(wedding_id, item_id):
     wedding = get_wedding_or_403(wedding_id)
-    item = RegistryItem.query.get_or_404(item_id)
+    item = get_entity_or_404(RegistryItem, item_id, wedding_id)
     if request.method == 'POST':
         item.item_name = request.form.get('item_name')
         item.store = request.form.get('store')
@@ -2192,7 +2238,7 @@ def registry_edit(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/registry/<int:item_id>/delete', methods=['POST'])
 @login_required
 def registry_delete(wedding_id, item_id):
-    item = RegistryItem.query.get_or_404(item_id)
+    item = get_entity_or_404(RegistryItem, item_id, wedding_id)
     db.session.delete(item)
     db.session.commit()
     flash('Registry item removed.', 'success')
@@ -2237,7 +2283,7 @@ def attire_add(wedding_id):
 @login_required
 def attire_edit(wedding_id, item_id):
     wedding = get_wedding_or_403(wedding_id)
-    item = Attire.query.get_or_404(item_id)
+    item = get_entity_or_404(Attire, item_id, wedding_id)
     if request.method == 'POST':
         item.person_name = request.form.get('person_name')
         item.person_type = request.form.get('person_type')
@@ -2267,7 +2313,7 @@ def attire_edit(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/attire/<int:item_id>/delete', methods=['POST'])
 @login_required
 def attire_delete(wedding_id, item_id):
-    item = Attire.query.get_or_404(item_id)
+    item = get_entity_or_404(Attire, item_id, wedding_id)
     db.session.delete(item)
     db.session.commit()
     flash('Attire item removed.', 'success')
@@ -2449,7 +2495,7 @@ def reception_table_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/reception/table/<int:table_id>/delete', methods=['POST'])
 @login_required
 def reception_table_delete(wedding_id, table_id):
-    table = SeatingTable.query.get_or_404(table_id)
+    table = get_entity_or_404(SeatingTable, table_id, wedding_id)
     db.session.delete(table)
     db.session.commit()
     flash('Table removed.', 'success')
@@ -2501,7 +2547,7 @@ def ceremony_timeline_delete(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/people/<int:person_id>/delete', methods=['POST'])
 @login_required
 def person_delete(wedding_id, person_id):
-    person = Person.query.get_or_404(person_id)
+    person = get_entity_or_404(Person, person_id, wedding_id)
     db.session.delete(person)
     db.session.commit()
     flash('Person removed.', 'success')
@@ -2553,7 +2599,7 @@ def day_of_add(wedding_id):
 @login_required
 def day_of_edit(wedding_id, item_id):
     wedding = get_wedding_or_403(wedding_id)
-    item = DayOfTimelineItem.query.get_or_404(item_id)
+    item = get_entity_or_404(DayOfTimelineItem, item_id, wedding_id)
     participants = wedding.participants
     if request.method == 'POST':
         item.title = request.form.get('title')
@@ -2581,7 +2627,7 @@ def day_of_edit(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/day-of/<int:item_id>/delete', methods=['POST'])
 @login_required
 def day_of_delete(wedding_id, item_id):
-    item = DayOfTimelineItem.query.get_or_404(item_id)
+    item = get_entity_or_404(DayOfTimelineItem, item_id, wedding_id)
     db.session.delete(item)
     db.session.commit()
     flash('Timeline item removed.', 'success')
@@ -2645,7 +2691,7 @@ def itinerary_add_participant(wedding_id):
 @login_required
 def itinerary_edit_participant(wedding_id, participant_id):
     wedding = get_wedding_or_403(wedding_id)
-    participant = WeddingParticipant.query.get_or_404(participant_id)
+    participant = get_entity_or_404(WeddingParticipant, participant_id, wedding_id)
     if request.method == 'POST':
         participant.name = request.form.get('name')
         participant.role = request.form.get('role')
@@ -2677,7 +2723,7 @@ def itinerary_edit_participant(wedding_id, participant_id):
 @app.route('/wedding/<int:wedding_id>/itinerary/participant/<int:participant_id>/delete', methods=['POST'])
 @login_required
 def itinerary_delete_participant(wedding_id, participant_id):
-    participant = WeddingParticipant.query.get_or_404(participant_id)
+    participant = get_entity_or_404(WeddingParticipant, participant_id, wedding_id)
     db.session.delete(participant)
     db.session.commit()
     flash('Participant removed.', 'success')
@@ -2687,7 +2733,7 @@ def itinerary_delete_participant(wedding_id, participant_id):
 @login_required
 def itinerary_individual(wedding_id, participant_id):
     wedding = get_wedding_or_403(wedding_id)
-    participant = WeddingParticipant.query.get_or_404(participant_id)
+    participant = get_entity_or_404(WeddingParticipant, participant_id, wedding_id)
     # Get this person's timeline items, sorted by time
     items = sorted(participant.timeline_items,
                    key=lambda x: (x.order, x.time or datetime.min.time()))
@@ -2779,7 +2825,7 @@ def photos_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/photos/<int:shot_id>/delete', methods=['POST'])
 @login_required
 def photos_delete(wedding_id, shot_id):
-    shot = PhotoShot.query.get_or_404(shot_id)
+    shot = get_entity_or_404(PhotoShot, shot_id, wedding_id)
     db.session.delete(shot)
     db.session.commit()
     flash('Shot removed.', 'success')
@@ -2788,7 +2834,7 @@ def photos_delete(wedding_id, shot_id):
 @app.route('/wedding/<int:wedding_id>/photos/<int:shot_id>/toggle', methods=['POST'])
 @login_required
 def photos_toggle(wedding_id, shot_id):
-    shot = PhotoShot.query.get_or_404(shot_id)
+    shot = get_entity_or_404(PhotoShot, shot_id, wedding_id)
     shot.captured = not shot.captured
     db.session.commit()
     return redirect(url_for('photos_view', wedding_id=wedding_id))
@@ -2827,7 +2873,7 @@ def music_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/music/<int:song_id>/delete', methods=['POST'])
 @login_required
 def music_delete(wedding_id, song_id):
-    song = Song.query.get_or_404(song_id)
+    song = get_entity_or_404(Song, song_id, wedding_id)
     db.session.delete(song)
     db.session.commit()
     flash('Song removed.', 'success')
@@ -2868,7 +2914,7 @@ def flowers_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/flowers/<int:item_id>/delete', methods=['POST'])
 @login_required
 def flowers_delete(wedding_id, item_id):
-    item = FloralItem.query.get_or_404(item_id)
+    item = get_entity_or_404(FloralItem, item_id, wedding_id)
     db.session.delete(item)
     db.session.commit()
     flash('Floral item removed.', 'success')
@@ -2910,7 +2956,7 @@ def invitations_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/invitations/<int:item_id>/delete', methods=['POST'])
 @login_required
 def invitations_delete(wedding_id, item_id):
-    item = Invitation.query.get_or_404(item_id)
+    item = get_entity_or_404(Invitation, item_id, wedding_id)
     db.session.delete(item)
     db.session.commit()
     flash('Stationery item removed.', 'success')
@@ -2996,7 +3042,7 @@ def accommodations_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/accommodations/<int:item_id>/delete', methods=['POST'])
 @login_required
 def accommodations_delete(wedding_id, item_id):
-    item = Accommodation.query.get_or_404(item_id)
+    item = get_entity_or_404(Accommodation, item_id, wedding_id)
     db.session.delete(item)
     db.session.commit()
     flash('Accommodation removed.', 'success')
@@ -3083,7 +3129,7 @@ def hair_makeup_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/hair-makeup/<int:appt_id>/delete', methods=['POST'])
 @login_required
 def hair_makeup_delete(wedding_id, appt_id):
-    appt = HairMakeup.query.get_or_404(appt_id)
+    appt = get_entity_or_404(HairMakeup, appt_id, wedding_id)
     db.session.delete(appt)
     db.session.commit()
     flash('Appointment removed.', 'success')
@@ -3208,7 +3254,7 @@ def contingency_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/contingency/<int:plan_id>/delete', methods=['POST'])
 @login_required
 def contingency_delete(wedding_id, plan_id):
-    plan = ContingencyPlan.query.get_or_404(plan_id)
+    plan = get_entity_or_404(ContingencyPlan, plan_id, wedding_id)
     db.session.delete(plan)
     db.session.commit()
     flash('Contingency plan removed.', 'success')
@@ -3239,7 +3285,7 @@ def budget_category_limit_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/budget/category-limit/<int:limit_id>/delete', methods=['POST'])
 @login_required
 def budget_category_limit_delete(wedding_id, limit_id):
-    limit = BudgetCategoryLimit.query.get_or_404(limit_id)
+    limit = get_entity_or_404(BudgetCategoryLimit, limit_id, wedding_id)
     db.session.delete(limit)
     db.session.commit()
     flash('Category limit removed.', 'success')
@@ -3290,7 +3336,7 @@ def tips_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/tips/<int:tip_id>/toggle-envelope', methods=['POST'])
 @login_required
 def tips_toggle_envelope(wedding_id, tip_id):
-    tip = TipItem.query.get_or_404(tip_id)
+    tip = get_entity_or_404(TipItem, tip_id, wedding_id)
     tip.envelope_prepared = not tip.envelope_prepared
     db.session.commit()
     return redirect(url_for('tips_view', wedding_id=wedding_id))
@@ -3298,7 +3344,7 @@ def tips_toggle_envelope(wedding_id, tip_id):
 @app.route('/wedding/<int:wedding_id>/tips/<int:tip_id>/toggle-given', methods=['POST'])
 @login_required
 def tips_toggle_given(wedding_id, tip_id):
-    tip = TipItem.query.get_or_404(tip_id)
+    tip = get_entity_or_404(TipItem, tip_id, wedding_id)
     tip.given = not tip.given
     db.session.commit()
     return redirect(url_for('tips_view', wedding_id=wedding_id))
@@ -3306,7 +3352,7 @@ def tips_toggle_given(wedding_id, tip_id):
 @app.route('/wedding/<int:wedding_id>/tips/<int:tip_id>/delete', methods=['POST'])
 @login_required
 def tips_delete(wedding_id, tip_id):
-    tip = TipItem.query.get_or_404(tip_id)
+    tip = get_entity_or_404(TipItem, tip_id, wedding_id)
     db.session.delete(tip)
     db.session.commit()
     flash('Tip removed.', 'success')
@@ -3362,7 +3408,7 @@ def gifts_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/gifts/<int:gift_id>/thank-you', methods=['POST'])
 @login_required
 def gifts_toggle_thank_you(wedding_id, gift_id):
-    gift = Gift.query.get_or_404(gift_id)
+    gift = get_entity_or_404(Gift, gift_id, wedding_id)
     gift.thank_you_sent = not gift.thank_you_sent
     if gift.thank_you_sent:
         gift.thank_you_sent_date = datetime.utcnow().date()
@@ -3374,7 +3420,7 @@ def gifts_toggle_thank_you(wedding_id, gift_id):
 @app.route('/wedding/<int:wedding_id>/gifts/<int:gift_id>/delete', methods=['POST'])
 @login_required
 def gifts_delete(wedding_id, gift_id):
-    gift = Gift.query.get_or_404(gift_id)
+    gift = get_entity_or_404(Gift, gift_id, wedding_id)
     db.session.delete(gift)
     db.session.commit()
     flash('Gift removed.', 'success')
@@ -3478,7 +3524,9 @@ def rsvp_enable(wedding_id):
     if wedding.rsvp_enabled and not wedding.rsvp_token:
         wedding.rsvp_token = generate_token()
     if request.form.get('rsvp_deadline'):
-        wedding.rsvp_deadline = datetime.strptime(request.form.get('rsvp_deadline'), '%Y-%m-%d').date()
+        parsed = safe_strptime(request.form.get('rsvp_deadline'), '%Y-%m-%d')
+        if parsed:
+            wedding.rsvp_deadline = parsed.date()
     if request.form.get('rsvp_message'):
         wedding.rsvp_message = request.form.get('rsvp_message')
     db.session.commit()
@@ -3627,7 +3675,7 @@ def guest_links_generate(wedding_id):
 def guest_send_email(wedding_id, guest_id):
     """Send a single guest their personalized check-in link via email."""
     wedding = get_wedding_or_403(wedding_id)
-    guest = Guest.query.get_or_404(guest_id)
+    guest = get_entity_or_404(Guest, guest_id, wedding_id)
 
     if not guest.email:
         flash(f'No email address on file for {guest.name}.', 'error')
@@ -3780,7 +3828,7 @@ def shared_view(token):
 @login_required
 def vendor_notes_view(wedding_id, vendor_id):
     wedding = get_wedding_or_403(wedding_id)
-    vendor = Vendor.query.get_or_404(vendor_id)
+    vendor = get_entity_or_404(Vendor, vendor_id, wedding_id)
     notes = VendorNote.query.filter_by(vendor_id=vendor_id).order_by(VendorNote.date.desc()).all()
     return render_template('vendors/notes.html', wedding=wedding, vendor=vendor, notes=notes)
 
@@ -3898,7 +3946,7 @@ def speeches_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/speeches/<int:speech_id>/toggle-reviewed', methods=['POST'])
 @login_required
 def speeches_toggle_reviewed(wedding_id, speech_id):
-    speech = SpeechToast.query.get_or_404(speech_id)
+    speech = get_entity_or_404(SpeechToast, speech_id, wedding_id)
     speech.reviewed = not speech.reviewed
     db.session.commit()
     return redirect(url_for('speeches_view', wedding_id=wedding_id))
@@ -3906,7 +3954,7 @@ def speeches_toggle_reviewed(wedding_id, speech_id):
 @app.route('/wedding/<int:wedding_id>/speeches/<int:speech_id>/delete', methods=['POST'])
 @login_required
 def speeches_delete(wedding_id, speech_id):
-    speech = SpeechToast.query.get_or_404(speech_id)
+    speech = get_entity_or_404(SpeechToast, speech_id, wedding_id)
     db.session.delete(speech)
     db.session.commit()
     flash('Speech removed.', 'success')
@@ -3954,7 +4002,7 @@ def favors_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/favors/<int:favor_id>/toggle', methods=['POST'])
 @login_required
 def favors_toggle(wedding_id, favor_id):
-    favor = WeddingFavor.query.get_or_404(favor_id)
+    favor = get_entity_or_404(WeddingFavor, favor_id, wedding_id)
     favor.assembled = not favor.assembled
     db.session.commit()
     return redirect(url_for('favors_view', wedding_id=wedding_id))
@@ -3962,7 +4010,7 @@ def favors_toggle(wedding_id, favor_id):
 @app.route('/wedding/<int:wedding_id>/favors/<int:favor_id>/delete', methods=['POST'])
 @login_required
 def favors_delete(wedding_id, favor_id):
-    favor = WeddingFavor.query.get_or_404(favor_id)
+    favor = get_entity_or_404(WeddingFavor, favor_id, wedding_id)
     db.session.delete(favor)
     db.session.commit()
     flash('Favor removed.', 'success')
@@ -4127,7 +4175,7 @@ def guest_group_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/guest-groups/<int:group_id>/delete', methods=['POST'])
 @login_required
 def guest_group_delete(wedding_id, group_id):
-    group = GuestGroup.query.get_or_404(group_id)
+    group = get_entity_or_404(GuestGroup, group_id, wedding_id)
     name = group.name
     db.session.delete(group)
     db.session.commit()
@@ -4139,7 +4187,7 @@ def guest_group_delete(wedding_id, group_id):
 @login_required
 def guest_group_bulk_assign(wedding_id, group_id):
     """Add a social group tag to multiple guests at once."""
-    group = GuestGroup.query.get_or_404(group_id)
+    group = get_entity_or_404(GuestGroup, group_id, wedding_id)
     guest_ids = request.form.getlist('guest_ids')
     count = 0
     for gid in guest_ids:
@@ -4159,8 +4207,8 @@ def guest_group_bulk_assign(wedding_id, group_id):
 @login_required
 def guest_group_remove_guest(wedding_id, group_id, guest_id):
     """Remove a social group tag from a single guest."""
-    group = GuestGroup.query.get_or_404(group_id)
-    guest = Guest.query.get_or_404(guest_id)
+    group = get_entity_or_404(GuestGroup, group_id, wedding_id)
+    guest = get_entity_or_404(Guest, guest_id, wedding_id)
     if guest.social_groups:
         tags = [t.strip() for t in guest.social_groups.split(',') if t.strip()]
         tags = [t for t in tags if t != group.name]
@@ -4237,7 +4285,6 @@ def compute_table_floor_data(tables, scale=1.4):
     Returns a dict keyed by table.id with dimensions, center point,
     and chair positions (with filled/empty status).
     """
-    import math
     CHAIR_GAP = 14
     PAD = 22
 
@@ -4485,7 +4532,6 @@ def seating_chart(wedding_id):
         canvas_h = max(canvas_h, bottom)
 
     # Detect tables that are too close together (overlapping clearance zones)
-    import math
     min_clearance_px = (CHAIR_PUSHBACK_INCHES * 2 + 24) * SCALE  # bare minimum: chairs + 24" passage
     # ADA requires 36" clear aisle for wheelchair access
     ada_min_px = 36 * SCALE
@@ -4619,7 +4665,7 @@ def seating_table_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/seating-chart/table/<int:table_id>/edit', methods=['POST'])
 @login_required
 def seating_table_edit(wedding_id, table_id):
-    table = SeatingTable.query.get_or_404(table_id)
+    table = get_entity_or_404(SeatingTable, table_id, wedding_id)
     table.table_name = request.form.get('table_name', '')
     table.table_shape = request.form.get('table_shape', 'round')
     table.capacity = request.form.get('capacity', 8, type=int)
@@ -4634,7 +4680,7 @@ def seating_table_edit(wedding_id, table_id):
 @app.route('/wedding/<int:wedding_id>/seating-chart/table/<int:table_id>/delete', methods=['POST'])
 @login_required
 def seating_table_delete(wedding_id, table_id):
-    table = SeatingTable.query.get_or_404(table_id)
+    table = get_entity_or_404(SeatingTable, table_id, wedding_id)
     # Unassign guests from this table
     for g in table.assigned_guests:
         g.table_id = None
@@ -4746,7 +4792,7 @@ def seating_tables_bulk_add(wedding_id):
 def seating_assign(wedding_id):
     guest_id = request.form.get('guest_id', type=int)
     table_id = request.form.get('table_id', type=int)
-    guest = Guest.query.get_or_404(guest_id)
+    guest = get_entity_or_404(Guest, guest_id, wedding_id)
     guest.table_id = table_id if table_id else None
     db.session.commit()
     msg = f'{guest.name} assigned!'
@@ -4768,7 +4814,7 @@ def seating_assign(wedding_id):
 @app.route('/wedding/<int:wedding_id>/seating-chart/unassign/<int:guest_id>', methods=['POST'])
 @login_required
 def seating_unassign(wedding_id, guest_id):
-    guest = Guest.query.get_or_404(guest_id)
+    guest = get_entity_or_404(Guest, guest_id, wedding_id)
     guest.table_id = None
     db.session.commit()
     flash(f'{guest.name} unassigned.', 'success')
@@ -4816,7 +4862,7 @@ def seating_update_position(wedding_id):
     table_id = request.json.get('table_id')
     x = request.json.get('x')
     y = request.json.get('y')
-    table = SeatingTable.query.get_or_404(table_id)
+    table = get_entity_or_404(SeatingTable, table_id, wedding_id)
     table.x_position = x
     table.y_position = y
     db.session.commit()
@@ -4827,7 +4873,7 @@ def seating_update_position(wedding_id):
 @login_required
 def seating_table_rotate(wedding_id, table_id):
     """AJAX endpoint to rotate a table by 90 degrees."""
-    table = SeatingTable.query.get_or_404(table_id)
+    table = get_entity_or_404(SeatingTable, table_id, wedding_id)
     current = table.rotation or 0
     table.rotation = (current + 90) % 360
     db.session.commit()
@@ -4884,7 +4930,7 @@ def fixture_add(wedding_id):
 @login_required
 def fixture_delete(wedding_id, fixture_id):
     get_wedding_or_403(wedding_id)
-    fixture = VenueFixture.query.get_or_404(fixture_id)
+    fixture = get_entity_or_404(VenueFixture, fixture_id, wedding_id)
     db.session.delete(fixture)
     db.session.commit()
     flash('Fixture removed from floor plan.', 'success')
@@ -4898,7 +4944,7 @@ def fixture_update_position(wedding_id):
     fixture_id = request.json.get('fixture_id')
     x = request.json.get('x')
     y = request.json.get('y')
-    fixture = VenueFixture.query.get_or_404(fixture_id)
+    fixture = get_entity_or_404(VenueFixture, fixture_id, wedding_id)
     fixture.x_position = x
     fixture.y_position = y
     db.session.commit()
@@ -4969,7 +5015,7 @@ def seating_preference_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/seating-chart/preferences/<int:pref_id>/delete', methods=['POST'])
 @login_required
 def seating_preference_delete(wedding_id, pref_id):
-    pref = SeatingPreference.query.get_or_404(pref_id)
+    pref = get_entity_or_404(SeatingPreference, pref_id, wedding_id)
     db.session.delete(pref)
     db.session.commit()
     flash('Preference removed.', 'success')
@@ -6627,7 +6673,7 @@ def comment_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/comment/<int:comment_id>/delete', methods=['POST'])
 @login_required
 def comment_delete(wedding_id, comment_id):
-    comment = Comment.query.get_or_404(comment_id)
+    comment = get_entity_or_404(Comment, comment_id, wedding_id)
     db.session.delete(comment)
     db.session.commit()
     flash('Comment removed.', 'success')
@@ -6937,10 +6983,10 @@ def check_reminders():
                         )
                         task.reminder_sent = True
                         db.session.commit()
-                        print(f"Reminder sent for task: {task.title}")
-        
+                        logger.info("Reminder sent for task: %s", task.title)
+
         except Exception as e:
-            print(f"Error checking reminders: {e}")
+            logger.error("Error checking reminders: %s", e)
         
         time_module.sleep(3600)  # Check every hour
 
@@ -7033,8 +7079,8 @@ def inventory_item_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/inventory/<int:item_id>/edit', methods=['GET', 'POST'])
 @login_required
 def inventory_item_edit(wedding_id, item_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
-    item = InventoryItem.query.get_or_404(item_id)
+    wedding = get_wedding_or_403(wedding_id)
+    item = get_entity_or_404(InventoryItem, item_id, wedding_id)
     bins = InventoryBin.query.filter_by(wedding_id=wedding_id).order_by(InventoryBin.label).all()
     if request.method == 'POST':
         item.name = request.form.get('name')
@@ -7066,7 +7112,8 @@ def inventory_item_edit(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/inventory/<int:item_id>/delete', methods=['POST'])
 @login_required
 def inventory_item_delete(wedding_id, item_id):
-    item = InventoryItem.query.get_or_404(item_id)
+    get_wedding_or_403(wedding_id)
+    item = get_entity_or_404(InventoryItem, item_id, wedding_id)
     db.session.delete(item)
     db.session.commit()
     flash('Item removed from inventory.', 'success')
@@ -7076,7 +7123,8 @@ def inventory_item_delete(wedding_id, item_id):
 @app.route('/wedding/<int:wedding_id>/inventory/<int:item_id>/status', methods=['POST'])
 @login_required
 def inventory_item_status(wedding_id, item_id):
-    item = InventoryItem.query.get_or_404(item_id)
+    get_wedding_or_403(wedding_id)
+    item = get_entity_or_404(InventoryItem, item_id, wedding_id)
     new_status = request.form.get('status')
     if new_status in ('needed', 'acquired', 'packed', 'setup', 'returned', 'lost'):
         item.status = new_status
@@ -7111,8 +7159,8 @@ def inventory_bin_add(wedding_id):
 @app.route('/wedding/<int:wedding_id>/inventory/bins/<int:bin_id>')
 @login_required
 def inventory_bin_view(wedding_id, bin_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
-    bin = InventoryBin.query.get_or_404(bin_id)
+    wedding = get_wedding_or_403(wedding_id)
+    bin = get_entity_or_404(InventoryBin, bin_id, wedding_id)
     # Get unassigned items for quick-assign
     unassigned = InventoryItem.query.filter_by(wedding_id=wedding_id, bin_id=None).all()
     return render_template('inventory/bin_view.html', wedding=wedding, bin=bin,
@@ -7122,8 +7170,8 @@ def inventory_bin_view(wedding_id, bin_id):
 @app.route('/wedding/<int:wedding_id>/inventory/bins/<int:bin_id>/edit', methods=['GET', 'POST'])
 @login_required
 def inventory_bin_edit(wedding_id, bin_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
-    bin = InventoryBin.query.get_or_404(bin_id)
+    wedding = get_wedding_or_403(wedding_id)
+    bin = get_entity_or_404(InventoryBin, bin_id, wedding_id)
     if request.method == 'POST':
         bin.label = request.form.get('label')
         bin.area = request.form.get('area')
@@ -7141,7 +7189,8 @@ def inventory_bin_edit(wedding_id, bin_id):
 @app.route('/wedding/<int:wedding_id>/inventory/bins/<int:bin_id>/delete', methods=['POST'])
 @login_required
 def inventory_bin_delete(wedding_id, bin_id):
-    bin = InventoryBin.query.get_or_404(bin_id)
+    get_wedding_or_403(wedding_id)
+    bin = get_entity_or_404(InventoryBin, bin_id, wedding_id)
     # Unassign items from this bin before deleting
     for item in bin.items:
         item.bin_id = None
@@ -7168,8 +7217,8 @@ def inventory_bin_assign(wedding_id, bin_id):
 @app.route('/wedding/<int:wedding_id>/inventory/bins/<int:bin_id>/print')
 @login_required
 def inventory_bin_print(wedding_id, bin_id):
-    wedding = Wedding.query.get_or_404(wedding_id)
-    bin = InventoryBin.query.get_or_404(bin_id)
+    wedding = get_wedding_or_403(wedding_id)
+    bin = get_entity_or_404(InventoryBin, bin_id, wedding_id)
     return _render_or_pdf('inventory/bin_print.html', f'bin_{bin.label}_{wedding_id}.pdf',
                           wedding=wedding, bin=bin)
 
