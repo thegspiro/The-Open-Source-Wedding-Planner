@@ -6986,29 +6986,32 @@ def check_reminders():
         try:
             with app.app_context():
                 reminder_threshold = datetime.utcnow() + timedelta(days=3)
-                tasks = Task.query.filter(
+                rows = db.session.query(Task, Wedding).join(
+                    Wedding, Task.wedding_id == Wedding.id
+                ).filter(
                     Task.completed == False,
                     Task.reminder_sent == False,
-                    Task.due_date <= reminder_threshold
+                    Task.due_date <= reminder_threshold,
+                    Wedding.email.isnot(None),
                 ).all()
-                
-                for task in tasks:
-                    wedding = Wedding.query.get(task.wedding_id)
-                    if wedding:
-                        send_reminder_email(
-                            to_email=wedding.email,
-                            couple_names=wedding.couple_names,
-                            task_title=task.title,
-                            task_description=task.description,
-                            due_date=task.due_date
-                        )
-                        task.reminder_sent = True
-                        db.session.commit()
-                        logger.info("Reminder sent for task: %s", task.title)
+
+                for task, wedding in rows:
+                    send_reminder_email(
+                        to_email=wedding.email,
+                        couple_names=wedding.couple_names,
+                        task_title=task.title,
+                        task_description=task.description,
+                        due_date=task.due_date
+                    )
+                    task.reminder_sent = True
+                    logger.info("Reminder sent for task: %s", task.title)
+
+                db.session.commit()
 
         except Exception as e:
+            db.session.rollback()
             logger.error("Error checking reminders: %s", e)
-        
+
         time_module.sleep(3600)  # Check every hour
 
 def start_reminder_thread():
