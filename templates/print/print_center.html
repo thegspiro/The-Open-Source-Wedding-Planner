@@ -68,6 +68,14 @@
             </a>
             <button type="button" class="share-btn" onclick="openShareModal('venue_info', 'Venue Information')">Share</button>
         </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_etiquette_guide', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128156;</div>
+                <div class="pc-title">Wedding Etiquette Guide</div>
+                <div class="pc-desc">Tips for being present, engaging with guests, and savoring the day</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('etiquette_guide', 'Wedding Etiquette Guide')">Share</button>
+        </div>
     </div>
 
     <!-- Ceremony & Reception -->

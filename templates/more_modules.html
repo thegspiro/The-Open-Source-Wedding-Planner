@@ -25,6 +25,9 @@
     <a href="{{ url_for('timeline_analysis', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">🔍</div><h3>Timeline Analysis</h3><p class="stat-label">Buffer warnings &amp; gap detection</p>
     </a>
+    <a href="{{ url_for('etiquette_guide_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">💜</div><h3>Etiquette Guide</h3><p class="stat-label">Being present &amp; guest engagement</p>
+    </a>
     <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">🗓️</div><h3>Individual Itineraries</h3><p class="stat-label">Per-person schedules &amp; handler view</p>
     </a>

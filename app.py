@@ -5543,6 +5543,7 @@ PRINT_DOCUMENTS = {
     'transportation':      {'title': 'Transportation & Hotels','template': 'print/transportation.html',      'filename': 'transportation'},
     'contingency_plans':   {'title': 'Backup Plans',          'template': 'print/contingency_plans.html',    'filename': 'contingency_plans'},
     'budget_summary':      {'title': 'Budget Summary',        'template': 'print/budget_summary.html',       'filename': 'budget'},
+    'etiquette_guide':     {'title': 'Wedding Etiquette Guide','template': 'print/etiquette_guide.html',     'filename': 'etiquette_guide'},
 }
 
 
@@ -8154,6 +8155,23 @@ def timeline_analysis(wedding_id):
 
     return render_template('day_of/analysis.html', wedding=wedding,
                          warnings=warnings, tips=tips, items=timed_items)
+
+
+@app.route('/wedding/<int:wedding_id>/etiquette-guide')
+@login_required
+def etiquette_guide_view(wedding_id):
+    """Wedding etiquette guide: being present, engaging with guests, and mindfulness tips."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('etiquette_guide/view.html', wedding=wedding)
+
+
+@app.route('/wedding/<int:wedding_id>/print/etiquette-guide')
+@login_required
+def print_etiquette_guide(wedding_id):
+    """Printable wedding etiquette guide."""
+    wedding = get_wedding_or_403(wedding_id)
+    return _render_or_pdf('print/etiquette_guide.html', f'etiquette_guide_{wedding_id}.pdf',
+                          wedding=wedding)
 
 
 # Start reminder thread:

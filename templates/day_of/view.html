@@ -8,6 +8,7 @@
     </div>
     <div class="header-actions">
         <a href="{{ url_for('timeline_analysis', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Analyze Timeline</a>
+        <a href="{{ url_for('etiquette_guide_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Etiquette Guide</a>
         <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="btn-secondary">Individual Itineraries</a>
         <a href="{{ url_for('itinerary_handler_view', wedding_id=wedding.id) }}" class="btn-secondary">Handler View</a>
         <a href="{{ url_for('day_of_add', wedding_id=wedding.id) }}" class="btn-primary">+ Add Item</a>
