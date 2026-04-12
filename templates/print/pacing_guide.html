@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pacing Your Wedding Day - {{ wedding.couple_names }}</title>
+    <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--body-font);
+            color: #3a3a3a;
+            line-height: 1.6;
+            padding: 20px 40px;
+            background: #fff;
+        }
+
+        .print-btn {
+            display: inline-block;
+            padding: 8px 20px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-family: var(--body-font);
+            border-radius: 4px;
+        }
+
+        .print-btn:hover {
+            opacity: 0.85;
+        }
+
+        .print-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+        .skip-link {
+            position: absolute; left: -9999px; top: auto;
+            width: 1px; height: 1px; overflow: hidden;
+            font-size: 14px; padding: 10px;
+        }
+        .skip-link:focus {
+            position: static; width: auto; height: auto;
+            overflow: visible; background: var(--primary); color: #fff;
+            display: inline-block; margin-bottom: 10px;
+        }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+        .print-header {
+            text-align: center;
+            padding: 30px 20px 25px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--secondary);
+            position: relative;
+        }
+
+        .print-header::before {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 2px;
+            background: var(--accent);
+            margin: 0 auto 15px;
+        }
+
+        .monogram {
+            font-family: var(--heading-font);
+            font-size: 36px;
+            color: var(--primary);
+            letter-spacing: 4px;
+            margin-bottom: 8px;
+        }
+
+        .print-header h1 {
+            font-family: var(--heading-font);
+            font-size: 26px;
+            font-weight: normal;
+            color: var(--primary);
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+
+        .print-header .wedding-date {
+            font-size: 13px;
+            color: #888;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .print-header .subtitle {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .print-header::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 2px;
+            background: var(--accent);
+            margin: 15px auto 0;
+        }
+
+        .section-heading {
+            font-family: var(--heading-font);
+            font-size: 16px;
+            color: var(--primary);
+            letter-spacing: 1px;
+            margin: 25px 0 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--secondary);
+        }
+
+        .tip-card {
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--accent);
+            background: #fafaf8;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .tip-card strong {
+            font-size: 13px;
+            color: #333;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .tip-card p {
+            font-size: 11px;
+            color: #666;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .tip-card.accent-green {
+            border-left-color: #81c784;
+        }
+
+        .tip-card.accent-blue {
+            border-left-color: #90caf9;
+        }
+
+        .approach-number {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background: var(--accent);
+            color: #fff;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+
+        .checklist li {
+            padding: 6px 0;
+            border-bottom: 1px solid #e8e2da;
+            font-size: 12px;
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .checklist-box {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid var(--primary);
+            border-radius: 2px;
+            margin-right: 8px;
+            vertical-align: middle;
+            position: relative;
+            top: -1px;
+        }
+
+        table.timing-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0 14px;
+            font-size: 11px;
+        }
+
+        table.timing-table th {
+            background: var(--secondary);
+            color: var(--primary);
+            font-family: var(--heading-font);
+            font-size: 11px;
+            font-weight: normal;
+            letter-spacing: 0.5px;
+            text-align: left;
+            padding: 6px 10px;
+        }
+
+        table.timing-table td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #e8e2da;
+            color: #555;
+        }
+
+        table.timing-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        table.timing-table tr:nth-child(even) {
+            background: #fafaf8;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 10px;
+            color: #bbb;
+            margin-top: 35px;
+            padding-top: 15px;
+            border-top: 1px solid var(--secondary);
+            letter-spacing: 0.5px;
+        }
+
+        @page {
+            size: letter;
+            margin: 0.6in 0.5in;
+        }
+
+        @media print {
+            * { color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+            .print-btn {
+                display: none !important;
+            }
+
+            .share-form-inline {
+                display: none !important;
+            }
+
+            .skip-link { display: none !important; }
+
+            body {
+                padding: 0;
+                font-size: 11px;
+            }
+
+            .print-header h1 {
+                font-size: 22px;
+            }
+
+            .section-heading {
+                margin-top: 18px;
+                font-size: 14px;
+            }
+
+            .tip-card {
+                padding: 6px 10px;
+                margin-bottom: 5px;
+                page-break-inside: avoid;
+            }
+
+            .tip-card strong {
+                font-size: 11px;
+            }
+
+            .tip-card p {
+                font-size: 10px;
+            }
+
+            .checklist li {
+                font-size: 11px;
+            }
+
+            table.timing-table {
+                page-break-inside: avoid;
+                font-size: 10px;
+            }
+
+            table.timing-table th {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
+    <button class="print-btn" onclick="window.print()">Print</button>
+    <a class="print-btn" href="?format=pdf" role="button" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+    {% set share_document_type = 'pacing_guide' %}{% include 'print/_share_button.html' %}
+
+    <main id="main-content">
+    <div class="print-header">
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Pacing Your Wedding Day</h1>
+        <div style="font-family: var(--heading-font); font-size: 15px; color: #666; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+        <div class="subtitle">Realistic timing, buffer strategies, and sample timelines</div>
+    </div>
+
+    <!-- Section 1: Realistic Time Estimates -->
+    <h2 class="section-heading">Realistic Time Estimates</h2>
+
+    <div class="tip-card">
+        <strong>Getting Ready: Hair &amp; Makeup</strong>
+        <p>Hair: 30&ndash;45 min per attendant, 60&ndash;90 min for the bride. Makeup: same. Bridal party totals: 4&ndash;5 people = 3&ndash;4 hrs, 6&ndash;9 = 5&ndash;6 hrs, 10+ = 6+ hrs. Getting dressed: 15&ndash;30 min. Finish H&amp;M 1.5&ndash;2 hrs before ceremony.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>First Look</strong>
+        <p>Reveal moment: 5&ndash;10 min. Full first-look block (including portraits): 45&ndash;60 min. Schedule 2&ndash;2.5 hrs before ceremony start.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Portraits</strong>
+        <p>Couple portraits: 20&ndash;45 min. Bridal party: 15&ndash;30 min. Family formals: 20&ndash;45 min (cap at 15 groupings). Total portrait block: 1.5&ndash;2+ hrs.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Ceremony Duration</strong>
+        <table class="timing-table" role="table" aria-label="Ceremony duration by type">
+            <thead>
+                <tr><th>Ceremony Type</th><th>Duration</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Civil</td><td>10&ndash;25 min</td></tr>
+                <tr><td>Secular</td><td>15&ndash;25 min</td></tr>
+                <tr><td>Protestant</td><td>20&ndash;30 min</td></tr>
+                <tr><td>Jewish</td><td>~30 min</td></tr>
+                <tr><td>Interfaith</td><td>20&ndash;45 min</td></tr>
+                <tr><td>Catholic (no mass)</td><td>30&ndash;45 min</td></tr>
+                <tr><td>Catholic (with mass)</td><td>60&ndash;90 min</td></tr>
+                <tr><td>Hindu</td><td>1.5&ndash;3 hrs</td></tr>
+                <tr><td>Orthodox</td><td>45&ndash;60 min</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="tip-card">
+        <strong>Cocktail Hour</strong>
+        <p>Standard: 60 min. Extended: 75&ndash;90 min. Maximum 90 min before guests get restless.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Reception Breakdown</strong>
+        <p>Entrance: 5&ndash;10 min. First dance: 2&ndash;4 min. Dinner (plated): 60&ndash;90 min / (buffet): 75&ndash;120 min. Toasts: 10&ndash;20 min total. Parent dances: 5&ndash;10 min combined. Cake cutting: 5&ndash;10 min. Open dancing: 1.5&ndash;2.5 hrs. Last dance &amp; send-off: 10&ndash;15 min. Total reception: ~5 hrs.</p>
+    </div>
+
+    <!-- Section 2: Buffer Time -->
+    <h2 class="section-heading">Buffer Time</h2>
+
+    <div class="tip-card accent-green">
+        <strong>Recommended Buffers</strong>
+        <p>Minimum 5&ndash;10 min between every transition. 10&ndash;15 min between major blocks. 30 min after getting ready before departing. 30 min pre-ceremony pause for the couple. 30&ndash;60 min between venues if traveling.</p>
+    </div>
+
+    <div class="tip-card accent-green">
+        <strong>What Goes Wrong Without Buffers</strong>
+        <p>Hair &amp; makeup delays (the most common culprit). Guest arrival delays pushing the ceremony start. Photos taking longer than expected. Transportation surprises. Each delay creates a cascade effect that compounds throughout the day.</p>
+    </div>
+
+    <!-- Section 3: Common Mistakes -->
+    <h2 class="section-heading">Common Pacing Mistakes</h2>
+
+    <div class="tip-card">
+        <strong>Overscheduling the Day</strong>
+        <p>Trying to pack in too many events leaves no room for genuine moments. If your timeline has zero downtime, something will give.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Underestimating Travel Time</strong>
+        <p>Double whatever Google Maps says. Account for traffic, parking, loading/unloading, and the bridal party moving as a group.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Skipping Meals</strong>
+        <p>Not eating is the fastest way for the day to unravel. Schedule a real meal before the ceremony and make sure you eat at the reception.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Starting Too Early or Too Late</strong>
+        <p>Starting too early causes fatigue by reception time. Starting too late compresses the timeline. Work backward from your ideal reception end time.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Surprise Speeches</strong>
+        <p>Unplanned toasts can add 30+ minutes to your reception. Decide in advance who speaks and set time limits.</p>
+    </div>
+
+    <!-- Section 4: Golden Hour -->
+    <h2 class="section-heading">Golden Hour Photography</h2>
+
+    <div class="tip-card">
+        <strong>Seasonal Golden Hour Windows</strong>
+        <table class="timing-table" role="table" aria-label="Golden hour times by season">
+            <thead>
+                <tr><th>Season</th><th>Approximate Golden Hour</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Spring</td><td>~6:30&ndash;7:30 PM</td></tr>
+                <tr><td>Summer</td><td>~6:45&ndash;7:45 PM</td></tr>
+                <tr><td>Fall</td><td>~5:30&ndash;6:30 PM</td></tr>
+                <tr><td>Winter</td><td>~4:15&ndash;5:15 PM</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="tip-card accent-blue">
+        <strong><span class="approach-number">1</span> Time Your Ceremony Around It</strong>
+        <p>Schedule the ceremony so it ends just as golden hour begins, flowing naturally into portraits.</p>
+    </div>
+
+    <div class="tip-card accent-blue">
+        <strong><span class="approach-number">2</span> Sneak Away During the Reception</strong>
+        <p>Step out with your photographer for 15&ndash;20 min during dinner or dancing. Guests won't notice.</p>
+    </div>
+
+    <div class="tip-card accent-blue">
+        <strong><span class="approach-number">3</span> Dedicated Portrait Block</strong>
+        <p>Build a standalone golden-hour portrait session into your timeline between cocktail hour and reception.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Terrain Warning</strong>
+        <p>Mountains, tall buildings, and tree lines can block the sun 30&ndash;60 min before the actual sunset time. Scout your venue in advance to know when light truly disappears.</p>
+    </div>
+
+    <!-- Section 5: Sample Timelines -->
+    <h2 class="section-heading">Sample Timelines</h2>
+
+    <div class="tip-card">
+        <strong>8-Hour Day</strong>
+        <table class="timing-table" role="table" aria-label="8-hour wedding day timeline">
+            <thead>
+                <tr><th>Time</th><th>Event</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>12:00 PM</td><td>Hair &amp; makeup begins</td></tr>
+                <tr><td>2:30 PM</td><td>Getting dressed</td></tr>
+                <tr><td>3:00 PM</td><td>First look &amp; couple portraits</td></tr>
+                <tr><td>3:45 PM</td><td>Bridal party &amp; family formals</td></tr>
+                <tr><td>4:15 PM</td><td>Pre-ceremony buffer</td></tr>
+                <tr><td>4:30 PM</td><td>Ceremony</td></tr>
+                <tr><td>5:00 PM</td><td>Cocktail hour</td></tr>
+                <tr><td>6:00 PM</td><td>Reception entrance &amp; first dance</td></tr>
+                <tr><td>6:15 PM</td><td>Dinner</td></tr>
+                <tr><td>7:15 PM</td><td>Toasts &amp; parent dances</td></tr>
+                <tr><td>7:45 PM</td><td>Cake cutting &amp; open dancing</td></tr>
+                <tr><td>8:00 PM</td><td>Last dance &amp; send-off</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="tip-card">
+        <strong>10-Hour Day</strong>
+        <table class="timing-table" role="table" aria-label="10-hour wedding day timeline">
+            <thead>
+                <tr><th>Time</th><th>Event</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>10:00 AM</td><td>Hair &amp; makeup begins</td></tr>
+                <tr><td>1:00 PM</td><td>Getting dressed</td></tr>
+                <tr><td>1:30 PM</td><td>First look &amp; couple portraits</td></tr>
+                <tr><td>2:15 PM</td><td>Bridal party &amp; family formals</td></tr>
+                <tr><td>3:00 PM</td><td>Buffer / bridal party downtime</td></tr>
+                <tr><td>3:30 PM</td><td>Pre-ceremony pause</td></tr>
+                <tr><td>4:00 PM</td><td>Ceremony</td></tr>
+                <tr><td>4:30 PM</td><td>Cocktail hour</td></tr>
+                <tr><td>5:30 PM</td><td>Reception entrance &amp; first dance</td></tr>
+                <tr><td>5:45 PM</td><td>Dinner</td></tr>
+                <tr><td>6:45 PM</td><td>Toasts &amp; parent dances</td></tr>
+                <tr><td>7:15 PM</td><td>Cake cutting</td></tr>
+                <tr><td>7:30 PM</td><td>Golden hour sneak-away portraits</td></tr>
+                <tr><td>7:50 PM</td><td>Open dancing</td></tr>
+                <tr><td>9:45 PM</td><td>Last dance &amp; send-off</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="tip-card">
+        <strong>12-Hour Day</strong>
+        <table class="timing-table" role="table" aria-label="12-hour wedding day timeline">
+            <thead>
+                <tr><th>Time</th><th>Event</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>8:00 AM</td><td>Hair &amp; makeup begins</td></tr>
+                <tr><td>11:30 AM</td><td>Getting dressed</td></tr>
+                <tr><td>12:00 PM</td><td>First look &amp; couple portraits</td></tr>
+                <tr><td>12:45 PM</td><td>Bridal party &amp; family formals</td></tr>
+                <tr><td>1:30 PM</td><td>Lunch break for couple &amp; bridal party</td></tr>
+                <tr><td>2:15 PM</td><td>Buffer / touch-up time</td></tr>
+                <tr><td>2:45 PM</td><td>Pre-ceremony pause</td></tr>
+                <tr><td>3:00 PM</td><td>Ceremony</td></tr>
+                <tr><td>3:30 PM</td><td>Cocktail hour (extended 90 min)</td></tr>
+                <tr><td>5:00 PM</td><td>Reception entrance &amp; first dance</td></tr>
+                <tr><td>5:15 PM</td><td>Dinner</td></tr>
+                <tr><td>6:30 PM</td><td>Toasts &amp; parent dances</td></tr>
+                <tr><td>7:00 PM</td><td>Cake cutting</td></tr>
+                <tr><td>7:15 PM</td><td>Golden hour sneak-away portraits</td></tr>
+                <tr><td>7:45 PM</td><td>Open dancing</td></tr>
+                <tr><td>9:45 PM</td><td>Last dance &amp; send-off</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer-note">
+        {{ wedding.couple_names }}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
+        &middot; Pacing Your Wedding Day
+    </div>
+    </main>
+</body>
+</html>

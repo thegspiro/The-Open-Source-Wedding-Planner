@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% block title %}Pacing Your Wedding Day - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Pacing Your Wedding Day</h1>
+        <p class="subtitle">Realistic timing, buffer strategies, and sample timelines so you never feel rushed</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('print_pacing_guide', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Guide</a>
+        <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Day-Of Timeline</a>
+        <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Dashboard</a>
+    </div>
+</div>
+
+<p class="form-help">The number one regret couples share is "it went by too fast." Pacing your day with realistic time estimates and intentional buffer time is what separates a rushed blur from a day you actually remember.</p>
+
+<!-- Realistic Time Estimates -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-primary);">&#9679;</span> Realistic Time Estimates
+    </h2>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Getting Ready</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Hair &amp; Makeup Per Person</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">
+            <strong>Attendants:</strong> 30-45 min each for hair, 30-45 min each for makeup.<br>
+            <strong>The person getting married:</strong> 60-90 min for hair, 60-90 min for makeup (updos, braids, and extensions take longer).<br>
+            <strong>Bridal party totals:</strong> 4-5 people: 3-4 hours. 6-9 people: 5-6 hours. 10+ people: 6+ hours (consider a second artist team).
+        </p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Getting Dressed</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Allow 15-30 minutes for the bride to get into the dress. This includes shoes, jewelry, perfume, veil, and final touch-ups. Groomsmen typically need 15-20 minutes. Hair and makeup should be completely finished 1.5-2 hours before ceremony time.</p>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Photography</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>First Look</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">The reveal itself: 5-10 minutes. First look plus immediate couple portraits: 15-30 minutes. Full first look block (reveal + portraits + individuals): 45-60 minutes. Schedule the first look 2-2.5 hours before the ceremony.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Portrait Sessions</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">
+            <strong>Couple portraits:</strong> 20-45 minutes.<br>
+            <strong>Bridal party:</strong> 15-30 minutes for 8-10 people; 30-45 min for 12+.<br>
+            <strong>Family formals:</strong> Under 10 groupings: 20 min. 10-15 groupings: 30 min. 15-20+ groupings: 45-60 min. Cap family groupings at 15 for sanity.<br>
+            <strong>Total photography block:</strong> Plan for 1.5-2+ hours for all portraits combined.
+        </p>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Ceremony Duration by Type</h3>
+
+    <table class="data-table" style="margin-bottom: 1rem;">
+        <thead>
+            <tr><th>Ceremony Type</th><th>Typical Duration</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Civil / Courthouse</td><td>10-25 min</td></tr>
+            <tr><td>Non-religious / Secular</td><td>15-25 min</td></tr>
+            <tr><td>Protestant</td><td>20-30 min</td></tr>
+            <tr><td>Jewish</td><td>~30 min</td></tr>
+            <tr><td>Interfaith</td><td>20-45 min</td></tr>
+            <tr><td>Catholic (without full mass)</td><td>30-45 min</td></tr>
+            <tr><td>Catholic (with full mass)</td><td>60-90 min</td></tr>
+            <tr><td>Hindu</td><td>1.5-3 hours</td></tr>
+            <tr><td>Orthodox Christian</td><td>45-60 min</td></tr>
+        </tbody>
+    </table>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Cocktail Hour &amp; Reception</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Cocktail Hour</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Standard: 60 minutes. Extended (for room flip or extra photos): 75-90 minutes. Maximum before guests get restless: 90 minutes. Beyond that, guests tend to over-drink, get impatient, or start leaving.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Reception Segments</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">
+            Grand entrance: 5-10 min. First dance: 2-4 min. Dinner (plated): 60-90 min. Dinner (buffet): 75-120 min. Toasts: 10-20 min total (3-5 min per speaker). Parent dances: 5-10 min combined. Cake cutting: 5-10 min. Open dancing: 1.5-2.5 hours. Last dance and send-off: 10-15 min. <strong>Total reception including cocktail hour: ~5 hours.</strong>
+        </p>
+    </div>
+</div>
+
+<!-- Buffer Time -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-accent);">&#9679;</span> Buffer Time: Your Best Friend
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>How Much Buffer to Add</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">
+            <strong>Minimum:</strong> 5-10 minutes between every transition.<br>
+            <strong>Recommended:</strong> 10-15 minutes between major blocks.<br>
+            <strong>Getting ready:</strong> Add 30 minutes beyond the estimated finish time.<br>
+            <strong>Pre-ceremony pause:</strong> 30 minutes after portraits so the couple can rest, touch up, hydrate, and use the restroom.<br>
+            <strong>Between venues:</strong> 30-60 minutes minimum.
+        </p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #ffb74d); background: var(--color-warning-bg, #fff8e1);">
+        <strong>What Goes Wrong Without Buffers</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">
+            <strong>Hair and makeup delays:</strong> Eyelash extensions not holding, hair not curling on the first attempt, a bridesmaid needing extra time.<br>
+            <strong>Guest arrival delays:</strong> Wrong directions, traffic, parking confusion. It can take 10 minutes just for guests to settle into seats.<br>
+            <strong>Photos taking longer:</strong> Wrangling family members and large groups always takes more time than you think.<br>
+            <strong>Transportation surprises:</strong> A 12-minute drive becomes 30 minutes with group logistics (bathroom stops, loading vehicles, parking).<br>
+            <strong>The cascade effect:</strong> Without buffers, a 15-minute hair delay pushes the first look late, which compresses portrait time, which bleeds into the ceremony window. Every subsequent event runs behind.
+        </p>
+    </div>
+</div>
+
+<!-- Common Mistakes -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-danger, #e57373);">&#9679;</span> Common Timeline Mistakes
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-danger, #e57373); background: var(--color-danger-bg, #fce4ec);">
+        <strong>Overscheduling the Day</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Cramming every idea into one day creates a mechanical feeling. You'll spend the day checking boxes instead of experiencing moments. Stick to what matters most, and consider spreading activities across a wedding weekend.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-danger, #e57373); background: var(--color-danger-bg, #fce4ec);">
+        <strong>Underestimating Travel Time</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Double your Google Maps estimate. A 12-minute drive becomes 25-30 minutes when you account for gathering belongings, bathroom stops, loading vehicles, traffic, parking, and walking in. Run a test drive at the same time and day of week as your wedding.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-danger, #e57373); background: var(--color-danger-bg, #fce4ec);">
+        <strong>Skipping Meals</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Couples regularly feel faint at the altar &mdash; usually from not eating, not emotion. Adrenaline masks hunger, but the body needs fuel for 12+ hours. Designate a "food enforcer" in the bridal party and schedule specific eating windows.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-danger, #e57373); background: var(--color-danger-bg, #fce4ec);">
+        <strong>Starting Too Early or Too Late</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Too early: the couple is exhausted by the reception and hair/makeup styles may not hold. Too late: dinner gets pushed past 7 PM (the #1 guest complaint) and dancing time gets cut. For outdoor ceremonies, start about 2 hours before sunset.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-danger, #e57373); background: var(--color-danger-bg, #fce4ec);">
+        <strong>Surprise Speeches</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Unplanned toasts disrupt the catering timeline. Caterers need precise timing to serve food properly. Confirm your speaker list in advance and give each person a time limit.</p>
+    </div>
+</div>
+
+<!-- Filling Gaps -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-success);">&#9679;</span> Filling Gaps Constructively
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>During Cocktail Hour</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">
+            <strong>Interactive:</strong> Photo booth with props, lawn games (cornhole, giant Jenga, croquet), wedding bingo, couple trivia.<br>
+            <strong>Entertainment:</strong> String quartet, jazz trio, live wedding painter, caricature artist, cigar rolling station.<br>
+            <strong>Food experiences:</strong> Signature cocktail station, interactive food stations, appetizer pairings.<br>
+            <strong>Guest activities:</strong> Polaroid cameras for guests, guest book stations, advice cards.
+        </p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Long Gaps Between Venues (45+ minutes)</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Direct guests to a nearby bar or restaurant with a printed card. Arrange a shuttle to a scenic spot. Host a mini cocktail reception at a midpoint location. At minimum, communicate clearly on invitations and signage so guests know what to do and where to go.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>During Extended Photo Sessions</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Extend cocktail hour to 75-90 minutes with adequate food and drink. Put a trusted friend "in charge" of keeping energy up. Ensure adequate bar staffing &mdash; long bar lines are the fastest way to lose guest goodwill.</p>
+    </div>
+</div>
+
+<!-- Golden Hour -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: #e6a817;">&#9679;</span> Golden Hour Photography
+    </h2>
+
+    <p class="form-help" style="margin-bottom: 1rem;">Golden hour begins 30-60 minutes before sunset. The light is warm, soft, and flattering &mdash; no harsh shadows or squinting. Check the exact sunset time for your wedding date and venue.</p>
+
+    <table class="data-table" style="margin-bottom: 1rem;">
+        <thead>
+            <tr><th>Season</th><th>Golden Hour Start (approx.)</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Spring</td><td>~6:30-7:30 PM</td><td>~45 min before sunset</td></tr>
+            <tr><td>Summer</td><td>~6:45-7:45 PM</td><td>~60 min; longest golden hour</td></tr>
+            <tr><td>Fall</td><td>~5:30-6:30 PM</td><td>~40 min before sunset</td></tr>
+            <tr><td>Winter</td><td>~4:15-5:15 PM</td><td>~30-40 min; shortest window</td></tr>
+        </tbody>
+    </table>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid #e6a817; background: var(--color-card-bg, #faf9f7);">
+        <strong>Three Ways to Capture Golden Hour</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">
+            <strong>1. Time the ceremony:</strong> Start the outdoor ceremony 1.5-2 hours before sunset. Portraits happen during cocktail hour in perfect light.<br>
+            <strong>2. "Sneak away" during reception:</strong> Step away for 15-20 minutes during golden hour. Best between appetizers and the main course. Guests barely notice.<br>
+            <strong>3. Dedicated portrait block:</strong> Schedule 30-45 minutes during golden hour with cocktail hour or entertainment covering the gap.
+        </p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #ffb74d); background: var(--color-warning-bg, #fff8e1);">
+        <strong>Watch Out: Terrain Matters</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Mountains, tall buildings, and trees to the west of your venue can block the sun 5-15 minutes before the "official" sunset time. If your venue is in a valley, golden hour may start and end earlier. Use apps like PhotoPills or TimeandDate.com to check the exact sun position for your venue and date.</p>
+    </div>
+</div>
+
+<!-- Sample Timelines -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-info, #64b5f6);">&#9679;</span> Sample Timeline Frameworks
+    </h2>
+
+    <p class="form-help" style="margin-bottom: 1rem;">These are starting points. Adjust based on your ceremony type, venue, and bridal party size. All assume a first look.</p>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">8-Hour Day (Compact, Single Venue)</h3>
+    <table class="data-table" style="margin-bottom: 1.5rem;">
+        <thead><tr><th>Time</th><th>Event</th></tr></thead>
+        <tbody>
+            <tr><td>1:30 PM</td><td>Photographer arrives; detail photos</td></tr>
+            <tr><td>2:00 PM</td><td>Getting-ready candids</td></tr>
+            <tr><td>2:30 PM</td><td>Bride gets into dress</td></tr>
+            <tr><td>3:00 PM</td><td>First look + couple portraits</td></tr>
+            <tr><td>3:45 PM</td><td>Bridal party &amp; family photos</td></tr>
+            <tr><td>5:00 PM</td><td>Buffer / pre-ceremony pause</td></tr>
+            <tr><td>5:30 PM</td><td>Ceremony</td></tr>
+            <tr><td>6:00 PM</td><td>Cocktail hour + sunset portraits</td></tr>
+            <tr><td>7:00 PM</td><td>Reception: entrance, first dance, dinner</td></tr>
+            <tr><td>8:00 PM</td><td>Toasts, parent dances, cake</td></tr>
+            <tr><td>8:30 PM</td><td>Open dancing</td></tr>
+            <tr><td>9:15 PM</td><td>Last dance / send-off</td></tr>
+        </tbody>
+    </table>
+    <p class="form-help" style="margin-top: -1rem; margin-bottom: 1rem;">8 hours is tight. Minimal open dancing (45-60 min). Best for single-venue weddings with small bridal parties.</p>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">10-Hour Day (Standard)</h3>
+    <table class="data-table" style="margin-bottom: 1.5rem;">
+        <thead><tr><th>Time</th><th>Event</th></tr></thead>
+        <tbody>
+            <tr><td>12:30 PM</td><td>Detail photos (rings, dress, shoes)</td></tr>
+            <tr><td>1:15 PM</td><td>Getting-ready candids</td></tr>
+            <tr><td>2:30 PM</td><td>Bride gets into dress</td></tr>
+            <tr><td>3:00 PM</td><td>First look + couple portraits</td></tr>
+            <tr><td>3:45 PM</td><td>Bridal party photos</td></tr>
+            <tr><td>4:15 PM</td><td>Family formals</td></tr>
+            <tr><td>5:00 PM</td><td>Buffer / pre-ceremony pause</td></tr>
+            <tr><td>5:30 PM</td><td>Ceremony</td></tr>
+            <tr><td>6:00 PM</td><td>Sunset portraits / cocktail hour</td></tr>
+            <tr><td>7:00 PM</td><td>Grand entrance, first dance</td></tr>
+            <tr><td>7:30 PM</td><td>Dinner service</td></tr>
+            <tr><td>8:15 PM</td><td>Toasts</td></tr>
+            <tr><td>8:30 PM</td><td>Parent dances, cake cutting</td></tr>
+            <tr><td>9:00 PM</td><td>Open dancing</td></tr>
+            <tr><td>10:00 PM</td><td>Last dance and send-off</td></tr>
+        </tbody>
+    </table>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">12-Hour Day (Full Day, Large Party or Multiple Venues)</h3>
+    <table class="data-table" style="margin-bottom: 1.5rem;">
+        <thead><tr><th>Time</th><th>Event</th></tr></thead>
+        <tbody>
+            <tr><td>10:00 AM</td><td>Hair and makeup begins</td></tr>
+            <tr><td>12:00 PM</td><td>Photography begins; detail photos</td></tr>
+            <tr><td>1:00 PM</td><td>Groom/groomsmen get dressed and photos</td></tr>
+            <tr><td>2:00 PM</td><td>Bride/bridesmaids get dressed and photos</td></tr>
+            <tr><td>2:30 PM</td><td>First look</td></tr>
+            <tr><td>3:00 PM</td><td>Couple portraits</td></tr>
+            <tr><td>3:30 PM</td><td>Bridal party portraits</td></tr>
+            <tr><td>4:00 PM</td><td>Buffer / individual portraits</td></tr>
+            <tr><td>4:30 PM</td><td>Travel to ceremony venue</td></tr>
+            <tr><td>5:00 PM</td><td>Ceremony</td></tr>
+            <tr><td>5:30 PM</td><td>Family formals</td></tr>
+            <tr><td>6:00 PM</td><td>Cocktail hour + couple portraits</td></tr>
+            <tr><td>6:45 PM</td><td>Grand entrance</td></tr>
+            <tr><td>7:00 PM</td><td>First dance, dinner begins</td></tr>
+            <tr><td>7:30 PM</td><td>Golden hour portraits (sneak away 15-20 min)</td></tr>
+            <tr><td>8:00 PM</td><td>Toasts / speeches</td></tr>
+            <tr><td>8:20 PM</td><td>Cake cutting, parent dances</td></tr>
+            <tr><td>8:45 PM</td><td>Open dancing</td></tr>
+            <tr><td>9:45 PM</td><td>Last dance</td></tr>
+            <tr><td>10:00 PM</td><td>Grand send-off</td></tr>
+        </tbody>
+    </table>
+    <p class="form-help" style="margin-top: -1rem; margin-bottom: 1rem;">12 hours is recommended when: there is travel between locations, the bridal party is 10+, a Catholic or long-form ceremony is involved, or you want comprehensive getting-ready coverage.</p>
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Day-Of Timeline</a>
+    <a href="{{ url_for('etiquette_guide_view', wedding_id=wedding.id) }}" class="btn-secondary">Etiquette Guide</a>
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

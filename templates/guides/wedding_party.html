@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Wedding Party Responsibilities - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Wedding Party Responsibilities</h1>
+        <p class="subtitle">What each role handles before, during, and after the wedding</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('print_wedding_party_guide', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Guide</a>
+        <a href="{{ url_for('bridal_party_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Wedding Party</a>
+        <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Dashboard</a>
+    </div>
+</div>
+
+<p class="form-help">Share this guide with your wedding party so everyone knows what's expected. Clear communication upfront prevents misunderstandings and ensures the day runs smoothly.</p>
+
+<!-- Maid/Matron of Honor -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-primary);">&#9679;</span> Maid / Matron of Honor
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Pre-Wedding</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Plan and host the bridal shower (with bridesmaids contributing). Organize the bachelorette party based on the bride's preferences. Attend dress shopping and all fittings. Coordinate bridesmaids on attire, schedules, and logistics. Help with tasks like stuffing invitations, assembling programs, and preparing favors. Be the bride's primary emotional support throughout planning.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Day-Of</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Arrive early to the bridal suite. Help the bride dress &mdash; zip/button the gown, secure the veil, handle jewelry. Assemble and carry the emergency kit (hairspray, bobby pins, sewing kit, stain remover, pain relievers, fashion tape, tissues). Keep the bride calm, on schedule, hydrated, and fed. Announce time checkpoints to bridesmaids.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Ceremony &amp; Reception</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Walk last among the bridesmaids, just before the flower girl. Arrange the bride's train and veil at the altar. Hold both bouquets during the ceremony. Hold the groom's ring. Sign the marriage license as witness. <strong>Bustle the dress at the reception</strong> &mdash; learn the technique at the final fitting. Deliver the MOH speech. Ensure the bride eats throughout the night. Handle mini-crises discreetly.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Post-Wedding</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Collect and secure wedding gifts and cards. Help store the wedding gown. Return borrowed or rented items. Check on the couple's home during the honeymoon (mail, pets, groceries).</p>
+    </div>
+</div>
+
+<!-- Best Man -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-accent);">&#9679;</span> Best Man
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Pre-Wedding</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Plan the bachelor party (match the groom's style, coordinate budgets with groomsmen, cover the groom's share collectively). Coordinate suit/tux fittings and rentals for all groomsmen &mdash; ensure measurements are submitted 2-4 months before. Be the go-to person for all groomsmen questions.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Day-Of</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Create a relaxed getting-ready atmosphere. Help groomsmen with ties and ensure boutonnieres are pinned properly. Make sure the groom eats and stays hydrated. Secure the wedding rings in an inner jacket pocket. Prepare the emergency kit (deodorant, bandages, tissues, pain relievers, stain remover, extra socks/tie, cash).</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Ceremony &amp; Reception</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Stand next to the groom at the altar. Present the rings at the right moment. Sign the marriage license as witness. Give the officiant their payment in a sealed envelope. Deliver the best man speech (5-7 minutes max). Play host &mdash; mingle with guests and help people feel welcome. Check on the groom throughout the night. Help decorate the getaway car (with couple's approval).</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Post-Wedding</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Distribute tip envelopes to vendors. Collect and secure gifts. Return all rented tuxes (including the groom's). Rally guests for the morning-after brunch. Check on the couple's home during the honeymoon.</p>
+    </div>
+</div>
+
+<!-- Bridesmaids -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-success);">&#9679;</span> Bridesmaids
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>What's Expected</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Purchase your own dress, shoes, and accessories. Attend major events (engagement party, bridal shower, bachelorette, rehearsal). Contribute financially to the shower and bachelorette. Buy a bridal shower gift ($50-75) and a wedding gift ($100-150). Show up on time for all wedding day activities. Follow the bride's direction on attire and styling.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Day-Of &amp; Reception</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Help keep the bride calm and collected. Answer texts and calls so the bride doesn't have to. Assist with dress, shoes, and jewelry. Walk in designated order during the processional. Remain photo-ready after the ceremony. Mingle with guests, encourage dancing, help direct guests to facilities. Help pack items at the end of the night (decor, gifts, guest book, leftover cake).</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #ffb74d); background: var(--color-warning-bg, #fff8e1);">
+        <strong>Financial Reality</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Total cost can reach $1,200-2,000+ per person when you include dress (~$130), alterations ($75-150), shoes and accessories ($50-100), hair and makeup ($100-200), bachelorette ($200-1,300+), shower contribution ($50-100), gifts ($150-225), and travel. Be upfront about costs early so everyone can plan.</p>
+    </div>
+</div>
+
+<!-- Groomsmen -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-info, #64b5f6);">&#9679;</span> Groomsmen
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Pre-Wedding &amp; Day-Of</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Collaborate with the best man on bachelor party planning. Obtain attire at own expense and submit measurements 2-4 months prior. Arrive early on the day to help the groom get ready. <strong>Usher guests:</strong> greet arriving guests, guide them to seats, distribute ceremony programs, manage the gift table, and help guests find parking and restrooms.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Post-Wedding</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Help transport gifts to the couple's home. Return all rented tuxes (including the groom's). Rally guests for the morning-after brunch. Decorate the getaway car (with the couple's approval).</p>
+    </div>
+</div>
+
+<!-- Flower Girl & Ring Bearer -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: #e091c0;">&#9679;</span> Flower Girl &amp; Ring Bearer
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid #e091c0; background: var(--color-card-bg, #faf9f7);">
+        <strong>Age &amp; Expectations</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Best age: 4-6 years old &mdash; old enough to follow directions, young enough to be adorable. Including children in the rehearsal is critical as a trial run. Have a parent stand at the end of the aisle as a visual anchor.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid #e091c0; background: var(--color-card-bg, #faf9f7);">
+        <strong>Backup Plans</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Use a buddy system &mdash; pair a younger child with an older one. Have the best man hold the real rings; give the ring bearer faux jewelry. If the child refuses at the last minute, don't force it &mdash; skip the processional walk and seat them with their parents. Accept that a parent may need to walk alongside them.</p>
+    </div>
+</div>
+
+<!-- Parents' Roles -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-warning);">&#9679;</span> Parents' Roles
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #ffb74d); background: var(--color-card-bg, #faf9f7);">
+        <strong>Mother of the Bride</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Accompany the bride to dress shopping. Help coordinate guest list, RSVPs, and seating chart. Help the bride get dressed on the day. Participate in the processional and receiving line. Sit front row. Participate in the parent dance sequence.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #ffb74d); background: var(--color-card-bg, #faf9f7);">
+        <strong>Father of the Bride</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Walk the bride down the aisle. Make the opening reception toast welcoming guests. Father-daughter dance. Be the last to leave the reception and settle outstanding vendor bills.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #ffb74d); background: var(--color-card-bg, #faf9f7);">
+        <strong>Parents of the Groom</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Traditionally host and pay for the rehearsal dinner. Invite the bride's parents to dinner within 4-6 weeks of the engagement. Compile a guest list for their side. Mother-son dance during the reception. Groom's parents now cover approximately 24% of total wedding costs on average.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #ffb74d); background: var(--color-card-bg, #faf9f7);">
+        <strong>Traditional Processional Order</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">1. Officiant takes position. 2. Groom and best man enter. 3. Groomsmen. 4. Bridesmaids. 5. Maid/Matron of Honor. 6. Ring bearer and/or flower girl. 7. Father escorts the bride.</p>
+    </div>
+</div>
+
+<!-- Coordinator vs Wedding Party -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: #8d6e63;">&#9679;</span> Coordinator vs. Wedding Party
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid #8d6e63; background: var(--color-card-bg, #faf9f7);">
+        <strong>What a Coordinator Handles</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Timeline management, vendor communication, ceremony lineup, reception flow (toasts/dances/cake cues), crisis management, setup and teardown logistics.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid #8d6e63; background: var(--color-card-bg, #faf9f7);">
+        <strong>What the Wedding Party Handles</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Emotional support. Holding the bouquet and rings during the ceremony. Signing the marriage license. Giving speeches. Ushering guests. Keeping the dance floor alive. Decorating the getaway car. Keeping the couple fed and hydrated.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #ffb74d); background: var(--color-warning-bg, #fff8e1);">
+        <strong>If You Don't Have a Coordinator</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Designate a "point person" who is NOT in the wedding party (a trusted friend or family member) to serve as coordinator. They hold the vendor contact list, know the timeline, make decisions on your behalf, and field questions. This should never be the bride, groom, MOH, or best man.</p>
+    </div>
+</div>
+
+<!-- Communicating Expectations -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-primary);">&#9679;</span> Communicating Expectations
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Be Direct and Respectful</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Put expectations in writing (email or shared document). Ask about budgets before planning expensive events. Don't assume people know what's expected. Over-communicate rather than under-communicate. Allow creative compromises (e.g., skipping the bachelorette but being present for the ceremony).</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-danger, #e57373); background: var(--color-danger-bg, #fce4ec);">
+        <strong>What NOT to Expect from Your Wedding Party</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Unlimited financial resources. Unlimited availability. Being your unpaid wedding planner. Handling your family drama. Perfection. The friendship should be stronger after the wedding, not damaged by it. Frame conversations around gratitude, not obligation.</p>
+    </div>
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('bridal_party_view', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Wedding Party</a>
+    <a href="{{ url_for('etiquette_guide_view', wedding_id=wedding.id) }}" class="btn-secondary">Etiquette Guide</a>
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

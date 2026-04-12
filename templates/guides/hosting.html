@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Hosting & Thank-You Etiquette - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Hosting &amp; Thank-You Etiquette</h1>
+        <p class="subtitle">Making guests feel welcome and expressing gratitude before, during, and after your wedding</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('print_hosting_guide', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Guide</a>
+        <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Day-Of Timeline</a>
+        <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Dashboard</a>
+    </div>
+</div>
+
+<p class="form-help">Hospitality is the thread that runs through your entire wedding weekend. From the moment guests arrive to the thank-you notes you send afterward, every detail is a chance to show the people you love how much their presence means to you.</p>
+
+<!-- Pre-Wedding Hospitality -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-primary);">&#9679;</span> Pre-Wedding Hospitality
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Welcome Bags</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Include water, local snacks, a weekend itinerary, a hangover kit, and a handwritten note. Deliver bags to the hotel in time for guest check-in. Plan one bag per room or per couple, not per person.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Welcome Party</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Host the evening before the wedding, keeping it to 2-3 hours. Everyone invited to the wedding should be invited to the welcome party. Keep the format casual: appetizers and drinks are sufficient. This is not a gift occasion.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Rehearsal Dinner</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Traditionally hosted by the groom's family. You must invite: wedding party and their partners, the officiant and their partner, parents and grandparents, and siblings. The rehearsal dinner should never be more formal than the wedding itself.</p>
+    </div>
+</div>
+
+<!-- Day-Of Guest Experience -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-accent);">&#9679;</span> Day-Of Guest Experience
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Ceremony Programs</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Include the order of ceremony, the wedding party list, a thank-you message, and an optional "In Loving Memory" section. Sample wording: "We are so grateful you are here to share this day with us. Your love and support mean more than words can say. Thank you for being part of our story."</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Signage</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Prepare signs for parking, welcome, directional arrows, restrooms, seating chart, and an unplugged ceremony notice. Clear signage prevents confusion and reduces the number of questions your wedding party has to field.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Dietary Needs</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Add a dietary needs field to your RSVP. Label all buffet items with common indicators: GF (gluten-free), V (vegetarian), VG (vegan), DF (dairy-free), NF (nut-free). Brief your catering staff on all dietary restrictions. For plated meals, use coded place cards so servers can deliver the correct dish without asking.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Accessibility</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Ensure wheelchair-accessible paths to all key areas. Remove chairs at tables where wheelchair users will sit. Hire a sign language interpreter if needed. Use high-contrast fonts on all signage and printed materials. Add an accommodations request field to your RSVP so guests can communicate needs in advance.</p>
+    </div>
+</div>
+
+<!-- Post-Wedding Thank-You Notes -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-success);">&#9679;</span> Post-Wedding Thank-You Notes
+    </h2>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Timeline</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>When to Send Thank-You Notes</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Pre-wedding gifts: within 2 weeks of receiving them. Shower hosts: within 2 days of the shower. Wedding gifts: within 3 months of your wedding (not a year, despite the common myth). Set a daily goal of writing 3-4 notes to stay on track without burning out.</p>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">The Formula</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Four Parts of a Great Thank-You Note</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Start with a warm greeting. Mention the specific gift. Make a personal connection (how you plan to use it, a memory from the wedding). Close with a warm sign-off. This formula keeps notes sincere and specific without overthinking.</p>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">By Gift Type</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Registry Gift</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Name the specific item and describe how you will use it. Example: "Thank you so much for the beautiful stand mixer. We have already used it twice and our Sunday mornings will never be the same."</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Cash Gift</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Mention your plans for the money but never state the amount. Example: "Your incredibly generous gift is going toward our honeymoon trip to Portugal, and we cannot wait to explore Lisbon thanks to your kindness."</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Group Gift</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Each contributor receives their own individual thank-you note. Never send a single group thank-you, even if multiple people went in on the same gift.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>No Gift</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Focus on their attendance and what it meant to you. Example: "Having you there to celebrate with us made the day so special. Your presence truly was the best gift."</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Off-Registry Gift</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Show that you appreciate the thought behind the gift. Reference what makes the item special or unique, and describe how it will fit into your life together.</p>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Who Else to Thank</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Beyond Gift-Givers</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Parents: for their support, love, and any financial contributions. Wedding party: pair a thank-you note with an attendant gift. Exceptional vendors: a thoughtful note goes a long way and helps their business. Anyone who helped with logistics: DIY helpers, day-of coordinators, friends who went above and beyond.</p>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Format</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Always Handwritten</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Thank-you notes should always be handwritten. No fill-in-the-blank cards, no emails, and no social media posts as substitutes. A handwritten note shows genuine effort and personal care that no other format can match.</p>
+    </div>
+</div>
+
+<!-- Guest Favors -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-info);">&#9679;</span> Guest Favors
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Keep It Simple</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Favors are entirely optional. Edible favors work best: cookies, honey, coffee, or local treats. Avoid overly personalized items (monogrammed koozies, custom bottle openers) as guests rarely keep them.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Donation in Lieu of Favors</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Choose a cause that is meaningful to you as a couple. Place one discreet sign on the favor table letting guests know. Keep the donation amount private. Do not say "in honor of our guests" as this can feel presumptuous.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>When Favors Are Not Needed</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">You are already providing a generous experience with a beautiful celebration, food, drinks, and entertainment. If your budget is tight, favors are an easy place to save. Intimate weddings with fewer than 30 guests rarely need formal favors.</p>
+    </div>
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('etiquette_guide_view', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Etiquette Guide</a>
+    <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Day-Of Timeline</a>
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}
