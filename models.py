@@ -30,8 +30,8 @@ class User(db.Model):
 
 class WeddingAccess(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     role = db.Column(db.String(20), nullable=False, default='owner')  # 'owner', 'planner', 'viewer'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -92,7 +92,7 @@ class Wedding(db.Model):
 class Person(db.Model):
     """Represents each person getting married - inclusive and flexible"""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     
     # Basic Information
     name = db.Column(db.String(200), nullable=False)
@@ -121,7 +121,7 @@ class Person(db.Model):
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     due_date = db.Column(db.DateTime, nullable=False)
@@ -130,7 +130,7 @@ class Task(db.Model):
     priority = db.Column(db.String(20), default='medium')
     category = db.Column(db.String(50))  # ceremony, reception, honeymoon, etc.
     assigned_to = db.Column(db.String(200))  # name of person assigned
-    depends_on_id = db.Column(db.Integer, db.ForeignKey('task.id'))  # task dependency
+    depends_on_id = db.Column(db.Integer, db.ForeignKey('task.id'), index=True)  # task dependency
     is_milestone = db.Column(db.Boolean, default=False)
     months_before = db.Column(db.Integer)  # auto-generated milestone: months before wedding
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -143,7 +143,7 @@ class Task(db.Model):
 
 class Ceremony(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     
     # Venue Details
     venue_name = db.Column(db.String(200))
@@ -190,7 +190,7 @@ class Ceremony(db.Model):
 
 class CeremonyTimelineItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    ceremony_id = db.Column(db.Integer, db.ForeignKey('ceremony.id'), nullable=False)
+    ceremony_id = db.Column(db.Integer, db.ForeignKey('ceremony.id'), nullable=False, index=True)
     order = db.Column(db.Integer, nullable=False)
     item_name = db.Column(db.String(200), nullable=False)
     duration_seconds = db.Column(db.Integer)  # precise to the second
@@ -200,7 +200,7 @@ class CeremonyTimelineItem(db.Model):
 
 class CeremonyReading(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    ceremony_id = db.Column(db.Integer, db.ForeignKey('ceremony.id'), nullable=False)
+    ceremony_id = db.Column(db.Integer, db.ForeignKey('ceremony.id'), nullable=False, index=True)
     title = db.Column(db.String(200))
     author = db.Column(db.String(200))
     reader_name = db.Column(db.String(200))
@@ -213,7 +213,7 @@ class CeremonyReading(db.Model):
 
 class Reception(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     
     # Venue Details
     venue_name = db.Column(db.String(200))
@@ -275,7 +275,7 @@ class Reception(db.Model):
 
 class ReceptionTimelineItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    reception_id = db.Column(db.Integer, db.ForeignKey('reception.id'), nullable=False)
+    reception_id = db.Column(db.Integer, db.ForeignKey('reception.id'), nullable=False, index=True)
     order = db.Column(db.Integer, nullable=False)
     item_name = db.Column(db.String(200), nullable=False)
     scheduled_time = db.Column(db.Time)
@@ -285,7 +285,7 @@ class ReceptionTimelineItem(db.Model):
 
 class MenuItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    reception_id = db.Column(db.Integer, db.ForeignKey('reception.id'), nullable=False)
+    reception_id = db.Column(db.Integer, db.ForeignKey('reception.id'), nullable=False, index=True)
     course = db.Column(db.String(50))  # appetizer, salad, entree, dessert
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
@@ -294,7 +294,7 @@ class MenuItem(db.Model):
 
 class SeatingTable(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    reception_id = db.Column(db.Integer, db.ForeignKey('reception.id'), nullable=False)
+    reception_id = db.Column(db.Integer, db.ForeignKey('reception.id'), nullable=False, index=True)
     table_number = db.Column(db.String(50), nullable=False)
     table_name = db.Column(db.String(100))  # custom name (e.g., "Rose Table")
     capacity = db.Column(db.Integer, nullable=False)
@@ -313,7 +313,7 @@ class SeatingTable(db.Model):
 class VenueFixture(db.Model):
     """Non-table elements on the floor plan: dance floor, stage, bar, catering, etc."""
     id = db.Column(db.Integer, primary_key=True)
-    reception_id = db.Column(db.Integer, db.ForeignKey('reception.id'), nullable=False)
+    reception_id = db.Column(db.Integer, db.ForeignKey('reception.id'), nullable=False, index=True)
     fixture_type = db.Column(db.String(50), nullable=False)  # key into VENUE_FIXTURE_TYPES
     label = db.Column(db.String(200))  # custom label override
     width_inches = db.Column(db.Integer, nullable=False)   # real-world width
@@ -445,9 +445,9 @@ VENUE_FIXTURE_TYPES = {
 class SeatingPreference(db.Model):
     """Tracks which guests should sit together or apart."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
-    guest_id = db.Column(db.Integer, db.ForeignKey('guest.id'), nullable=False)
-    other_guest_id = db.Column(db.Integer, db.ForeignKey('guest.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
+    guest_id = db.Column(db.Integer, db.ForeignKey('guest.id'), nullable=False, index=True)
+    other_guest_id = db.Column(db.Integer, db.ForeignKey('guest.id'), nullable=False, index=True)
     preference_type = db.Column(db.String(20), nullable=False)  # 'together' or 'apart'
     priority = db.Column(db.Integer, default=5)  # 1-10, higher = more important
     notes = db.Column(db.String(200))
@@ -459,7 +459,7 @@ class SeatingPreference(db.Model):
 class GuestGroup(db.Model):
     """Named social groups for organizing guests (e.g., Church, Work, College)."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     name = db.Column(db.String(100), nullable=False)  # "Church Group", "Work Friends", etc.
     color = db.Column(db.String(7))  # optional hex color for visual tagging
     seat_together = db.Column(db.Boolean, default=True)  # should algorithm try to seat together?
@@ -519,7 +519,7 @@ TABLE_ROLES = {
 
 class Honeymoon(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     
     destination = db.Column(db.String(200))
     start_date = db.Column(db.DateTime)
@@ -536,7 +536,7 @@ class Honeymoon(db.Model):
 
 class HoneymoonItinerary(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    honeymoon_id = db.Column(db.Integer, db.ForeignKey('honeymoon.id'), nullable=False)
+    honeymoon_id = db.Column(db.Integer, db.ForeignKey('honeymoon.id'), nullable=False, index=True)
     day_number = db.Column(db.Integer, nullable=False)
     date = db.Column(db.Date)
     location = db.Column(db.String(200))
@@ -547,7 +547,7 @@ class HoneymoonItinerary(db.Model):
 
 class PackingItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    honeymoon_id = db.Column(db.Integer, db.ForeignKey('honeymoon.id'), nullable=False)
+    honeymoon_id = db.Column(db.Integer, db.ForeignKey('honeymoon.id'), nullable=False, index=True)
     item_name = db.Column(db.String(200), nullable=False)
     category = db.Column(db.String(100))  # clothing, toiletries, documents, etc.
     packed = db.Column(db.Boolean, default=False)
@@ -558,7 +558,7 @@ class PackingItem(db.Model):
 
 class WeddingBranding(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     
     # Colors (hex codes)
     primary_color = db.Column(db.String(7))  # #RRGGBB
@@ -584,8 +584,8 @@ class WeddingBranding(db.Model):
 
 class BridalPartyMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
-    person_id = db.Column(db.Integer, db.ForeignKey('person.id'))  # Optional: which person's side
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), index=True)  # Optional: which person's side
     
     name = db.Column(db.String(200), nullable=False)
     name_pronunciation = db.Column(db.String(200))  # phonetic guide for DJ/MC announcements
@@ -625,9 +625,9 @@ class BridalPartyMember(db.Model):
 
 class Guest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
-    table_id = db.Column(db.Integer, db.ForeignKey('seating_table.id'))
-    person_id = db.Column(db.Integer, db.ForeignKey('person.id'))  # Optional: associated person
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
+    table_id = db.Column(db.Integer, db.ForeignKey('seating_table.id'), index=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), index=True)  # Optional: associated person
     
     # Basic Info
     name = db.Column(db.String(200), nullable=False)
@@ -678,7 +678,7 @@ class Guest(db.Model):
 
 class Budget(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     
     total_budget = db.Column(db.Float, nullable=False)
     
@@ -687,7 +687,7 @@ class Budget(db.Model):
 
 class BudgetExpense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    budget_id = db.Column(db.Integer, db.ForeignKey('budget.id'), nullable=False)
+    budget_id = db.Column(db.Integer, db.ForeignKey('budget.id'), nullable=False, index=True)
     
     category = db.Column(db.String(100), nullable=False)  # venue, catering, photography, etc.
     item_name = db.Column(db.String(200), nullable=False)
@@ -707,7 +707,7 @@ class BudgetExpense(db.Model):
 
 class Vendor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     
     category = db.Column(db.String(100), nullable=False)  # photographer, caterer, florist, etc.
     business_name = db.Column(db.String(200), nullable=False)
@@ -751,7 +751,7 @@ class Vendor(db.Model):
 
 class RegistryItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     
     item_name = db.Column(db.String(200), nullable=False)
     store = db.Column(db.String(200))
@@ -767,8 +767,8 @@ class RegistryItem(db.Model):
 
 class Attire(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
-    person_id = db.Column(db.Integer, db.ForeignKey('person.id'))  # Optional: if for someone getting married
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), index=True)  # Optional: if for someone getting married
     
     person_type = db.Column(db.String(100))  # Flexible: "person getting married", "wedding party", custom
     person_name = db.Column(db.String(200))
@@ -804,7 +804,7 @@ class Attire(db.Model):
 
 class DayOfTimelineItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     time = db.Column(db.Time)
     title = db.Column(db.String(200), nullable=False)
@@ -822,7 +822,7 @@ class DayOfTimelineItem(db.Model):
 
 class PhotoShot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     category = db.Column(db.String(50))  # getting_ready, ceremony, portraits, reception, detail
     description = db.Column(db.String(500), nullable=False)
@@ -840,7 +840,7 @@ class PhotoShot(db.Model):
 
 class Song(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     title = db.Column(db.String(200), nullable=False)
     artist = db.Column(db.String(200))
@@ -858,7 +858,7 @@ class Song(db.Model):
 
 class FloralItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     item_type = db.Column(db.String(100), nullable=False)  # bouquet, boutonniere, centerpiece, arch, corsage, etc.
     recipient = db.Column(db.String(200))  # who it's for
@@ -876,7 +876,7 @@ class FloralItem(db.Model):
 
 class Invitation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     item_type = db.Column(db.String(100), nullable=False)  # save_the_date, invitation, rsvp_card, program, menu_card, thank_you, place_card
     designer = db.Column(db.String(200))
@@ -896,7 +896,7 @@ class Invitation(db.Model):
 
 class RehearsalDinner(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     date = db.Column(db.Date)
     start_time = db.Column(db.Time)
@@ -917,7 +917,7 @@ class RehearsalDinner(db.Model):
 
 class Accommodation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     accommodation_type = db.Column(db.String(50), nullable=False)  # hotel_block, recommended, transportation, parking
     name = db.Column(db.String(200), nullable=False)
@@ -944,7 +944,7 @@ class Accommodation(db.Model):
 
 class MarriageLicense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     county = db.Column(db.String(200))
     state = db.Column(db.String(100))
@@ -967,7 +967,7 @@ class MarriageLicense(db.Model):
 
 class HairMakeup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     person_name = db.Column(db.String(200), nullable=False)
     service_type = db.Column(db.String(50))  # hair, makeup, both
@@ -988,7 +988,7 @@ class HairMakeup(db.Model):
 class WeddingParticipant(db.Model):
     """Any individual with a role on the wedding day - couples, family, party, vendors, handlers."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     name = db.Column(db.String(200), nullable=False)
     name_pronunciation = db.Column(db.String(200))  # phonetic guide for DJ/MC announcements
@@ -999,8 +999,8 @@ class WeddingParticipant(db.Model):
     notes = db.Column(db.Text)
 
     # Optional links to existing records
-    person_id = db.Column(db.Integer, db.ForeignKey('person.id'))
-    bridal_party_id = db.Column(db.Integer, db.ForeignKey('bridal_party_member.id'))
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), index=True)
+    bridal_party_id = db.Column(db.Integer, db.ForeignKey('bridal_party_member.id'), index=True)
 
     person = db.relationship('Person', backref='participant_records', foreign_keys=[person_id])
     bridal_party_member = db.relationship('BridalPartyMember', backref='participant_records', foreign_keys=[bridal_party_id])
@@ -1044,8 +1044,8 @@ class TraditionalElement(db.Model):
 class WeddingElement(db.Model):
     """Tracks which traditional elements a wedding has included"""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
-    element_id = db.Column(db.Integer, db.ForeignKey('traditional_element.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
+    element_id = db.Column(db.Integer, db.ForeignKey('traditional_element.id'), nullable=False, index=True)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -1057,7 +1057,7 @@ class WeddingElement(db.Model):
 
 class ContingencyPlan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     category = db.Column(db.String(100), nullable=False)  # weather, vendor_backup, venue_backup, emergency, transportation, power_outage, other
     title = db.Column(db.String(200), nullable=False)
@@ -1074,7 +1074,7 @@ class ContingencyPlan(db.Model):
 
 class BudgetCategoryLimit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    budget_id = db.Column(db.Integer, db.ForeignKey('budget.id'), nullable=False)
+    budget_id = db.Column(db.Integer, db.ForeignKey('budget.id'), nullable=False, index=True)
 
     category = db.Column(db.String(100), nullable=False)
     limit_amount = db.Column(db.Float, nullable=False)
@@ -1087,7 +1087,7 @@ class BudgetCategoryLimit(db.Model):
 
 class TipItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     recipient = db.Column(db.String(200), nullable=False)  # e.g., "Lead Photographer", "DJ", "Catering Staff"
     service_category = db.Column(db.String(100))  # photography, catering, music, beauty, transportation, venue, planner, officiant, other
@@ -1106,7 +1106,7 @@ class TipItem(db.Model):
 
 class Gift(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     event = db.Column(db.String(50), nullable=False)  # shower, wedding, engagement, other
     from_name = db.Column(db.String(200), nullable=False)
@@ -1125,7 +1125,7 @@ class Gift(db.Model):
 
 class VendorNote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    vendor_id = db.Column(db.Integer, db.ForeignKey('vendor.id'), nullable=False)
+    vendor_id = db.Column(db.Integer, db.ForeignKey('vendor.id'), nullable=False, index=True)
     note_type = db.Column(db.String(50))  # email, call, meeting, other
     subject = db.Column(db.String(200))
     content = db.Column(db.Text)
@@ -1139,7 +1139,7 @@ class VendorNote(db.Model):
 
 class VendorQuote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     category = db.Column(db.String(100), nullable=False)  # photographer, caterer, etc.
     vendor_name = db.Column(db.String(200), nullable=False)
     contact_info = db.Column(db.String(200))
@@ -1159,7 +1159,7 @@ class VendorQuote(db.Model):
 
 class SpeechToast(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     speaker_name = db.Column(db.String(200), nullable=False)
     speech_type = db.Column(db.String(50))  # toast, speech, blessing, roast
     order = db.Column(db.Integer, default=0)
@@ -1175,7 +1175,7 @@ class SpeechToast(db.Model):
 
 class WeddingFavor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     description = db.Column(db.String(500), nullable=False)
     quantity = db.Column(db.Integer)
     cost_per_item = db.Column(db.Float)
@@ -1195,8 +1195,8 @@ class WeddingFavor(db.Model):
 
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     user_name = db.Column(db.String(200))
     action = db.Column(db.String(50), nullable=False)  # created, updated, deleted
     entity_type = db.Column(db.String(100))  # guest, vendor, task, expense, etc.
@@ -1212,8 +1212,8 @@ class ActivityLog(db.Model):
 
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     user_name = db.Column(db.String(200))
     entity_type = db.Column(db.String(100), nullable=False)  # vendor, task, expense, etc.
     entity_id = db.Column(db.Integer, nullable=False)
@@ -1304,7 +1304,7 @@ POST_WEDDING_TASKS = [
 class InventoryBin(db.Model):
     """A bin/box used to organize and transport wedding items."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
     label = db.Column(db.String(100), nullable=False)  # e.g., "Table 5 Box", "Ceremony Bin A"
     area = db.Column(db.String(50))  # ceremony, cocktail_hour, reception, other
     table_number = db.Column(db.Integer)  # optional: which table this bin is for
@@ -1333,8 +1333,8 @@ class InventoryBin(db.Model):
 class InventoryItem(db.Model):
     """An individual inventory item for the wedding."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
-    bin_id = db.Column(db.Integer, db.ForeignKey('inventory_bin.id'), nullable=True)  # optional bin assignment
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
+    bin_id = db.Column(db.Integer, db.ForeignKey('inventory_bin.id'), nullable=True, index=True)  # optional bin assignment
 
     name = db.Column(db.String(200), nullable=False)
     category = db.Column(db.String(50))  # centerpiece, linen, flatware, candle, signage, favor, decor, tableware, other
@@ -1409,7 +1409,7 @@ INVITATION_WORDING_TEMPLATES = {
 class EmergencyKitItem(db.Model):
     """Custom emergency kit item - users can add/remove supplies from the checklist."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     item_name = db.Column(db.String(200), nullable=False)
     category = db.Column(db.String(50))  # fashion, health, beauty, tools, food, documents
@@ -1426,7 +1426,7 @@ class EmergencyKitItem(db.Model):
 class PreWeddingEvent(db.Model):
     """Track pre-wedding events: engagement party, bridal shower, bachelor/ette, welcome party, etc."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     event_type = db.Column(db.String(50), nullable=False)  # engagement_party, bridal_shower, bachelor, bachelorette, welcome_party, send_off_brunch, other
     name = db.Column(db.String(200), nullable=False)
@@ -1468,7 +1468,7 @@ PRE_WEDDING_EVENT_TYPES = [
 class SignageItem(db.Model):
     """Track all signs and printed materials needed for the wedding."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     name = db.Column(db.String(200), nullable=False)
     category = db.Column(db.String(50))  # ceremony, reception, directional, informational, other
@@ -1516,7 +1516,7 @@ DEFAULT_SIGNAGE_ITEMS = [
 class DayOfContact(db.Model):
     """Master contact sheet for the wedding day - vendors, VIPs, and key people."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     name = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(100), nullable=False)  # e.g., "Photographer", "DJ", "Day-of Coordinator", "MOH", "Best Man"
@@ -1534,7 +1534,7 @@ class DayOfContact(db.Model):
 class DayOfTask(db.Model):
     """Task delegation for wedding day - who handles what."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     task = db.Column(db.String(300), nullable=False)
     assigned_to = db.Column(db.String(200))
@@ -1577,7 +1577,7 @@ DEFAULT_DAY_OF_TASKS = [
 class PackingListItem(db.Model):
     """Wedding day packing list - everything to bring on the big day."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     item_name = db.Column(db.String(200), nullable=False)
     category = db.Column(db.String(50))  # documents, attire, accessories, ceremony, reception, personal, gifts, other
@@ -1643,7 +1643,7 @@ DEFAULT_PACKING_LIST = [
 class NameChangeTask(db.Model):
     """Post-wedding name change checklist tracker."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     task_name = db.Column(db.String(300), nullable=False)
     category = db.Column(db.String(50))  # government, financial, insurance, employment, medical, personal, other
@@ -1694,7 +1694,7 @@ DEFAULT_NAME_CHANGE_TASKS = [
 class CustomRsvpQuestion(db.Model):
     """Custom questions to add to the RSVP form beyond meal choice and dietary restrictions."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     question_text = db.Column(db.String(500), nullable=False)
     question_type = db.Column(db.String(20), default='text')  # text, select, checkbox
@@ -1709,8 +1709,8 @@ class CustomRsvpQuestion(db.Model):
 class CustomRsvpAnswer(db.Model):
     """Guest answers to custom RSVP questions."""
     id = db.Column(db.Integer, primary_key=True)
-    question_id = db.Column(db.Integer, db.ForeignKey('custom_rsvp_question.id'), nullable=False)
-    guest_id = db.Column(db.Integer, db.ForeignKey('guest.id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('custom_rsvp_question.id'), nullable=False, index=True)
+    guest_id = db.Column(db.Integer, db.ForeignKey('guest.id'), nullable=False, index=True)
 
     answer_text = db.Column(db.Text)
 
@@ -1759,7 +1759,7 @@ HIDDEN_COST_REMINDERS = [
 class AccessibilityItem(db.Model):
     """Track accessibility needs and accommodations for guests."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     item_name = db.Column(db.String(300), nullable=False)
     category = db.Column(db.String(50))  # mobility, hearing, vision, sensory, dietary, seating, other
@@ -1798,7 +1798,7 @@ DEFAULT_ACCESSIBILITY_CHECKLIST = [
 class SocialMediaSettings(db.Model):
     """Wedding social media preferences and hashtag."""
     id = db.Column(db.Integer, primary_key=True)
-    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False, index=True)
 
     wedding_hashtag = db.Column(db.String(200))
     backup_hashtags = db.Column(db.Text)  # JSON array of alternatives
