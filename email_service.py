@@ -9,6 +9,21 @@ import os
 logger = logging.getLogger(__name__)
 
 
+def clean_header(value):
+    """Flatten a value for use as an email header.
+
+    Header values here are built from user-supplied text — a task title, a guest
+    name, a subject typed into a form. Python's email library refuses to
+    serialize a header containing a newline (it raises HeaderParseError rather
+    than allowing header injection), which is the right call but happens deep
+    inside send, where the failure surfaces as a message that silently never
+    goes out. Collapsing the whitespace here keeps the message sendable.
+    """
+    if value is None:
+        return ''
+    return ' '.join(str(value).split())
+
+
 def _get_smtp_config():
     """Return SMTP settings from environment variables."""
     smtp_user = os.environ.get('SMTP_USER')
@@ -35,7 +50,7 @@ def _send_message(msg, from_email_override=None):
                      msg['Subject'], msg['To'])
         return False
 
-    msg['From'] = from_addr
+    msg['From'] = clean_header(from_addr)
 
     try:
         with smtplib.SMTP(cfg['host'], cfg['port']) as server:
@@ -52,8 +67,8 @@ def _send_message(msg, from_email_override=None):
 def send_reminder_email(to_email, couple_names, task_title, task_description, due_date):
     """Send a task-deadline reminder to the couple."""
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = f'Wedding Reminder: {task_title}'
-    msg['To'] = to_email
+    msg['Subject'] = clean_header(f'Wedding Reminder: {task_title}')
+    msg['To'] = clean_header(to_email)
 
     due_str = due_date.strftime('%B %d, %Y')
     desc_line = f"\n{task_description}" if task_description else ''
@@ -98,8 +113,8 @@ def send_guest_email(to_email, guest_name, couple_names, wedding_date,
     venue check-in.
     """
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['To'] = to_email
+    msg['Subject'] = clean_header(subject)
+    msg['To'] = clean_header(to_email)
 
     safe_guest = escape(guest_name)
     safe_couple = escape(couple_names)
@@ -167,13 +182,14 @@ def send_pdf_email(to_email, subject, body_text, pdf_bytes, pdf_filename, from_e
         True on success, False on failure.
     """
     msg = MIMEMultipart('mixed')
-    msg['Subject'] = subject
-    msg['To'] = to_email
+    msg['Subject'] = clean_header(subject)
+    msg['To'] = clean_header(to_email)
 
     msg.attach(MIMEText(body_text, 'plain'))
 
     pdf_part = MIMEApplication(pdf_bytes, _subtype='pdf')
-    pdf_part.add_header('Content-Disposition', 'attachment', filename=pdf_filename)
+    pdf_part.add_header('Content-Disposition', 'attachment',
+                        filename=clean_header(pdf_filename))
     msg.attach(pdf_part)
 
     return _send_message(msg, from_email_override=from_email)

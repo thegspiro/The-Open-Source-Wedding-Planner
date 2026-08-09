@@ -384,7 +384,8 @@ OWNER_ONLY_ENDPOINTS = {
     'collaborator_add', 'collaborator_update', 'collaborator_remove',
     # Publishing the wedding to unauthenticated visitors, or rotating and
     # withdrawing the tokens that control that exposure
-    'rsvp_enable', 'share_enable', 'share_regenerate', 'share_revoke',
+    'rsvp_enable', 'rsvp_regenerate',
+    'share_enable', 'share_regenerate', 'share_revoke',
     'guest_links_generate',
 }
 
@@ -760,7 +761,11 @@ def user_settings():
 # ============================================
 
 @app.route('/version')
+@login_required
 def app_version():
+    # Behind a login: an exact build number lets an attacker match the deployment
+    # against published advisories before probing it. /health is the endpoint for
+    # uptime monitoring and stays open.
     return {'version': __version__}
 
 @app.route('/')
@@ -3768,9 +3773,29 @@ def rsvp_enable(wedding_id):
     if request.form.get('rsvp_message'):
         wedding.rsvp_message = request.form.get('rsvp_message')
     db.session.commit()
-    status = 'enabled' if wedding.rsvp_enabled else 'disabled'
-    flash(f'RSVP portal {status}!', 'success')
+    if wedding.rsvp_enabled:
+        flash('RSVP portal enabled!', 'success')
+    else:
+        # Disabling stops submissions, but the token is kept so re-enabling
+        # restores the same link. Say so, because "disabled" reads like the URL
+        # is dead and it is not — it is dormant.
+        flash('RSVP portal disabled. Your existing RSVP link is paused, not '
+              'retired — re-enabling will make it work again. Generate a new '
+              'link if the old one should stop working for good.', 'success')
     return redirect(url_for('guests_view', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/rsvp/regenerate', methods=['POST'])
+@login_required
+def rsvp_regenerate(wedding_id):
+    """Issue a new RSVP token, retiring every link handed out so far."""
+    wedding = get_wedding_or_403(wedding_id)
+    wedding.rsvp_token = generate_token()
+    log_activity(wedding_id, 'updated', 'RSVP link',
+                 details='Regenerated; previously shared links no longer work')
+    db.session.commit()
+    flash('New RSVP link generated. Links you shared previously no longer work.', 'success')
+    return safe_redirect(url_for('guests_view', wedding_id=wedding_id))
 
 # ============================================
 # GUEST CHECK-IN (PUBLIC - COOKIE-BASED)

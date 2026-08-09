@@ -36,9 +36,21 @@
         {% if wedding.rsvp_deadline %}
         <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.5rem;">Deadline: {{ wedding.rsvp_deadline.strftime('%B %d, %Y') }}</p>
         {% endif %}
-        <form method="POST" action="{{ url_for('rsvp_enable', wedding_id=wedding.id) }}" style="margin-top: 0.75rem;">
-            <button type="submit" class="btn-danger btn-small">Disable Portal</button>
-        </form>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;">
+            <form method="POST" action="{{ url_for('rsvp_regenerate', wedding_id=wedding.id) }}"
+                  onsubmit="return confirm('Generate a new RSVP link? Every link you have already sent to guests will stop working.');">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-secondary btn-small">Generate New Link</button>
+            </form>
+            <form method="POST" action="{{ url_for('rsvp_enable', wedding_id=wedding.id) }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-danger btn-small">Disable Portal</button>
+            </form>
+        </div>
+        <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.5rem;">
+            Disabling pauses the portal but keeps this link, so re-enabling brings it back.
+            Generate a new link to retire the old one permanently.
+        </p>
     {% else %}
         <p style="color: var(--color-text-light); font-size: 0.9rem; margin-bottom: 0.75rem;">Let guests respond to your invitation online. Enable the portal and share the link.</p>
         <form method="POST" action="{{ url_for('rsvp_enable', wedding_id=wedding.id) }}" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
