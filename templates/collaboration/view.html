@@ -82,10 +82,27 @@
             <input type="text" id="share-url" value="{{ url_for('shared_view', token=wedding.share_token, _external=True) }}" readonly>
             <button class="btn-secondary btn-small" onclick="document.getElementById('share-url').select(); document.execCommand('copy');">Copy Link</button>
         </div>
+        <div class="share-actions">
+            <form method="POST" action="{{ url_for('share_regenerate', wedding_id=wedding.id) }}"
+                  onsubmit="return confirm('Generate a new link? The current link will stop working for anyone you have already sent it to.');">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-secondary btn-small">Generate New Link</button>
+            </form>
+            <form method="POST" action="{{ url_for('share_revoke', wedding_id=wedding.id) }}"
+                  onsubmit="return confirm('Revoke this link? Anyone holding it will immediately lose access.');">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-danger btn-small">Revoke Link</button>
+            </form>
+        </div>
+        <p class="share-hint">
+            Generating a new link replaces the current one. Revoking removes public access
+            altogether — you can always create a new link later.
+        </p>
     </div>
     {% else %}
     <p>Generate a shareable link so others can view your wedding details without an account.</p>
     <form method="POST" action="{{ url_for('share_enable', wedding_id=wedding.id) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn-primary">Generate Shareable Link</button>
     </form>
     {% endif %}
@@ -121,6 +138,17 @@
     border-radius: 4px;
     font-size: 0.9rem;
     background: white;
+}
+.share-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+.share-hint {
+    margin: 0.75rem 0 0;
+    font-size: 0.85rem;
+    color: #666;
 }
 .role-badge {
     background: #fff3f8;
