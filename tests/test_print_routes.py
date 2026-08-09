@@ -5,30 +5,6 @@ from unittest.mock import patch, MagicMock
 from models import Wedding, db
 
 
-# ---------------------------------------------------------------------------
-# Helper: monkey-patch get_wedding_or_403 so it doesn't infinitely recurse
-# (the production code has a bug where it calls itself instead of
-#  Wedding.query.get_or_404).  We patch it to do the correct thing.
-# ---------------------------------------------------------------------------
-
-def _patched_get_wedding(wedding_id):
-    from flask import g, abort
-    from models import Wedding, WeddingAccess
-    wedding = db.session.get(Wedding, wedding_id)
-    if wedding is None:
-        abort(404)
-    user = g.get("user")
-    if not user:
-        abort(401)
-    access = WeddingAccess.query.filter_by(
-        user_id=user.id, wedding_id=wedding_id
-    ).first()
-    if not access:
-        abort(403, description="You do not have access to this wedding.")
-    g.wedding_role = access.role
-    return wedding
-
-
 # All print routes that accept only wedding_id (no extra path params)
 PRINT_ROUTES = [
     "/wedding/{wid}/print",
@@ -60,8 +36,7 @@ class TestPrintRoutesAuthenticated:
     """Print routes should return 200 for an authenticated user with access."""
 
     @pytest.mark.parametrize("route_tpl", PRINT_ROUTES)
-    @patch("app.get_wedding_or_403", side_effect=_patched_get_wedding)
-    def test_returns_200(self, mock_gw, auth_client, route_tpl):
+    def test_returns_200(self, auth_client, route_tpl):
         client, seed = auth_client
         url = route_tpl.format(wid=seed["wedding_id"])
         resp = client.get(url)
@@ -114,8 +89,7 @@ class TestPrintRoutesPDFFormat:
     ]
 
     @pytest.mark.parametrize("route_tpl", PDF_ROUTES)
-    @patch("app.get_wedding_or_403", side_effect=_patched_get_wedding)
-    def test_pdf_format_returns_pdf_content_type(self, mock_gw, auth_client, route_tpl):
+    def test_pdf_format_returns_pdf_content_type(self, auth_client, route_tpl):
         """When ?format=pdf is given, response Content-Type should be application/pdf."""
         client, seed = auth_client
         url = route_tpl.format(wid=seed["wedding_id"]) + "?format=pdf"

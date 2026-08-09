@@ -1,29 +1,7 @@
 """Tests for core routes: index, dashboard, create wedding, and health check."""
 
 import pytest
-from unittest.mock import patch
 from models import db, Wedding, WeddingAccess, EmergencyKitItem, Person
-
-
-# ---------------------------------------------------------------------------
-# Patch helper (same pattern as existing tests)
-# ---------------------------------------------------------------------------
-
-def _patched_get_wedding(wedding_id):
-    from flask import g, abort
-    wedding = db.session.get(Wedding, wedding_id)
-    if wedding is None:
-        abort(404)
-    user = g.get("user")
-    if not user:
-        abort(401)
-    access = WeddingAccess.query.filter_by(
-        user_id=user.id, wedding_id=wedding_id
-    ).first()
-    if not access:
-        abort(403, description="You do not have access to this wedding.")
-    g.wedding_role = access.role
-    return wedding
 
 
 class TestHealthCheck:
@@ -54,8 +32,7 @@ class TestIndex:
 class TestDashboard:
     """Tests for the /wedding/<id> dashboard route."""
 
-    @patch("app.get_wedding_or_403", side_effect=_patched_get_wedding)
-    def test_dashboard_returns_200_for_auth_user(self, mock_gw, auth_client):
+    def test_dashboard_returns_200_for_auth_user(self, auth_client):
         client, seed = auth_client
         resp = client.get(f'/wedding/{seed["wedding_id"]}')
         assert resp.status_code == 200

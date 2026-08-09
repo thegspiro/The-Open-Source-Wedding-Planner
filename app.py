@@ -43,7 +43,7 @@ import math
 from functools import wraps
 
 logger = logging.getLogger(__name__)
-from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission, validate_time_string, validate_name_pronunciation, validate_text_field
+from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission, validate_time_string, validate_name_pronunciation, validate_text_field, ROLE_HIERARCHY
 
 __version__ = '2.10.0'
 
@@ -60,6 +60,20 @@ if app.config['SECRET_KEY'] in ('dev-secret-key-change-in-production', 'your-sec
         '    Then set it:     Copy .env.example to .env and update SECRET_KEY'
     )
 
+# Behind a reverse proxy, request.remote_addr is the proxy's address for every
+# visitor, which collapses each rate-limit bucket into a single global one — ten
+# bad logins would then lock out every user. ProxyFix restores the real client IP
+# from X-Forwarded-For.
+#
+# Off by default and opt-in: X-Forwarded-For is trivially spoofable, so trusting
+# it on a directly-exposed install would let an attacker forge a fresh IP per
+# request and bypass rate limiting entirely. Set TRUST_PROXY=true only when the
+# app genuinely sits behind a proxy that overwrites the header.
+if os.environ.get('TRUST_PROXY', 'false').lower() in ('true', '1', 'yes'):
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    logger.info('TRUST_PROXY enabled: reading client IP from X-Forwarded-For.')
+
 db.init_app(app)
 migrate = Migrate(app, db)
 
@@ -68,10 +82,18 @@ init_security(app)
 
 
 # Custom error handlers to prevent information leakage
+@app.errorhandler(401)
+def unauthorized(e):
+    flash('Please log in to access this page.', 'error')
+    return redirect(url_for('login')), 302
+
 @app.errorhandler(403)
 def forbidden(e):
-    flash(str(e.description) if hasattr(e, 'description') else 'Access denied.', 'error')
-    return redirect(url_for('index'))
+    # Render at 403 rather than redirecting: a refusal that returns a redirect
+    # is indistinguishable from a successful action to anything that isn't a
+    # human reading flash messages, including the test suite.
+    description = str(e.description) if getattr(e, 'description', None) else 'You do not have access to this page.'
+    return render_template('errors/403.html', description=description), 403
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -313,20 +335,86 @@ def get_user_weddings(user):
     return Wedding.query.filter(Wedding.id.in_(wedding_ids)).order_by(Wedding.wedding_date).all()
 
 
-def get_wedding_or_403(wedding_id):
-    """Get a wedding, checking that the current user has access.
+# ============================================
+# WEDDING ACCESS ENFORCEMENT
+# ============================================
+#
+# Access control is enforced centrally in enforce_wedding_access() below, which
+# runs before every request. Any route whose URL carries a wedding_id is checked
+# there, so the guarantee is a property of the URL rather than something each of
+# the 300+ handlers has to remember to do.
+#
+# Required role is derived from the HTTP method: safe methods need 'viewer',
+# state-changing methods need 'planner'. Endpoints that destroy the wedding,
+# manage who can reach it, or publish it to the world require 'owner' and are
+# listed explicitly.
 
-    Aborts with 403 if the user does not have access.
+OWNER_ONLY_ENDPOINTS = {
+    # Destroying the wedding and everything under it
+    'delete_wedding',
+    # Deciding who else can reach this wedding
+    'collaborator_add', 'collaborator_update', 'collaborator_remove',
+    # Publishing the wedding to unauthenticated visitors, or rotating the
+    # tokens that control that exposure
+    'rsvp_enable', 'share_enable', 'guest_links_generate',
+}
+
+
+def required_wedding_role(endpoint, method):
+    """Return the minimum role needed for an endpoint/method pair."""
+    if endpoint in OWNER_ONLY_ENDPOINTS:
+        return 'owner'
+    if method in ('GET', 'HEAD', 'OPTIONS'):
+        return 'viewer'
+    return 'planner'
+
+
+@app.before_request
+def enforce_wedding_access():
+    """Verify the current user may act on the wedding named in the URL.
+
+    Runs for every request. Routes without a wedding_id are unaffected; routes
+    with one are refused unless the user holds a WeddingAccess row of sufficient
+    role. Sets g.wedding and g.wedding_role for the handler to use.
     """
-    wedding = Wedding.query.get_or_404(wedding_id)
+    view_args = request.view_args or {}
+    if 'wedding_id' not in view_args:
+        return
+
+    wedding = Wedding.query.get_or_404(view_args['wedding_id'])
     user = g.get('user')
     if not user:
         abort(401)
-    access = WeddingAccess.query.filter_by(user_id=user.id, wedding_id=wedding_id).first()
+
+    access = WeddingAccess.query.filter_by(
+        user_id=user.id, wedding_id=wedding.id
+    ).first()
     if not access:
         abort(403, description='You do not have access to this wedding.')
+
+    needed = required_wedding_role(request.endpoint, request.method)
+    if ROLE_HIERARCHY.get(access.role, 0) < ROLE_HIERARCHY[needed]:
+        abort(403, description=(
+            f'This action requires {needed} access. You are a {access.role} '
+            'on this wedding.'
+        ))
+
+    g.wedding = wedding
     g.wedding_role = access.role
-    return wedding
+
+
+def get_wedding_or_403(wedding_id):
+    """Return the wedding for the current request.
+
+    Access was already verified by enforce_wedding_access() before the handler
+    ran, so this is just a typed accessor for g.wedding. It stays as a function
+    because 234 handlers call it.
+    """
+    wedding = g.get('wedding')
+    if wedding is not None and wedding.id == wedding_id:
+        return wedding
+    # Defensive fallback: a handler invoked outside the normal request path.
+    return Wedding.query.get_or_404(wedding_id)
 
 
 def get_entity_or_404(model, entity_id, wedding_id):
@@ -1211,6 +1299,7 @@ def onboarding_generate_tasks(wedding_id):
                          existing_milestones=existing_milestones)
 
 @app.route('/wedding/<int:wedding_id>/onboarding/reset', methods=['POST'])
+@login_required
 def onboarding_reset(wedding_id):
     """Reset onboarding progress so user can redo setup modules"""
     wedding = get_wedding_or_403(wedding_id)
@@ -3465,11 +3554,31 @@ def rsvp_portal(token):
     return render_template('rsvp/portal.html', wedding=wedding, guests=guests,
                          menu_items=menu_items, token=token, custom_questions=custom_questions)
 
+def identified_guest(wedding):
+    """Return the guest proven by the caller's check-in cookie, if any.
+
+    The cookie is only ever issued to someone who followed their own emailed
+    /g/<token> link, so it is the one piece of evidence in the public RSVP flow
+    that ties a request to a specific invitee. A typed-in name is not evidence.
+    """
+    cookie_token = request.cookies.get(f'guest_{wedding.id}')
+    if not cookie_token:
+        return None
+    return Guest.query.filter_by(
+        guest_token=cookie_token, wedding_id=wedding.id
+    ).first()
+
+
 @app.route('/rsvp/<token>/submit', methods=['POST'])
 @rate_limit(max_requests=20, window_seconds=3600)
 def rsvp_submit(token):
     """Process RSVP submission from public portal."""
     wedding = Wedding.query.filter_by(rsvp_token=token).first_or_404()
+
+    # The portal page checks this too, but this is the route that writes, and an
+    # RSVP link stays in circulation long after the couple closes responses.
+    if not wedding.rsvp_enabled:
+        return render_template('rsvp/disabled.html', wedding=wedding), 403
 
     # Validate and sanitize all input
     is_valid, errors, data = validate_rsvp_submission(wedding, request.form)
@@ -3485,11 +3594,26 @@ def rsvp_submit(token):
     rsvp_notes = data['rsvp_notes']
     plus_one_name = data['plus_one_name']
 
+    caller = identified_guest(wedding)
     guest = Guest.query.filter_by(wedding_id=wedding.id, name=guest_name).first()
+    created_guest = False
+
     if not guest:
-        # Allow new guests to RSVP (they type their name)
+        # Walk-ups may still RSVP by typing a name — this creates a new record
+        # and so cannot overwrite anyone.
         guest = Guest(wedding_id=wedding.id, name=guest_name, guest_token=generate_token())
         db.session.add(guest)
+        created_guest = True
+    elif guest.rsvp_date and (caller is None or caller.id != guest.id):
+        # The guest has already responded and the caller has not proven they are
+        # that guest. Refuse rather than let anyone who knows the name rewrite a
+        # response — including dietary restrictions, which the caterer acts on.
+        flash(
+            'A response has already been recorded for that name. To change it, '
+            'use the personal link from your invitation email, or contact the couple.',
+            'error',
+        )
+        return redirect(url_for('rsvp_portal', token=token))
 
     # Ensure guest has a check-in token
     if not guest.guest_token:
@@ -3525,15 +3649,20 @@ def rsvp_submit(token):
 
     db.session.commit()
 
-    # Set cookie so this guest is recognized at venue check-in
     response = make_response(render_template('rsvp/thank_you.html', wedding=wedding, guest=guest, token=token))
-    response.set_cookie(
-        f'guest_{wedding.id}',
-        guest.guest_token,
-        max_age=60 * 60 * 24 * 90,
-        httponly=True,
-        samesite='Lax',
-    )
+
+    # Issue the check-in cookie only when this request created the guest record,
+    # or when the caller already proved they are that guest. Handing it out on a
+    # bare name match would let anyone who knows a guest's name walk away with
+    # that guest's venue identity.
+    if created_guest or (caller is not None and caller.id == guest.id):
+        response.set_cookie(
+            f'guest_{wedding.id}',
+            guest.guest_token,
+            max_age=60 * 60 * 24 * 90,
+            httponly=True,
+            samesite='Lax',
+        )
     return response
 
 @app.route('/wedding/<int:wedding_id>/rsvp/enable', methods=['POST'])
@@ -3631,21 +3760,14 @@ def guest_checkin_lookup(rsvp_token):
         table_name = guest.seating_table.table_name
         table_number = guest.seating_table.table_number
 
-    # If found and guest has a token, set the cookie for next time
-    response = make_response(render_template('checkin/table.html',
+    # Deliberately no cookie here. Showing someone their table when they type
+    # their name at the venue is the point of this page; minting a 90-day
+    # identity credential from a name anyone could guess is not. Guests who want
+    # to be remembered follow the /g/<token> link emailed to them.
+    return render_template('checkin/table.html',
         guest=guest, wedding=wedding,
         table_name=table_name, table_number=table_number,
-        rsvp_token=rsvp_token, searched_name=name))
-
-    if guest and guest.guest_token:
-        response.set_cookie(
-            f'guest_{wedding.id}',
-            guest.guest_token,
-            max_age=60 * 60 * 24 * 90,
-            httponly=True,
-            samesite='Lax',
-        )
-    return response
+        rsvp_token=rsvp_token, searched_name=name)
 
 
 @app.route('/wedding/<int:wedding_id>/guest-links')
