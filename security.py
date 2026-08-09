@@ -9,15 +9,13 @@ Provides:
 - Session security hardening
 """
 
-import hashlib
 import hmac
-import os
 import re
 import secrets
 import time
 from functools import wraps
 
-from flask import abort, g, request, session
+from flask import abort, request, session
 
 
 # ============================================
@@ -335,51 +333,22 @@ def validate_password_strength(password):
 
 
 # ============================================
-# AUTHORIZATION HELPERS
+# AUTHORIZATION
 # ============================================
 
-def require_wedding_access(min_role='viewer'):
-    """Decorator that checks the current user has access to the wedding.
-
-    Expects the route to have a 'wedding_id' parameter.
-    Sets g.wedding and g.wedding_role for use in the route handler.
-
-    Args:
-        min_role: Minimum role required. One of 'viewer', 'planner', 'owner'.
-    """
-    ROLE_HIERARCHY = {'viewer': 0, 'planner': 1, 'owner': 2}
-
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            from models import Wedding, WeddingAccess
-            wedding_id = kwargs.get('wedding_id')
-            if wedding_id is None:
-                abort(400)
-
-            wedding = Wedding.query.get_or_404(wedding_id)
-            user = g.get('user')
-            if not user:
-                abort(401)
-
-            access = WeddingAccess.query.filter_by(
-                user_id=user.id, wedding_id=wedding_id
-            ).first()
-
-            if not access:
-                abort(403, description='You do not have access to this wedding.')
-
-            user_role_level = ROLE_HIERARCHY.get(access.role, 0)
-            required_level = ROLE_HIERARCHY.get(min_role, 0)
-
-            if user_role_level < required_level:
-                abort(403, description='You do not have sufficient permissions.')
-
-            g.wedding = wedding
-            g.wedding_role = access.role
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
+# Collaborator roles, least to most privileged. A user may act on a wedding when
+# their role ranks at or above the level the endpoint requires.
+#
+#   viewer  - read the wedding
+#   planner - read and edit everything under the wedding
+#   owner   - additionally: delete the wedding, manage collaborators, and
+#             publish it via RSVP/share links
+#
+# Enforcement lives in app.enforce_wedding_access(), a before_request hook that
+# covers every route carrying a wedding_id. It is deliberately not a per-route
+# decorator: a decorator has to be remembered on each of 300+ handlers, and the
+# ones it was forgotten on are exactly where tenant isolation broke.
+ROLE_HIERARCHY = {'viewer': 0, 'planner': 1, 'owner': 2}
 
 
 # ============================================

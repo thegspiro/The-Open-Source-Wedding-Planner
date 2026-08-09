@@ -43,7 +43,7 @@ import math
 from functools import wraps
 
 logger = logging.getLogger(__name__)
-from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission, validate_time_string, validate_name_pronunciation, validate_text_field
+from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission, validate_time_string, validate_name_pronunciation, validate_text_field, ROLE_HIERARCHY
 
 __version__ = '2.10.0'
 
@@ -68,10 +68,18 @@ init_security(app)
 
 
 # Custom error handlers to prevent information leakage
+@app.errorhandler(401)
+def unauthorized(e):
+    flash('Please log in to access this page.', 'error')
+    return redirect(url_for('login')), 302
+
 @app.errorhandler(403)
 def forbidden(e):
-    flash(str(e.description) if hasattr(e, 'description') else 'Access denied.', 'error')
-    return redirect(url_for('index'))
+    # Render at 403 rather than redirecting: a refusal that returns a redirect
+    # is indistinguishable from a successful action to anything that isn't a
+    # human reading flash messages, including the test suite.
+    description = str(e.description) if getattr(e, 'description', None) else 'You do not have access to this page.'
+    return render_template('errors/403.html', description=description), 403
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -313,20 +321,86 @@ def get_user_weddings(user):
     return Wedding.query.filter(Wedding.id.in_(wedding_ids)).order_by(Wedding.wedding_date).all()
 
 
-def get_wedding_or_403(wedding_id):
-    """Get a wedding, checking that the current user has access.
+# ============================================
+# WEDDING ACCESS ENFORCEMENT
+# ============================================
+#
+# Access control is enforced centrally in enforce_wedding_access() below, which
+# runs before every request. Any route whose URL carries a wedding_id is checked
+# there, so the guarantee is a property of the URL rather than something each of
+# the 300+ handlers has to remember to do.
+#
+# Required role is derived from the HTTP method: safe methods need 'viewer',
+# state-changing methods need 'planner'. Endpoints that destroy the wedding,
+# manage who can reach it, or publish it to the world require 'owner' and are
+# listed explicitly.
 
-    Aborts with 403 if the user does not have access.
+OWNER_ONLY_ENDPOINTS = {
+    # Destroying the wedding and everything under it
+    'delete_wedding',
+    # Deciding who else can reach this wedding
+    'collaborator_add', 'collaborator_update', 'collaborator_remove',
+    # Publishing the wedding to unauthenticated visitors, or rotating the
+    # tokens that control that exposure
+    'rsvp_enable', 'share_enable', 'guest_links_generate',
+}
+
+
+def required_wedding_role(endpoint, method):
+    """Return the minimum role needed for an endpoint/method pair."""
+    if endpoint in OWNER_ONLY_ENDPOINTS:
+        return 'owner'
+    if method in ('GET', 'HEAD', 'OPTIONS'):
+        return 'viewer'
+    return 'planner'
+
+
+@app.before_request
+def enforce_wedding_access():
+    """Verify the current user may act on the wedding named in the URL.
+
+    Runs for every request. Routes without a wedding_id are unaffected; routes
+    with one are refused unless the user holds a WeddingAccess row of sufficient
+    role. Sets g.wedding and g.wedding_role for the handler to use.
     """
-    wedding = Wedding.query.get_or_404(wedding_id)
+    view_args = request.view_args or {}
+    if 'wedding_id' not in view_args:
+        return
+
+    wedding = Wedding.query.get_or_404(view_args['wedding_id'])
     user = g.get('user')
     if not user:
         abort(401)
-    access = WeddingAccess.query.filter_by(user_id=user.id, wedding_id=wedding_id).first()
+
+    access = WeddingAccess.query.filter_by(
+        user_id=user.id, wedding_id=wedding.id
+    ).first()
     if not access:
         abort(403, description='You do not have access to this wedding.')
+
+    needed = required_wedding_role(request.endpoint, request.method)
+    if ROLE_HIERARCHY.get(access.role, 0) < ROLE_HIERARCHY[needed]:
+        abort(403, description=(
+            f'This action requires {needed} access. You are a {access.role} '
+            'on this wedding.'
+        ))
+
+    g.wedding = wedding
     g.wedding_role = access.role
-    return wedding
+
+
+def get_wedding_or_403(wedding_id):
+    """Return the wedding for the current request.
+
+    Access was already verified by enforce_wedding_access() before the handler
+    ran, so this is just a typed accessor for g.wedding. It stays as a function
+    because 234 handlers call it.
+    """
+    wedding = g.get('wedding')
+    if wedding is not None and wedding.id == wedding_id:
+        return wedding
+    # Defensive fallback: a handler invoked outside the normal request path.
+    return Wedding.query.get_or_404(wedding_id)
 
 
 def get_entity_or_404(model, entity_id, wedding_id):
@@ -1211,6 +1285,7 @@ def onboarding_generate_tasks(wedding_id):
                          existing_milestones=existing_milestones)
 
 @app.route('/wedding/<int:wedding_id>/onboarding/reset', methods=['POST'])
+@login_required
 def onboarding_reset(wedding_id):
     """Reset onboarding progress so user can redo setup modules"""
     wedding = get_wedding_or_403(wedding_id)

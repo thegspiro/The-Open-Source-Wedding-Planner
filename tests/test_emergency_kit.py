@@ -1,30 +1,8 @@
 """Tests for the emergency kit seeding functionality."""
 
 import pytest
-from unittest.mock import patch
 from models import db, EmergencyKitItem, Wedding, WeddingAccess
 from app import seed_default_emergency_kit, DEFAULT_EMERGENCY_KIT_ITEMS
-
-
-# ---------------------------------------------------------------------------
-# Patch helper (same as in test_print_routes)
-# ---------------------------------------------------------------------------
-
-def _patched_get_wedding(wedding_id):
-    from flask import g, abort
-    wedding = db.session.get(Wedding, wedding_id)
-    if wedding is None:
-        abort(404)
-    user = g.get("user")
-    if not user:
-        abort(401)
-    access = WeddingAccess.query.filter_by(
-        user_id=user.id, wedding_id=wedding_id
-    ).first()
-    if not access:
-        abort(403, description="You do not have access to this wedding.")
-    g.wedding_role = access.role
-    return wedding
 
 
 EXPECTED_CATEGORIES = {"fashion", "health", "beauty", "tools", "food", "documents"}
@@ -102,8 +80,7 @@ class TestSeedDefaultEmergencyKit:
 class TestEmergencyKitAutoSeed:
     """Test auto-seeding when viewing the emergency kit print page."""
 
-    @patch("app.get_wedding_or_403", side_effect=_patched_get_wedding)
-    def test_auto_seeds_on_first_view(self, mock_gw, app, auth_client):
+    def test_auto_seeds_on_first_view(self, app, auth_client):
         """Visiting the emergency-kit print page should auto-seed if no items exist."""
         client, seed = auth_client
         wedding_id = seed["wedding_id"]
@@ -121,8 +98,7 @@ class TestEmergencyKitAutoSeed:
             count = EmergencyKitItem.query.filter_by(wedding_id=wedding_id).count()
             assert count == 86
 
-    @patch("app.get_wedding_or_403", side_effect=_patched_get_wedding)
-    def test_does_not_double_seed(self, mock_gw, app, auth_client):
+    def test_does_not_double_seed(self, app, auth_client):
         """Visiting the page twice should not duplicate items."""
         client, seed = auth_client
         wedding_id = seed["wedding_id"]
