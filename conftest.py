@@ -34,6 +34,21 @@ def app():
     yield flask_app
 
 
+@pytest.fixture(scope="function", autouse=True)
+def reset_rate_limiter():
+    """Clear the in-memory rate limiter between tests.
+
+    The limiter is a module-level singleton, so without this its hit counts
+    accumulate across every test in the process. Enough requests to /login or
+    /register in one run and later tests start getting 429s for reasons that
+    have nothing to do with what they are asserting.
+    """
+    import security
+    security._rate_limiter._hits.clear()
+    yield
+    security._rate_limiter._hits.clear()
+
+
 @pytest.fixture(scope="function")
 def database(app):
     """Create fresh database tables for each test function."""
