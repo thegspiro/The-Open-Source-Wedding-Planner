@@ -382,9 +382,10 @@ OWNER_ONLY_ENDPOINTS = {
     'delete_wedding',
     # Deciding who else can reach this wedding
     'collaborator_add', 'collaborator_update', 'collaborator_remove',
-    # Publishing the wedding to unauthenticated visitors, or rotating the
-    # tokens that control that exposure
-    'rsvp_enable', 'share_enable', 'guest_links_generate',
+    # Publishing the wedding to unauthenticated visitors, or rotating and
+    # withdrawing the tokens that control that exposure
+    'rsvp_enable', 'share_enable', 'share_regenerate', 'share_revoke',
+    'guest_links_generate',
 }
 
 
@@ -4035,9 +4036,41 @@ def share_enable(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     if not wedding.share_token:
         wedding.share_token = generate_token()
+        log_activity(wedding_id, 'created', 'share link')
     db.session.commit()
     flash('Shareable link generated!', 'success')
-    return redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
+    return safe_redirect(url_for('collaborators_view', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/share/regenerate', methods=['POST'])
+@login_required
+def share_regenerate(wedding_id):
+    """Issue a new share token, which invalidates the previous link."""
+    wedding = get_wedding_or_403(wedding_id)
+    wedding.share_token = generate_token()
+    log_activity(wedding_id, 'updated', 'share link', details='Regenerated; previous link no longer works')
+    db.session.commit()
+    flash('New share link generated. The previous link no longer works.', 'success')
+    return safe_redirect(url_for('collaborators_view', wedding_id=wedding_id))
+
+
+@app.route('/wedding/<int:wedding_id>/share/revoke', methods=['POST'])
+@login_required
+def share_revoke(wedding_id):
+    """Withdraw the share link entirely.
+
+    Clearing the token is what actually revokes access: shared_view looks a
+    wedding up by its token, and a NULL column matches no token anyone holds.
+    """
+    wedding = get_wedding_or_403(wedding_id)
+    if wedding.share_token:
+        wedding.share_token = None
+        log_activity(wedding_id, 'deleted', 'share link')
+        db.session.commit()
+        flash('Share link revoked. Anyone holding the old link can no longer view this wedding.', 'success')
+    else:
+        flash('There is no share link to revoke.', 'info')
+    return safe_redirect(url_for('collaborators_view', wedding_id=wedding_id))
 
 @app.route('/shared/<token>')
 def shared_view(token):
