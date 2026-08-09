@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Vendor Etiquette & Tipping Guide - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Vendor Etiquette &amp; Tipping Guide</h1>
+        <p class="subtitle">Who to tip, how much, when to deliver, and day-of vendor communication</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('print_vendor_tipping_guide', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Guide</a>
+        <a href="{{ url_for('tips_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Tips Tracker</a>
+        <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Dashboard</a>
+    </div>
+</div>
+
+<p class="form-help">Tipping wedding vendors can feel confusing. This guide covers standard tipping ranges, when tips are and aren't expected, how to organize envelope distribution, and best practices for working with vendors on your wedding day.</p>
+
+<!-- Tipping by Vendor Category -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-primary);">&#9679;</span> Tipping by Vendor Category
+    </h2>
+
+    <table class="data-table" style="margin-bottom: 1rem;">
+        <thead>
+            <tr><th>Vendor</th><th>Recommended Tip</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Photographer / Videographer</td><td>$50-200 per lead, $50-100 per assistant, or 1-5%</td><td>Not expected for business owners. Tip at end of event or post-honeymoon.</td></tr>
+            <tr><td>DJ</td><td>$50-150 or 10-15%</td><td>Band: $25-50 per musician. Tip at end of performance.</td></tr>
+            <tr><td>Caterer / Staff</td><td>15-20% of food bill if not included</td><td>Captain $100-300, servers $20-50 each. Check contract for included gratuity.</td></tr>
+            <tr><td>Bartenders</td><td>10-20% of bar tab or $20-150 each</td><td>Often pre-included &mdash; check contract before tipping twice.</td></tr>
+            <tr><td>Planner / Coordinator</td><td>$50-500 or up to 10-20%</td><td>Assistants $50-150. Consider a thoughtful gift in addition to tip.</td></tr>
+            <tr><td>Officiant</td><td>Professional: $50-150</td><td>Religious: $100-500 donation to house of worship.</td></tr>
+            <tr><td>Florist</td><td>$50-150 lead (optional)</td><td>Delivery staff $10-30 each. Not expected for business owners.</td></tr>
+            <tr><td>Baker</td><td>Not expected for owner</td><td>Delivery staff $5-20 each.</td></tr>
+            <tr><td>Hair &amp; Makeup</td><td>15-25% of service cost per artist ($50-100)</td><td>Tip each artist individually. Deliver after services are complete.</td></tr>
+            <tr><td>Transportation</td><td>15-20% or $100-150 per driver</td><td>Often pre-included in contract. Confirm before doubling up.</td></tr>
+            <tr><td>Venue Coordinator</td><td>$100-200</td><td>Assistant staff $25-50 each.</td></tr>
+            <tr><td>Valet</td><td>$1-5 per car or $50 per attendant</td><td>Tip at START of event so guests know it's covered.</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- When Tipping Is NOT Expected -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-info, #64b5f6);">&#9679;</span> When Tipping Is NOT Expected
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Business Owners vs. Employees</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Owners set their own pricing and profit margins. The convention of tipping applies primarily to employees who don't control their rates. If the person who owns the business is also your day-of vendor, a tip is a generous gesture but not an expectation.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Service Charge vs. Gratuity &mdash; NOT the Same Thing</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">A "service charge" is a fee that may go to the company, not the staff. A "gratuity" goes directly to the workers. Always ask your vendor: "Does the service charge go to the staff?" If it doesn't, consider tipping the staff separately.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Tips Are Never Expected For:</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Brief deliveries (dropping off rentals, linens, etc.). Poor or unprofessional service &mdash; address the issue instead. When your budget doesn't allow it &mdash; heartfelt thank-you notes, glowing online reviews, and referrals to friends are meaningful alternatives that cost nothing.</p>
+    </div>
+</div>
+
+<!-- How to Deliver Tips -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-accent);">&#9679;</span> How to Deliver Tips
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>The Labeled Envelope System</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Withdraw all tip cash at least 2 weeks before the wedding. Prepare individual envelopes labeled with each vendor's name and a brief handwritten thank-you note. Seal each envelope and organize them in a box or folder in the order they'll be distributed throughout the day.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>The "Tip Distributor"</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Designate ONE person to handle all tip distribution: your planner, maid of honor, or best man. Provide them with a checklist that includes each vendor's name, their envelope, and the timing for delivery. The couple should never be fumbling for envelopes on their wedding day.</p>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Tip Delivery Timing</h3>
+
+    <table class="data-table" style="margin-bottom: 1rem;">
+        <thead>
+            <tr><th>Vendor</th><th>When to Deliver</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Hair &amp; Makeup Artists</td><td>After services are complete</td></tr>
+            <tr><td>Officiant</td><td>At the rehearsal or before the ceremony</td></tr>
+            <tr><td>Valet</td><td>Start of the event</td></tr>
+            <tr><td>Caterer / Wait Staff</td><td>End of the reception</td></tr>
+            <tr><td>DJ / Band</td><td>After their final performance</td></tr>
+            <tr><td>Photographer / Videographer</td><td>End of event or post-honeymoon</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Day-Of Vendor Communication -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-success);">&#9679;</span> Day-Of Vendor Communication
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Establish a Single Point of Contact</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">On the wedding day, your planner becomes the sole point of contact for all vendor questions and logistics. If you don't have a planner, designate a trusted friend or family member as your vendor liaison. The couple should NOT be fielding vendor questions about setup, timing, or logistics on their wedding day.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Vendor Meals</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Any vendor working 4-6+ hours during meal service should receive a hot meal. Serve vendor meals after the couple but before the remaining guest tables. Provide a private or semi-private dining area so vendors can take a genuine break. This is not just etiquette &mdash; well-fed vendors perform better.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Timeline &amp; Confirmation Protocol</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Share the final detailed timeline with all vendors 3-4 weeks before the wedding. Make a confirmation call or send a confirmation email to every vendor 1 week before the event to reconfirm arrival times, setup details, and any last-minute changes.</p>
+    </div>
+</div>
+
+<!-- When Things Go Wrong -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-warning);">&#9679;</span> When Things Go Wrong
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #ffb74d); background: var(--color-warning-bg, #fff8e1);">
+        <strong>Address Immediately If:</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">There is a safety issue (food allergy concern, electrical problem, structural hazard). Contracted services are not being delivered as agreed. The problem will worsen if left unaddressed (e.g., sound system failing, wrong table arrangement before guests arrive). Have your planner or liaison handle these &mdash; never the couple.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #ffb74d); background: var(--color-warning-bg, #fff8e1);">
+        <strong>Let It Go If:</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">It's a minor aesthetic issue that only you would notice (slightly different shade of napkin, one centerpiece shorter than the others). It's a small timing delay that won't cascade into larger problems. The imperfection won't show up in photos or affect your guests' experience.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #ffb74d); background: var(--color-warning-bg, #fff8e1);">
+        <strong>Post-Wedding: Handling Vendor Issues</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Wait 2-3 weeks after the wedding before reaching out about any issues &mdash; emotions will have settled and you'll communicate more clearly. Contact the vendor directly before posting public reviews. Be factual and specific about what happened versus what was contracted. Most reputable vendors will work to make it right.</p>
+    </div>
+</div>
+
+<!-- Overall Budget Guidance -->
+<div class="module-section">
+    <div style="padding: 1.25rem; border-radius: 8px; border: 2px solid var(--color-secondary, #D4C5B2); background: var(--color-card-bg, #faf9f7);">
+        <strong style="font-size: 1.05rem;">Overall Tipping Budget Guidance</strong>
+        <p style="margin: 0.5rem 0 0; color: var(--color-text-muted);">Budget 5-10% of your total wedding cost for vendor tips. For most weddings, the total tipping amount falls between $500 and $1,500. Build this into your budget from the start so it doesn't come as a surprise at the end.</p>
+    </div>
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('tips_view', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Tips Tracker</a>
+    <a href="{{ url_for('etiquette_guide_view', wedding_id=wedding.id) }}" class="btn-secondary">Etiquette Guide</a>
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

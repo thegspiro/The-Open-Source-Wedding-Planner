@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Wedding Etiquette Guide - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Being Present on Your Wedding Day</h1>
+        <p class="subtitle">A guide to staying mindful, connecting with guests, and savoring every moment</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('print_etiquette_guide', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Guide</a>
+        <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Dashboard</a>
+    </div>
+</div>
+
+<p class="form-help">Your wedding day will fly by. These reminders, drawn from wedding planners, etiquette experts, and experienced couples, will help you slow down, stay present, and make every interaction count.</p>
+
+<!-- Being Present & Mindful -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-primary);">&#9679;</span> Staying Present &amp; Mindful
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Unplug from Technology</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Leave your phone with someone you trust. Resist the urge to check notifications or post to social media. The day is about being here, not documenting it in real time. Let your photographer and guests capture the moments for you.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Build Buffer Time into Your Timeline</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Avoid back-to-back scheduling. Even 5-10 extra minutes between events gives you room to breathe, absorb the moment, and transition without rushing. An overpacked timeline is the number one enemy of being present.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Start the Day with a Grounding Ritual</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Take a few minutes for deep breathing, meditation, or journaling before the day takes over. Inhale slowly through your nose, hold for a few seconds, exhale through your mouth. This activates your parasympathetic nervous system and helps manage adrenaline.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Let Go of Perfectionism</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Small things will go wrong. A slightly late start, a misplaced boutonniere, a smudged place card. Embracing imperfections prevents stress from pulling you out of the moment. These unexpected moments often become your best stories.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Trust Your Vendor Team</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">You hired professionals for a reason. Let them handle logistics, troubleshoot problems, and keep things on track. Your job today is to experience the day, not manage it.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Eat and Hydrate</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">The first place weddings go sideways is when the couple doesn't eat. Have a plan for lunch for you, your partner, and the people getting ready with you. Keep water accessible throughout the day. You cannot be present if you are hungry or dehydrated.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Don't Perform for Social Media</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Make authentic choices rather than performance-based ones. Your wedding should feel like you, not like a content shoot. The genuine moments will always photograph better than the staged ones.</p>
+    </div>
+</div>
+
+<!-- Private Moments as a Couple -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-accent);">&#9679;</span> Private Moments as a Couple
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Schedule Time Just for the Two of You</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Intentionally carve out private moments: after the ceremony, during sunset, or a short walk during the reception. These quiet pauses let you take everything in together and are often what couples remember most vividly.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Consider a First Look</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">A private first look before the ceremony gives you a calm, intimate connection point before the adrenaline of the ceremony. It also allows portraits to be done beforehand, freeing up cocktail hour to spend with guests.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Exchange a Note or Small Gift</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">In the morning before the day takes over, exchange a handwritten note or small token. This anchors your connection and reminds you both why you're here before the whirlwind begins.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Check In with Each Other Throughout the Day</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">You are a team. Hold hands, share a quick kiss, whisper something to each other between events. These small acts of connection keep you grounded and remind you of the significance of the day.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Take a Private Dinner Moment</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Some couples take 10 minutes to dine privately before joining guests, or step away after the ceremony to enjoy a few appetizers alone. Use this time to talk about how incredible the day has been.</p>
+    </div>
+</div>
+
+<!-- Engaging with Guests -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-success);">&#9679;</span> Engaging with Your Guests
+    </h2>
+
+    <p class="form-help" style="margin-bottom: 1rem;">Etiquette experts agree on one obligation: the couple should personally greet and thank every guest. How you accomplish this is flexible. Choose the approach that fits your personality and guest count.</p>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Three Approaches to Greeting Guests</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>1. Receiving Line (Most Traditional)</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Best for weddings with 75 or more guests. Position the line at the ceremony exit or reception entrance. Keep conversations brief: "Thank you so much for being here" plus one personal comment is plenty. Have refreshments available for guests waiting in line. Fathers and groomsmen can circulate among guests instead of standing in line.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>2. Table Visits During Dinner (Most Popular)</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Spend 3-5 minutes at each table while guests eat. Have your planner or coordinator accompany you to help manage timing so you don't get stuck at any one table. This feels more personal and relaxed than a formal line. You can divide and conquer: you don't both need to be at every table simultaneously.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>3. Cocktail Hour Greeting (Most Casual)</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Mingle and greet guests while everyone is relaxed with drinks. This works best if your formal portraits are done beforehand. If you miss a few people, don't stress. You can catch them later during the reception.</p>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Making Guests Feel Welcome</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Welcome Bags with Handwritten Notes</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">For out-of-town guests, welcome bags with a personal note make people feel valued before the event even starts. Include local snacks, a weekend itinerary, and your gratitude.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Thank-You Messages in the Program</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">A brief thank-you note in your ceremony program is a thoughtful touch that shows guests they matter. Even a few sincere lines go a long way.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Host a Pre-Wedding Gathering</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">A welcome party or rehearsal dinner gives you relaxed, low-pressure time to connect with guests you might not reach on the busy wedding day itself. This is especially valuable for out-of-town guests.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Ask Guests to Unplug Too</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">A friendly sign at the ceremony or a gentle note from the officiant can remind guests to stay present and save photos for later. This keeps the ceremony distraction-free and encourages everyone to share the moment with you.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Encourage the Guest Book</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Place your guest book in a visible spot with a small sign. It becomes a lasting memento of who was there and what they wished for you. Consider creative alternatives like a photo guest book or advice cards.</p>
+    </div>
+</div>
+
+<!-- Quick Reference Checklist -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-warning);">&#9679;</span> Quick Reference: Day-Of Reminders
+    </h2>
+
+    <p class="form-help" style="margin-bottom: 1rem;">Print this list and tuck it into your getting-ready bag or give it to your maid of honor or best man.</p>
+
+    <div style="padding: 1.25rem; border-radius: 8px; border: 2px solid var(--color-secondary, #D4C5B2); background: var(--color-card-bg, #faf9f7);">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #e8e2da; font-size: 0.95rem;">&#9744; Hand your phone to someone you trust</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #e8e2da; font-size: 0.95rem;">&#9744; Eat a real meal before the ceremony</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #e8e2da; font-size: 0.95rem;">&#9744; Take three deep breaths before walking down the aisle</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #e8e2da; font-size: 0.95rem;">&#9744; Look into your partner's eyes during your vows</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #e8e2da; font-size: 0.95rem;">&#9744; Take a private 5-minute moment together after the ceremony</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #e8e2da; font-size: 0.95rem;">&#9744; Greet and thank every guest (choose your approach)</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #e8e2da; font-size: 0.95rem;">&#9744; Keep water nearby throughout the day</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #e8e2da; font-size: 0.95rem;">&#9744; Step outside together for a quiet moment during the reception</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #e8e2da; font-size: 0.95rem;">&#9744; Don't skip eating your reception dinner</li>
+            <li style="padding: 0.4rem 0; font-size: 0.95rem;">&#9744; Take one last look around the room before you leave</li>
+        </ul>
+    </div>
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Day-Of Timeline</a>
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hosting & Thank-You Etiquette - {{ wedding.couple_names }}</title>
+    <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--body-font);
+            color: #3a3a3a;
+            line-height: 1.6;
+            padding: 20px 40px;
+            background: #fff;
+        }
+
+        .print-btn {
+            display: inline-block;
+            padding: 8px 20px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-family: var(--body-font);
+            border-radius: 4px;
+        }
+
+        .print-btn:hover {
+            opacity: 0.85;
+        }
+
+        .print-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+        .skip-link {
+            position: absolute; left: -9999px; top: auto;
+            width: 1px; height: 1px; overflow: hidden;
+            font-size: 14px; padding: 10px;
+        }
+        .skip-link:focus {
+            position: static; width: auto; height: auto;
+            overflow: visible; background: var(--primary); color: #fff;
+            display: inline-block; margin-bottom: 10px;
+        }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+        .print-header {
+            text-align: center;
+            padding: 30px 20px 25px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--secondary);
+            position: relative;
+        }
+
+        .print-header::before {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 2px;
+            background: var(--accent);
+            margin: 0 auto 15px;
+        }
+
+        .monogram {
+            font-family: var(--heading-font);
+            font-size: 36px;
+            color: var(--primary);
+            letter-spacing: 4px;
+            margin-bottom: 8px;
+        }
+
+        .print-header h1 {
+            font-family: var(--heading-font);
+            font-size: 26px;
+            font-weight: normal;
+            color: var(--primary);
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+
+        .print-header .wedding-date {
+            font-size: 13px;
+            color: #888;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .print-header .subtitle {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .print-header::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 2px;
+            background: var(--accent);
+            margin: 15px auto 0;
+        }
+
+        .section-heading {
+            font-family: var(--heading-font);
+            font-size: 16px;
+            color: var(--primary);
+            letter-spacing: 1px;
+            margin: 25px 0 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--secondary);
+        }
+
+        .tip-card {
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--accent);
+            background: #fafaf8;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .tip-card strong {
+            font-size: 13px;
+            color: #333;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .tip-card p {
+            font-size: 11px;
+            color: #666;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .tip-card.accent-green {
+            border-left-color: #81c784;
+        }
+
+        .tip-card.accent-blue {
+            border-left-color: #90caf9;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 10px;
+            color: #bbb;
+            margin-top: 35px;
+            padding-top: 15px;
+            border-top: 1px solid var(--secondary);
+            letter-spacing: 0.5px;
+        }
+
+        @page {
+            size: letter;
+            margin: 0.6in 0.5in;
+        }
+
+        @media print {
+            * { color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+            .print-btn {
+                display: none !important;
+            }
+
+            .share-form-inline {
+                display: none !important;
+            }
+
+            .skip-link { display: none !important; }
+
+            body {
+                padding: 0;
+                font-size: 11px;
+            }
+
+            .print-header h1 {
+                font-size: 22px;
+            }
+
+            .section-heading {
+                margin-top: 18px;
+                font-size: 14px;
+            }
+
+            .tip-card {
+                padding: 6px 10px;
+                margin-bottom: 5px;
+                page-break-inside: avoid;
+            }
+
+            .tip-card strong {
+                font-size: 11px;
+            }
+
+            .tip-card p {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
+    <button class="print-btn" onclick="window.print()">Print</button>
+    <a class="print-btn" href="?format=pdf" role="button" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+    {% set share_document_type = 'hosting_guide' %}{% include 'print/_share_button.html' %}
+
+    <main id="main-content">
+    <div class="print-header">
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Hosting &amp; Thank-You Etiquette</h1>
+        <div style="font-family: var(--heading-font); font-size: 15px; color: #666; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+        <div class="subtitle">Making guests feel welcome and expressing gratitude</div>
+    </div>
+
+    <!-- Pre-Wedding Hospitality -->
+    <h2 class="section-heading">Pre-Wedding Hospitality</h2>
+
+    <div class="tip-card">
+        <strong>Welcome Bags</strong>
+        <p>Include water, local snacks, a weekend itinerary, a hangover kit, and a handwritten note. Deliver to the hotel for check-in. One bag per room or per couple.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Welcome Party</strong>
+        <p>Host the evening before, keep it to 2-3 hours. Everyone invited to the wedding should be invited. Casual format: appetizers and drinks are sufficient. Not a gift occasion.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Rehearsal Dinner</strong>
+        <p>Traditionally the groom's family hosts. Must invite: wedding party + partners, officiant + partner, parents, grandparents, and siblings. Never more formal than the wedding.</p>
+    </div>
+
+    <!-- Day-Of Guest Experience -->
+    <h2 class="section-heading">Day-Of Guest Experience</h2>
+
+    <div class="tip-card">
+        <strong>Ceremony Programs</strong>
+        <p>Include order of ceremony, wedding party list, a thank-you message, and an optional "In Loving Memory" section. A few sincere lines of thanks go a long way.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Signage</strong>
+        <p>Prepare signs for parking, welcome, directional arrows, restrooms, seating chart, and an unplugged ceremony notice. Clear signage prevents confusion and reduces questions.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Dietary Needs</strong>
+        <p>Add a dietary field to your RSVP. Label buffet items (GF, V, VG, DF, NF). Brief catering staff on restrictions. Use coded place cards for plated meals.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>Accessibility</strong>
+        <p>Ensure wheelchair-accessible paths. Remove chairs for wheelchair users. Consider a sign language interpreter. Use high-contrast fonts. Add an accommodations field to your RSVP.</p>
+    </div>
+
+    <!-- Post-Wedding Thank-You Notes -->
+    <h2 class="section-heading">Post-Wedding Thank-You Notes</h2>
+
+    <div class="tip-card accent-green">
+        <strong>Timeline</strong>
+        <p>Pre-wedding gifts: within 2 weeks. Shower hosts: within 2 days. Wedding gifts: within 3 months (not a year). Set a daily goal of 3-4 notes.</p>
+    </div>
+
+    <div class="tip-card accent-green">
+        <strong>The Formula</strong>
+        <p>Warm greeting, specific gift mention, personal connection (how you will use it or a shared memory), warm closing. This keeps notes sincere without overthinking.</p>
+    </div>
+
+    <div class="tip-card accent-green">
+        <strong>Registry Gift</strong>
+        <p>Name the specific item and how you will use it. "Thank you for the beautiful stand mixer. We have already used it twice."</p>
+    </div>
+
+    <div class="tip-card accent-green">
+        <strong>Cash Gift</strong>
+        <p>Mention your plans for the money but never state the amount. "Your generous gift is going toward our honeymoon trip to Portugal."</p>
+    </div>
+
+    <div class="tip-card accent-green">
+        <strong>Group Gift</strong>
+        <p>Each contributor receives their own individual note. Never send a single group thank-you.</p>
+    </div>
+
+    <div class="tip-card accent-green">
+        <strong>No Gift</strong>
+        <p>Focus on their attendance. "Having you there made the day so special. Your presence truly was the best gift."</p>
+    </div>
+
+    <div class="tip-card accent-green">
+        <strong>Who Else to Thank</strong>
+        <p>Parents (support and contributions), wedding party (pair with attendant gift), exceptional vendors, and anyone who helped with logistics.</p>
+    </div>
+
+    <div class="tip-card accent-green">
+        <strong>Format</strong>
+        <p>Always handwritten. No fill-in-the-blank cards, no emails, no social media posts as substitutes.</p>
+    </div>
+
+    <!-- Guest Favors -->
+    <h2 class="section-heading">Guest Favors</h2>
+
+    <div class="tip-card accent-blue">
+        <strong>Keep It Simple</strong>
+        <p>Favors are optional. Edible favors work best: cookies, honey, coffee. Avoid overly personalized items guests rarely keep.</p>
+    </div>
+
+    <div class="tip-card accent-blue">
+        <strong>Donation in Lieu of Favors</strong>
+        <p>Choose a meaningful cause. One discreet sign on the favor table. Keep the amount private. Do not say "in honor of our guests."</p>
+    </div>
+
+    <div class="tip-card accent-blue">
+        <strong>When Favors Are Not Needed</strong>
+        <p>Already providing a generous experience, budget is tight, or hosting an intimate wedding with fewer than 30 guests.</p>
+    </div>
+
+    <div class="footer-note">
+        {{ wedding.couple_names }}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
+        &middot; Hosting &amp; Thank-You Etiquette
+    </div>
+    </main>
+</body>
+</html>

@@ -5543,6 +5543,12 @@ PRINT_DOCUMENTS = {
     'transportation':      {'title': 'Transportation & Hotels','template': 'print/transportation.html',      'filename': 'transportation'},
     'contingency_plans':   {'title': 'Backup Plans',          'template': 'print/contingency_plans.html',    'filename': 'contingency_plans'},
     'budget_summary':      {'title': 'Budget Summary',        'template': 'print/budget_summary.html',       'filename': 'budget'},
+    'etiquette_guide':     {'title': 'Wedding Etiquette Guide','template': 'print/etiquette_guide.html',     'filename': 'etiquette_guide'},
+    'pacing_guide':        {'title': 'Pacing Your Wedding Day','template': 'print/pacing_guide.html',       'filename': 'pacing_guide'},
+    'hosting_guide':       {'title': 'Hosting & Thank-You',    'template': 'print/hosting_guide.html',      'filename': 'hosting_guide'},
+    'vendor_tipping_guide':{'title': 'Vendor Etiquette & Tipping','template': 'print/vendor_tipping_guide.html','filename': 'vendor_tipping_guide'},
+    'speeches_guide':      {'title': 'Speech & Toast Guide',   'template': 'print/speeches_guide.html',     'filename': 'speeches_guide'},
+    'wedding_party_guide': {'title': 'Wedding Party Guide',    'template': 'print/wedding_party_guide.html', 'filename': 'wedding_party_guide'},
 }
 
 
@@ -8154,6 +8160,108 @@ def timeline_analysis(wedding_id):
 
     return render_template('day_of/analysis.html', wedding=wedding,
                          warnings=warnings, tips=tips, items=timed_items)
+
+
+@app.route('/wedding/<int:wedding_id>/etiquette-guide')
+@login_required
+def etiquette_guide_view(wedding_id):
+    """Wedding etiquette guide: being present, engaging with guests, and mindfulness tips."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('etiquette_guide/view.html', wedding=wedding)
+
+
+@app.route('/wedding/<int:wedding_id>/print/etiquette-guide')
+@login_required
+def print_etiquette_guide(wedding_id):
+    """Printable wedding etiquette guide."""
+    wedding = get_wedding_or_403(wedding_id)
+    return _render_or_pdf('print/etiquette_guide.html', f'etiquette_guide_{wedding_id}.pdf',
+                          wedding=wedding)
+
+
+@app.route('/wedding/<int:wedding_id>/guides/pacing')
+@login_required
+def pacing_guide_view(wedding_id):
+    """Pacing Your Wedding Day guide."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('guides/pacing.html', wedding=wedding)
+
+
+@app.route('/wedding/<int:wedding_id>/print/pacing-guide')
+@login_required
+def print_pacing_guide(wedding_id):
+    """Printable pacing guide."""
+    wedding = get_wedding_or_403(wedding_id)
+    return _render_or_pdf('print/pacing_guide.html', f'pacing_guide_{wedding_id}.pdf',
+                          wedding=wedding)
+
+
+@app.route('/wedding/<int:wedding_id>/guides/hosting')
+@login_required
+def hosting_guide_view(wedding_id):
+    """Hosting & Thank-You Etiquette guide."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('guides/hosting.html', wedding=wedding)
+
+
+@app.route('/wedding/<int:wedding_id>/print/hosting-guide')
+@login_required
+def print_hosting_guide(wedding_id):
+    """Printable hosting guide."""
+    wedding = get_wedding_or_403(wedding_id)
+    return _render_or_pdf('print/hosting_guide.html', f'hosting_guide_{wedding_id}.pdf',
+                          wedding=wedding)
+
+
+@app.route('/wedding/<int:wedding_id>/guides/vendor-tipping')
+@login_required
+def vendor_tipping_guide_view(wedding_id):
+    """Vendor Etiquette & Tipping guide."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('guides/vendor_tipping.html', wedding=wedding)
+
+
+@app.route('/wedding/<int:wedding_id>/print/vendor-tipping-guide')
+@login_required
+def print_vendor_tipping_guide(wedding_id):
+    """Printable vendor tipping guide."""
+    wedding = get_wedding_or_403(wedding_id)
+    return _render_or_pdf('print/vendor_tipping_guide.html', f'vendor_tipping_guide_{wedding_id}.pdf',
+                          wedding=wedding)
+
+
+@app.route('/wedding/<int:wedding_id>/guides/speeches')
+@login_required
+def speeches_guide_view(wedding_id):
+    """Speech & Toast guide."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('guides/speeches.html', wedding=wedding)
+
+
+@app.route('/wedding/<int:wedding_id>/print/speeches-guide')
+@login_required
+def print_speeches_guide(wedding_id):
+    """Printable speeches guide."""
+    wedding = get_wedding_or_403(wedding_id)
+    return _render_or_pdf('print/speeches_guide.html', f'speeches_guide_{wedding_id}.pdf',
+                          wedding=wedding)
+
+
+@app.route('/wedding/<int:wedding_id>/guides/wedding-party')
+@login_required
+def wedding_party_guide_view(wedding_id):
+    """Wedding Party Responsibilities guide."""
+    wedding = get_wedding_or_403(wedding_id)
+    return render_template('guides/wedding_party.html', wedding=wedding)
+
+
+@app.route('/wedding/<int:wedding_id>/print/wedding-party-guide')
+@login_required
+def print_wedding_party_guide(wedding_id):
+    """Printable wedding party guide."""
+    wedding = get_wedding_or_403(wedding_id)
+    return _render_or_pdf('print/wedding_party_guide.html', f'wedding_party_guide_{wedding_id}.pdf',
+                          wedding=wedding)
 
 
 # Start reminder thread:

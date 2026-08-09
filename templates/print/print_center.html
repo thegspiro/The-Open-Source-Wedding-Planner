@@ -194,6 +194,61 @@
             <button type="button" class="share-btn" onclick="openShareModal('budget_summary', 'Budget Summary')">Share</button>
         </div>
     </div>
+
+    <!-- Guides & Reference -->
+    <h2 class="pc-section-heading" style="font-size: 16px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #e8e2da; padding-bottom: 8px; margin-bottom: 16px; color: #666;">
+        Guides &amp; Reference
+    </h2>
+    <div class="pc-grid">
+        <div class="print-card">
+            <a href="{{ url_for('print_etiquette_guide', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128156;</div>
+                <div class="pc-title">Being Present</div>
+                <div class="pc-desc">Mindfulness tips, guest engagement, and day-of reminders</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('etiquette_guide', 'Being Present Guide')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_pacing_guide', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#9201;</div>
+                <div class="pc-title">Pacing Your Day</div>
+                <div class="pc-desc">Realistic timing, buffer strategies, and sample timelines</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('pacing_guide', 'Pacing Guide')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_hosting_guide', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#127873;</div>
+                <div class="pc-title">Hosting &amp; Thank-Yous</div>
+                <div class="pc-desc">Welcome bags, guest experience, and thank-you note etiquette</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('hosting_guide', 'Hosting Guide')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_vendor_tipping_guide', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128176;</div>
+                <div class="pc-title">Vendor Tipping</div>
+                <div class="pc-desc">Who to tip, how much, and day-of vendor communication</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('vendor_tipping_guide', 'Vendor Tipping Guide')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_speeches_guide', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#127908;</div>
+                <div class="pc-title">Speech &amp; Toast Guide</div>
+                <div class="pc-desc">Timing, structure, delivery tips, and what to avoid</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('speeches_guide', 'Speech Guide')">Share</button>
+        </div>
+        <div class="print-card">
+            <a href="{{ url_for('print_wedding_party_guide', wedding_id=wedding.id) }}" class="pc-link">
+                <div class="pc-icon">&#128101;</div>
+                <div class="pc-title">Wedding Party Roles</div>
+                <div class="pc-desc">MOH, best man, bridesmaids, groomsmen, and parents</div>
+            </a>
+            <button type="button" class="share-btn" onclick="openShareModal('wedding_party_guide', 'Wedding Party Guide')">Share</button>
+        </div>
+    </div>
 </div>
 
 <!-- Share Modal -->

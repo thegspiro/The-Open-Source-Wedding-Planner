@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}Speech & Toast Guide - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Speech &amp; Toast Guide</h1>
+        <p class="subtitle">Everything your speakers need to know about timing, structure, and delivery</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('print_speeches_guide', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Guide</a>
+        <a href="{{ url_for('speeches_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Speeches</a>
+        <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Dashboard</a>
+    </div>
+</div>
+
+<p class="form-help">A well-run speech block is one of the most memorable parts of any wedding reception. This guide covers timing, structure, delivery tips, and etiquette so every speaker can shine without the evening running off schedule.</p>
+
+<!-- Speech Order & Timing -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-primary);">&#9679;</span> Speech Order &amp; Timing
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Traditional Order</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Best Man &rarr; Maid of Honor &rarr; Father of the Bride &rarr; Father of the Groom &rarr; The Couple. The MC or DJ introduces each speaker and keeps the flow moving.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-primary, #8B7355); background: var(--color-card-bg, #faf9f7);">
+        <strong>Modern Variations</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Brides are speaking more often, mothers are being included, couples are giving joint speeches, and the order is entirely flexible. Do what feels right for your celebration.</p>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Ideal Speech Lengths</h3>
+
+    <div style="overflow-x: auto; margin-bottom: 1rem;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--color-secondary, #D4C5B2);">
+                    <th style="text-align: left; padding: 0.5rem 0.75rem; font-family: var(--font-heading);">Speaker</th>
+                    <th style="text-align: left; padding: 0.5rem 0.75rem; font-family: var(--font-heading);">Ideal Length</th>
+                    <th style="text-align: left; padding: 0.5rem 0.75rem; font-family: var(--font-heading);">Max</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid #e8e2da;">
+                    <td style="padding: 0.5rem 0.75rem;">Best Man</td>
+                    <td style="padding: 0.5rem 0.75rem;">3-5 min</td>
+                    <td style="padding: 0.5rem 0.75rem;">7 min</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e8e2da;">
+                    <td style="padding: 0.5rem 0.75rem;">Maid of Honor</td>
+                    <td style="padding: 0.5rem 0.75rem;">3-5 min</td>
+                    <td style="padding: 0.5rem 0.75rem;">7 min</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e8e2da;">
+                    <td style="padding: 0.5rem 0.75rem;">Father of the Bride</td>
+                    <td style="padding: 0.5rem 0.75rem;">5-7 min</td>
+                    <td style="padding: 0.5rem 0.75rem;">9 min</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e8e2da;">
+                    <td style="padding: 0.5rem 0.75rem;">Parents of the Groom</td>
+                    <td style="padding: 0.5rem 0.75rem;">3-5 min</td>
+                    <td style="padding: 0.5rem 0.75rem;">7 min</td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.5rem 0.75rem;">Couple's Toast</td>
+                    <td style="padding: 0.5rem 0.75rem;">2-3 min</td>
+                    <td style="padding: 0.5rem 0.75rem;">5 min</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p class="form-help" style="margin-bottom: 1rem;"><strong>Total speech block: aim for under 30 minutes.</strong></p>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #ffb74d); background: var(--color-warning-bg, #fff8e1);">
+        <strong>&#9888; What Happens When Speeches Run Long</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Audience attention drops sharply after 3 minutes per speaker. Caterers face delays holding hot food. Guests get hungry and restless. Dancing time gets cut short. Keep it tight and your guests will love every word.</p>
+    </div>
+</div>
+
+<!-- Speech Structure -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-accent);">&#9679;</span> Speech Structure
+    </h2>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">The 3-Part Framework</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Opening (30 seconds - 1 minute)</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Introduce yourself briefly, establish your relationship to the couple, and hook the audience with something engaging. You have about 15 seconds to earn their attention.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Body (2-3 minutes)</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Share one or two anecdotes that reveal something meaningful about the person you know, then bridge to what you've seen in them as a couple. One great story beats three mediocre ones.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <strong>Closing (30 seconds - 1 minute)</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Deliver your toast line clearly. Raise your glass toward the couple and invite the room to join you. End with a specific, heartfelt wish and take a sip.</p>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Good Openers</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <ul style="margin: 0; padding-left: 1.25rem; color: var(--color-text-muted);">
+            <li style="margin-bottom: 0.25rem;">A brief, funny observation about the couple or the day</li>
+            <li style="margin-bottom: 0.25rem;">"For those who don't know me..." followed by a quick, warm intro</li>
+            <li>A short, engaging anecdote that draws the audience in immediately</li>
+        </ul>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Bad Openers</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-danger, #e57373); background: var(--color-danger-bg, #fce4ec);">
+        <ul style="margin: 0; padding-left: 1.25rem; color: var(--color-text-muted);">
+            <li style="margin-bottom: 0.25rem;">"Webster's dictionary defines..." &mdash; overused and instantly loses the room</li>
+            <li style="margin-bottom: 0.25rem;">"I'm really nervous" &mdash; makes the audience nervous too</li>
+            <li>"I didn't prepare anything" &mdash; tells guests you don't care enough to try</li>
+        </ul>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Ending with a Toast</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-accent, #C9A96E); background: var(--color-card-bg, #faf9f7);">
+        <p style="margin: 0; color: var(--color-text-muted);">Give a clear signal: "Please raise your glasses..." Name both partners. Offer a specific wish for their future. Raise your glass toward the couple. Take a sip. That's it &mdash; clean and memorable.</p>
+    </div>
+</div>
+
+<!-- What to Include -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-success);">&#9679;</span> What to Include
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Personal Stories That Reveal Character</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Choose stories that show who this person really is &mdash; their kindness, their humor, their loyalty. One great story told well beats three mediocre ones rushed through.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Humor, Balanced with Sentiment</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">The best speeches make people laugh and then get a little misty-eyed. Self-deprecating humor works especially well. Test your jokes on someone outside the wedding party to make sure they land.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Compliment Both Partners</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Even if you primarily know one half of the couple, make a point to acknowledge and welcome the other. This is about their union, not just your friendship with one of them.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-success, #81c784); background: var(--color-card-bg, #faf9f7);">
+        <strong>Absent Loved Ones</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Get the couple's approval first before mentioning anyone who has passed. Keep the tone uplifting and pivot to how proud they would be. A brief, warm mention is more powerful than a long tribute.</p>
+    </div>
+</div>
+
+<!-- What to Avoid -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-danger);">&#9679;</span> What to Avoid
+    </h2>
+
+    <div style="padding: 1.25rem; border-radius: 8px; border: 2px solid var(--color-danger, #e57373); background: var(--color-danger-bg, #fce4ec);">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #f5c6cb; font-size: 0.95rem;">&#10007; <strong>Ex-partners</strong> &mdash; NEVER. Not even as a joke. Not even vaguely.</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #f5c6cb; font-size: 0.95rem;">&#10007; <strong>Embarrassing stories</strong> that would mortify parents or grandparents in the room</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #f5c6cb; font-size: 0.95rem;">&#10007; <strong>Inside jokes</strong> that nobody outside your friend group understands</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #f5c6cb; font-size: 0.95rem;">&#10007; <strong>Making it about yourself</strong> &mdash; you are the messenger, not the story</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #f5c6cb; font-size: 0.95rem;">&#10007; <strong>Excessive alcohol before speaking</strong> &mdash; one drink max before your speech</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #f5c6cb; font-size: 0.95rem;">&#10007; <strong>Reading entirely from your phone</strong> &mdash; use printed cue cards instead</li>
+            <li style="padding: 0.4rem 0; border-bottom: 1px solid #f5c6cb; font-size: 0.95rem;">&#10007; <strong>Winging it</strong> &mdash; always prepare, even if you are naturally funny</li>
+            <li style="padding: 0.4rem 0; font-size: 0.95rem;">&#10007; <strong>Divorce statistics or cynical marriage jokes</strong> &mdash; save the dark humor for another occasion</li>
+        </ul>
+    </div>
+</div>
+
+<!-- Tips for Nervous Speakers -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-info);">&#9679;</span> Tips for Nervous Speakers
+    </h2>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Preparation Timeline</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <ul style="margin: 0; padding-left: 1.25rem; color: var(--color-text-muted);">
+            <li style="margin-bottom: 0.25rem;"><strong>4-6 weeks out:</strong> Brainstorm stories and themes</li>
+            <li style="margin-bottom: 0.25rem;"><strong>3-4 weeks out:</strong> Write your first draft</li>
+            <li style="margin-bottom: 0.25rem;"><strong>2 weeks out:</strong> Edit ruthlessly and test on a trusted friend</li>
+            <li style="margin-bottom: 0.25rem;"><strong>1 week out:</strong> Finalize cue cards and practice daily</li>
+            <li style="margin-bottom: 0.25rem;"><strong>Day before:</strong> One full run-through, then put it away</li>
+            <li><strong>Day of:</strong> One quiet read-through to yourself, then trust your prep</li>
+        </ul>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Cue Cards</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <p style="margin: 0; color: var(--color-text-muted);">Use bullet points, not a memorized script and not a full written-out speech. Number your cards. Use large, clear text so you can glance down and look back up quickly. Give a backup copy to a friend in case you misplace yours.</p>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Breathing Techniques</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Box Breathing (4-4-4-4)</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Inhale for 4 counts, hold for 4, exhale for 4, hold for 4. Repeat 3-4 times.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Extended Exhale (4-4-8)</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Inhale for 4 counts, hold for 4, exhale slowly for 8. This activates the parasympathetic nervous system and calms you quickly. Practice 5-10 minutes before your speech.</p>
+    </div>
+
+    <h3 style="font-family: var(--font-heading); margin: 1.25rem 0 0.75rem; font-size: 1rem;">Where to Look</h3>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <p style="margin: 0; color: var(--color-text-muted);">Scan left, center, and right &mdash; don't fixate on one spot. Find 3-5 friendly, smiling faces in different parts of the room and rotate between them. During the heartfelt moments, look directly at the couple. They are your anchor.</p>
+    </div>
+</div>
+
+<!-- Toast Etiquette for Guests -->
+<div class="module-section">
+    <h2 style="font-family: var(--font-heading); margin: 1.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="color: var(--color-info);">&#9679;</span> Toast Etiquette for Guests
+    </h2>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Raising Your Glass</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Only raise your glass when the speaker invites you to. Hold it by the stem. Raise it toward the couple.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>The Couple Being Toasted</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">The couple being toasted remains seated and does not drink to themselves. They smile, acknowledge the toast, and can take a sip after the room has finished.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>Non-Drinkers</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Absolutely participate in the toast &mdash; raise whatever you have. Water, juice, soda, sparkling cider. Any beverage is acceptable. The gesture is what matters, not the contents of the glass.</p>
+    </div>
+
+    <div style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px; border-left: 4px solid var(--color-info, #90caf9); background: var(--color-info-bg, #e3f2fd);">
+        <strong>When During the Reception</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Toasts work best between courses (after the main course, before dessert) or after dinner before dancing begins. This gives guests time to settle in with drinks and keeps the energy flowing into the next phase of the evening.</p>
+    </div>
+</div>
+
+<div class="page-actions">
+    <a href="{{ url_for('speeches_view', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Speeches</a>
+    <a href="{{ url_for('etiquette_guide_view', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Etiquette Guide</a>
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

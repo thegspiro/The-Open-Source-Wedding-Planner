@@ -25,6 +25,9 @@
     <a href="{{ url_for('timeline_analysis', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">🔍</div><h3>Timeline Analysis</h3><p class="stat-label">Buffer warnings &amp; gap detection</p>
     </a>
+    <a href="{{ url_for('etiquette_guide_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">💜</div><h3>Etiquette Guide</h3><p class="stat-label">Being present &amp; guest engagement</p>
+    </a>
     <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}" class="dashboard-card module-link">
         <div class="card-icon">🗓️</div><h3>Individual Itineraries</h3><p class="stat-label">Per-person schedules &amp; handler view</p>
     </a>
@@ -207,6 +210,21 @@
     </a>
     <a href="{{ url_for('traditional_elements') }}" class="dashboard-card module-link">
         <div class="card-icon">📖</div><h3>Traditional Elements</h3><p class="stat-label">Browse wedding traditions</p>
+    </a>
+    <a href="{{ url_for('pacing_guide_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">⏱️</div><h3>Pacing Guide</h3><p class="stat-label">Timing, buffers &amp; sample timelines</p>
+    </a>
+    <a href="{{ url_for('hosting_guide_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🎁</div><h3>Hosting &amp; Thank-Yous</h3><p class="stat-label">Welcome bags &amp; thank-you notes</p>
+    </a>
+    <a href="{{ url_for('vendor_tipping_guide_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">💵</div><h3>Vendor Tipping Guide</h3><p class="stat-label">Who to tip &amp; how much</p>
+    </a>
+    <a href="{{ url_for('speeches_guide_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">🎙️</div><h3>Speech &amp; Toast Guide</h3><p class="stat-label">Structure, timing &amp; delivery</p>
+    </a>
+    <a href="{{ url_for('wedding_party_guide_view', wedding_id=wedding.id) }}" class="dashboard-card module-link">
+        <div class="card-icon">👥</div><h3>Wedding Party Roles</h3><p class="stat-label">MOH, best man &amp; party duties</p>
     </a>
 </div>
 

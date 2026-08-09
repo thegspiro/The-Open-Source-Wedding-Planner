@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Etiquette & Tipping Guide - {{ wedding.couple_names }}</title>
+    <style>
+        :root {
+            --primary: {{ wedding.branding.primary_color if wedding.branding and wedding.branding.primary_color else '#8B7355' }};
+            --secondary: {{ wedding.branding.secondary_color if wedding.branding and wedding.branding.secondary_color else '#D4C5B2' }};
+            --accent: {{ wedding.branding.accent_color if wedding.branding and wedding.branding.accent_color else '#C9A96E' }};
+            --heading-font: {{ wedding.branding.primary_font if wedding.branding and wedding.branding.primary_font else "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }};
+            --body-font: {{ wedding.branding.secondary_font if wedding.branding and wedding.branding.secondary_font else "'Segoe UI', Optima, Candara, sans-serif" }};
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--body-font);
+            color: #3a3a3a;
+            line-height: 1.6;
+            padding: 20px 40px;
+            background: #fff;
+        }
+
+        .print-btn {
+            display: inline-block;
+            padding: 8px 20px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-family: var(--body-font);
+            border-radius: 4px;
+        }
+
+        .print-btn:hover {
+            opacity: 0.85;
+        }
+
+        .print-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+        .skip-link {
+            position: absolute; left: -9999px; top: auto;
+            width: 1px; height: 1px; overflow: hidden;
+            font-size: 14px; padding: 10px;
+        }
+        .skip-link:focus {
+            position: static; width: auto; height: auto;
+            overflow: visible; background: var(--primary); color: #fff;
+            display: inline-block; margin-bottom: 10px;
+        }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+        .print-header {
+            text-align: center;
+            padding: 30px 20px 25px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--secondary);
+            position: relative;
+        }
+
+        .print-header::before {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 2px;
+            background: var(--accent);
+            margin: 0 auto 15px;
+        }
+
+        .monogram {
+            font-family: var(--heading-font);
+            font-size: 36px;
+            color: var(--primary);
+            letter-spacing: 4px;
+            margin-bottom: 8px;
+        }
+
+        .print-header h1 {
+            font-family: var(--heading-font);
+            font-size: 26px;
+            font-weight: normal;
+            color: var(--primary);
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+
+        .print-header .wedding-date {
+            font-size: 13px;
+            color: #888;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .print-header .subtitle {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .print-header::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 2px;
+            background: var(--accent);
+            margin: 15px auto 0;
+        }
+
+        .section-heading {
+            font-family: var(--heading-font);
+            font-size: 16px;
+            color: var(--primary);
+            letter-spacing: 1px;
+            margin: 25px 0 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--secondary);
+        }
+
+        .tip-card {
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--accent);
+            background: #fafaf8;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .tip-card strong {
+            font-size: 13px;
+            color: #333;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .tip-card p {
+            font-size: 11px;
+            color: #666;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .tip-card.accent-green {
+            border-left-color: #81c784;
+        }
+
+        .tip-card.accent-blue {
+            border-left-color: #90caf9;
+        }
+
+        .tip-card.accent-warning {
+            border-left-color: #ffb74d;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            font-size: 11px;
+        }
+
+        .data-table th {
+            background: #f5f3f0;
+            font-family: var(--heading-font);
+            font-size: 11px;
+            text-align: left;
+            padding: 6px 10px;
+            border-bottom: 2px solid var(--secondary);
+            color: var(--primary);
+            letter-spacing: 0.5px;
+        }
+
+        .data-table td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #e8e2da;
+            vertical-align: top;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .budget-box {
+            padding: 12px 16px;
+            border: 2px solid var(--secondary);
+            border-radius: 6px;
+            background: #fafaf8;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .budget-box strong {
+            font-size: 13px;
+            color: #333;
+        }
+
+        .budget-box p {
+            font-size: 11px;
+            color: #666;
+            margin: 4px 0 0;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 10px;
+            color: #bbb;
+            margin-top: 35px;
+            padding-top: 15px;
+            border-top: 1px solid var(--secondary);
+            letter-spacing: 0.5px;
+        }
+
+        @page {
+            size: letter;
+            margin: 0.6in 0.5in;
+        }
+
+        @media print {
+            * { color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+            .print-btn {
+                display: none !important;
+            }
+
+            .share-form-inline {
+                display: none !important;
+            }
+
+            .skip-link { display: none !important; }
+
+            body {
+                padding: 0;
+                font-size: 11px;
+            }
+
+            .print-header h1 {
+                font-size: 22px;
+            }
+
+            .section-heading {
+                margin-top: 18px;
+                font-size: 14px;
+            }
+
+            .tip-card {
+                padding: 6px 10px;
+                margin-bottom: 5px;
+                page-break-inside: avoid;
+            }
+
+            .tip-card strong {
+                font-size: 11px;
+            }
+
+            .tip-card p {
+                font-size: 10px;
+            }
+
+            .data-table {
+                font-size: 10px;
+                page-break-inside: avoid;
+            }
+
+            .data-table th {
+                font-size: 10px;
+            }
+
+            .data-table td {
+                padding: 4px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
+    <button class="print-btn" onclick="window.print()">Print</button>
+    <a class="print-btn" href="?format=pdf" role="button" style="text-decoration:none; margin-left:8px;">Download PDF</a>
+    {% set share_document_type = 'vendor_tipping_guide' %}{% include 'print/_share_button.html' %}
+
+    <main id="main-content">
+    <div class="print-header">
+        {% if wedding.branding and wedding.branding.monogram_text %}
+        <div class="monogram">{{ wedding.branding.monogram_text }}</div>
+        {% endif %}
+        <h1>Vendor Etiquette &amp; Tipping Guide</h1>
+        <div style="font-family: var(--heading-font); font-size: 15px; color: #666; margin-bottom: 4px;">{{ wedding.couple_names }}</div>
+        {% if wedding.wedding_date %}
+        <div class="wedding-date">{{ wedding.wedding_date.strftime('%A, %B %d, %Y') }}</div>
+        {% endif %}
+        <div class="subtitle">Who to tip, how much, when to deliver, and day-of vendor communication</div>
+    </div>
+
+    <!-- Tipping by Vendor Category -->
+    <h2 class="section-heading">Tipping by Vendor Category</h2>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Vendor</th><th>Recommended Tip</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Photographer / Videographer</td><td>$50-200 per lead, $50-100 per assistant, or 1-5%</td><td>Not expected for owners</td></tr>
+            <tr><td>DJ</td><td>$50-150 or 10-15%</td><td>Band: $25-50 per musician</td></tr>
+            <tr><td>Caterer / Staff</td><td>15-20% of food bill if not included</td><td>Captain $100-300, servers $20-50 each</td></tr>
+            <tr><td>Bartenders</td><td>10-20% of bar tab or $20-150 each</td><td>Often pre-included &mdash; check contract</td></tr>
+            <tr><td>Planner / Coordinator</td><td>$50-500 or up to 10-20%</td><td>Assistants $50-150</td></tr>
+            <tr><td>Officiant</td><td>Professional: $50-150</td><td>Religious: $100-500 donation to house of worship</td></tr>
+            <tr><td>Florist</td><td>$50-150 lead (optional)</td><td>Delivery $10-30 each</td></tr>
+            <tr><td>Baker</td><td>Not expected for owner</td><td>Delivery $5-20 each</td></tr>
+            <tr><td>Hair &amp; Makeup</td><td>15-25% of service cost ($50-100)</td><td>Tip each artist individually</td></tr>
+            <tr><td>Transportation</td><td>15-20% or $100-150 per driver</td><td>Often pre-included</td></tr>
+            <tr><td>Venue Coordinator</td><td>$100-200</td><td>Assistant staff $25-50</td></tr>
+            <tr><td>Valet</td><td>$1-5 per car or $50 per attendant</td><td>Tip at START so guests know it's covered</td></tr>
+        </tbody>
+    </table>
+
+    <!-- When Tipping Is NOT Expected -->
+    <h2 class="section-heading">When Tipping Is NOT Expected</h2>
+
+    <div class="tip-card accent-blue">
+        <strong>Business Owners vs. Employees</strong>
+        <p>Owners set their own pricing. Tipping applies primarily to employees who don't control their rates.</p>
+    </div>
+
+    <div class="tip-card accent-blue">
+        <strong>Service Charge vs. Gratuity</strong>
+        <p>NOT the same thing. A service charge may go to the company, not the staff. Ask: "Does this fee go to the staff?"</p>
+    </div>
+
+    <div class="tip-card accent-blue">
+        <strong>Tips Never Expected</strong>
+        <p>Brief deliveries. Poor service (address the issue instead). When budget doesn't allow &mdash; reviews and referrals are meaningful alternatives.</p>
+    </div>
+
+    <!-- How to Deliver Tips -->
+    <h2 class="section-heading">How to Deliver Tips</h2>
+
+    <div class="tip-card">
+        <strong>Labeled Envelope System</strong>
+        <p>Withdraw cash 2 weeks before. Prepare envelopes with vendor name + thank-you note. Seal and organize in delivery order.</p>
+    </div>
+
+    <div class="tip-card">
+        <strong>The "Tip Distributor"</strong>
+        <p>Designate ONE person (planner, MOH, best man). Provide checklist with names, envelopes, and timing. The couple should never handle envelopes on the day.</p>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Vendor</th><th>When to Deliver</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Hair &amp; Makeup</td><td>After services are complete</td></tr>
+            <tr><td>Officiant</td><td>At rehearsal or before ceremony</td></tr>
+            <tr><td>Valet</td><td>Start of event</td></tr>
+            <tr><td>Caterer / Wait Staff</td><td>End of reception</td></tr>
+            <tr><td>DJ / Band</td><td>After final performance</td></tr>
+            <tr><td>Photographer</td><td>End of event or post-honeymoon</td></tr>
+        </tbody>
+    </table>
+
+    <!-- Day-Of Vendor Communication -->
+    <h2 class="section-heading">Day-Of Vendor Communication</h2>
+
+    <div class="tip-card accent-green">
+        <strong>Point of Contact</strong>
+        <p>Planner becomes sole vendor contact. If no planner, designate a liaison. The couple should NOT field vendor questions on the day.</p>
+    </div>
+
+    <div class="tip-card accent-green">
+        <strong>Vendor Meals</strong>
+        <p>Any vendor working 4-6+ hours during meal service gets a hot meal. Serve after couple but before remaining tables. Provide a private dining area.</p>
+    </div>
+
+    <div class="tip-card accent-green">
+        <strong>Timeline &amp; Confirmation</strong>
+        <p>Share final timeline 3-4 weeks before. Confirmation call 1 week before. Reconfirm arrival times, setup, and any changes.</p>
+    </div>
+
+    <!-- When Things Go Wrong -->
+    <h2 class="section-heading">When Things Go Wrong</h2>
+
+    <div class="tip-card accent-warning">
+        <strong>Address Immediately If:</strong>
+        <p>Safety issue. Contracted services not being delivered. Problem will worsen if unaddressed. Have your planner or liaison handle it.</p>
+    </div>
+
+    <div class="tip-card accent-warning">
+        <strong>Let It Go If:</strong>
+        <p>Minor aesthetic issue only you notice. Small delay that won't cascade. Imperfection won't show in photos or affect guest experience.</p>
+    </div>
+
+    <div class="tip-card accent-warning">
+        <strong>Post-Wedding</strong>
+        <p>Wait 2-3 weeks. Contact vendor directly before posting reviews. Be factual about what happened vs. what was contracted.</p>
+    </div>
+
+    <!-- Budget Guidance -->
+    <div class="budget-box">
+        <strong>Overall Tipping Budget</strong>
+        <p>Budget 5-10% of total wedding cost for tips. Typical total: $500-$1,500.</p>
+    </div>
+
+    <div class="footer-note">
+        {{ wedding.couple_names }}
+        {% if wedding.wedding_date %} &middot; {{ wedding.wedding_date.strftime('%B %d, %Y') }}{% endif %}
+        &middot; Vendor Etiquette &amp; Tipping Guide
+    </div>
+    </main>
+</body>
+</html>
