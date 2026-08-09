@@ -60,6 +60,20 @@ if app.config['SECRET_KEY'] in ('dev-secret-key-change-in-production', 'your-sec
         '    Then set it:     Copy .env.example to .env and update SECRET_KEY'
     )
 
+# Behind a reverse proxy, request.remote_addr is the proxy's address for every
+# visitor, which collapses each rate-limit bucket into a single global one — ten
+# bad logins would then lock out every user. ProxyFix restores the real client IP
+# from X-Forwarded-For.
+#
+# Off by default and opt-in: X-Forwarded-For is trivially spoofable, so trusting
+# it on a directly-exposed install would let an attacker forge a fresh IP per
+# request and bypass rate limiting entirely. Set TRUST_PROXY=true only when the
+# app genuinely sits behind a proxy that overwrites the header.
+if os.environ.get('TRUST_PROXY', 'false').lower() in ('true', '1', 'yes'):
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    logger.info('TRUST_PROXY enabled: reading client IP from X-Forwarded-For.')
+
 db.init_app(app)
 migrate = Migrate(app, db)
 
@@ -3540,11 +3554,31 @@ def rsvp_portal(token):
     return render_template('rsvp/portal.html', wedding=wedding, guests=guests,
                          menu_items=menu_items, token=token, custom_questions=custom_questions)
 
+def identified_guest(wedding):
+    """Return the guest proven by the caller's check-in cookie, if any.
+
+    The cookie is only ever issued to someone who followed their own emailed
+    /g/<token> link, so it is the one piece of evidence in the public RSVP flow
+    that ties a request to a specific invitee. A typed-in name is not evidence.
+    """
+    cookie_token = request.cookies.get(f'guest_{wedding.id}')
+    if not cookie_token:
+        return None
+    return Guest.query.filter_by(
+        guest_token=cookie_token, wedding_id=wedding.id
+    ).first()
+
+
 @app.route('/rsvp/<token>/submit', methods=['POST'])
 @rate_limit(max_requests=20, window_seconds=3600)
 def rsvp_submit(token):
     """Process RSVP submission from public portal."""
     wedding = Wedding.query.filter_by(rsvp_token=token).first_or_404()
+
+    # The portal page checks this too, but this is the route that writes, and an
+    # RSVP link stays in circulation long after the couple closes responses.
+    if not wedding.rsvp_enabled:
+        return render_template('rsvp/disabled.html', wedding=wedding), 403
 
     # Validate and sanitize all input
     is_valid, errors, data = validate_rsvp_submission(wedding, request.form)
@@ -3560,11 +3594,26 @@ def rsvp_submit(token):
     rsvp_notes = data['rsvp_notes']
     plus_one_name = data['plus_one_name']
 
+    caller = identified_guest(wedding)
     guest = Guest.query.filter_by(wedding_id=wedding.id, name=guest_name).first()
+    created_guest = False
+
     if not guest:
-        # Allow new guests to RSVP (they type their name)
+        # Walk-ups may still RSVP by typing a name — this creates a new record
+        # and so cannot overwrite anyone.
         guest = Guest(wedding_id=wedding.id, name=guest_name, guest_token=generate_token())
         db.session.add(guest)
+        created_guest = True
+    elif guest.rsvp_date and (caller is None or caller.id != guest.id):
+        # The guest has already responded and the caller has not proven they are
+        # that guest. Refuse rather than let anyone who knows the name rewrite a
+        # response — including dietary restrictions, which the caterer acts on.
+        flash(
+            'A response has already been recorded for that name. To change it, '
+            'use the personal link from your invitation email, or contact the couple.',
+            'error',
+        )
+        return redirect(url_for('rsvp_portal', token=token))
 
     # Ensure guest has a check-in token
     if not guest.guest_token:
@@ -3600,15 +3649,20 @@ def rsvp_submit(token):
 
     db.session.commit()
 
-    # Set cookie so this guest is recognized at venue check-in
     response = make_response(render_template('rsvp/thank_you.html', wedding=wedding, guest=guest, token=token))
-    response.set_cookie(
-        f'guest_{wedding.id}',
-        guest.guest_token,
-        max_age=60 * 60 * 24 * 90,
-        httponly=True,
-        samesite='Lax',
-    )
+
+    # Issue the check-in cookie only when this request created the guest record,
+    # or when the caller already proved they are that guest. Handing it out on a
+    # bare name match would let anyone who knows a guest's name walk away with
+    # that guest's venue identity.
+    if created_guest or (caller is not None and caller.id == guest.id):
+        response.set_cookie(
+            f'guest_{wedding.id}',
+            guest.guest_token,
+            max_age=60 * 60 * 24 * 90,
+            httponly=True,
+            samesite='Lax',
+        )
     return response
 
 @app.route('/wedding/<int:wedding_id>/rsvp/enable', methods=['POST'])
@@ -3706,21 +3760,14 @@ def guest_checkin_lookup(rsvp_token):
         table_name = guest.seating_table.table_name
         table_number = guest.seating_table.table_number
 
-    # If found and guest has a token, set the cookie for next time
-    response = make_response(render_template('checkin/table.html',
+    # Deliberately no cookie here. Showing someone their table when they type
+    # their name at the venue is the point of this page; minting a 90-day
+    # identity credential from a name anyone could guess is not. Guests who want
+    # to be remembered follow the /g/<token> link emailed to them.
+    return render_template('checkin/table.html',
         guest=guest, wedding=wedding,
         table_name=table_name, table_number=table_number,
-        rsvp_token=rsvp_token, searched_name=name))
-
-    if guest and guest.guest_token:
-        response.set_cookie(
-            f'guest_{wedding.id}',
-            guest.guest_token,
-            max_age=60 * 60 * 24 * 90,
-            httponly=True,
-            samesite='Lax',
-        )
-    return response
+        rsvp_token=rsvp_token, searched_name=name)
 
 
 @app.route('/wedding/<int:wedding_id>/guest-links')

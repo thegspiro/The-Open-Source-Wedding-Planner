@@ -11,6 +11,37 @@ This guide covers setting up a reverse proxy in front of Wedding Organizer for S
 
 ---
 
+## Required: set `TRUST_PROXY=true`
+
+**Set this whenever the app runs behind a proxy.** Add it to your `.env`:
+
+```bash
+TRUST_PROXY=true
+```
+
+Behind a proxy, every request reaches the app from the proxy's address. Without
+`TRUST_PROXY` the app takes that address at face value, so all visitors look
+like a single client and share one rate-limit bucket. The practical effect is
+that ten failed logins — from anyone, anywhere — lock out **every user** for
+five minutes, and that condition can be held indefinitely.
+
+With `TRUST_PROXY=true` the app reads the real client address from
+`X-Forwarded-For`, and rate limits apply per visitor as intended.
+
+Your proxy must set that header (every configuration in this guide already
+does):
+
+```nginx
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+**Leave it unset when the app is exposed directly.** `X-Forwarded-For` is just a
+request header, so anyone can forge it. With no proxy in front to overwrite it,
+trusting the header would let an attacker present a different IP on every
+request and bypass rate limiting entirely.
+
+---
+
 ## Option 1: Nginx
 
 ### Basic Configuration
