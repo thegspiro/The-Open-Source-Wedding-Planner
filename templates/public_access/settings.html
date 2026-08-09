@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Public Access & Embeds - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Public Access & Embeds</h1>
+</div>
+
+<p class="form-help">Configure your public URL and enable embeddable widgets that can be placed on any external website (Squarespace, WordPress, Wix, a custom site, etc.) using simple iframe codes.</p>
+
+<div class="form-container">
+    <form method="POST">
+        <!-- Reverse Proxy / Public URL -->
+        <div class="module-section">
+            <h2 style="font-size: 1.15rem;">Reverse Proxy / Public URL</h2>
+            <p class="form-help">If your server is accessible via a public URL (through a reverse proxy like nginx, Caddy, or Cloudflare), enter it here. All embed codes and public links will use this URL.</p>
+
+            <div class="form-group">
+                <label>Public URL</label>
+                <input type="url" name="public_url" value="{{ wedding.public_url or '' }}" placeholder="https://wedding.mydomain.com">
+                <small class="form-help">The full URL where this application is accessible from the internet. Include https:// but no trailing slash. Leave blank if not publicly accessible.</small>
+            </div>
+
+            {% if not wedding.public_url %}
+            <div style="padding: 1rem; border-radius: 8px; border-left: 4px solid var(--color-warning, #f57c00); background: var(--color-warning-bg, #fff8e1); margin-bottom: 1rem;">
+                <strong>No public URL configured</strong>
+                <p style="margin: 0.25rem 0 0; color: var(--color-text-muted);">Embed widgets require your application to be accessible from the internet via a reverse proxy. Without a public URL, embeds will only work on your local network.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Enable Embeds -->
+        <div class="module-section">
+            <h2 style="font-size: 1.15rem;">Embeddable Widgets</h2>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="embed_enabled" {% if wedding.embed_enabled %}checked{% endif %}>
+                    Enable embeddable widgets for this wedding
+                </label>
+                <small class="form-help">When enabled, public pages are created that can be embedded on external websites via iframe. Anyone with the embed URL can view the information.</small>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 1.5rem;">
+            <button type="submit" class="btn-primary" style="padding: 0.75rem 2.5rem;">Save Settings</button>
+        </div>
+    </form>
+</div>
+
+<!-- Embed Codes Section (only shown when enabled) -->
+{% if wedding.embed_enabled and embed_urls %}
+<div class="module-section" style="margin-top: 2rem;">
+    <h2 style="font-size: 1.15rem;">Your Embed Codes</h2>
+    <p class="form-help">Copy and paste these iframe codes into your external website. Each widget is a self-contained page styled to look good at any size.</p>
+
+    {% macro embed_card(title, description, url, height) %}
+    {% if url %}
+    <div class="dashboard-card" style="margin-bottom: 1rem;">
+        <h3>{{ title }}</h3>
+        <p class="stat-label">{{ description }}</p>
+        <div class="form-group" style="margin-top: 0.75rem;">
+            <label>Embed Code</label>
+            <textarea rows="2" readonly onclick="this.select()" style="font-family: monospace; font-size: 0.8rem;">&lt;iframe src="{{ url }}" width="100%" height="{{ height }}" frameborder="0" style="border: none; border-radius: 8px;"&gt;&lt;/iframe&gt;</textarea>
+        </div>
+        <div class="form-actions">
+            <a href="{{ url }}" target="_blank" class="btn-secondary btn-small">Preview</a>
+        </div>
+    </div>
+    {% endif %}
+    {% endmacro %}
+
+    {{ embed_card('Event Details', 'Wedding date, time, venue, and ceremony/reception info', embed_urls.events, '500') }}
+
+    {% if embed_urls.rsvp %}
+    {{ embed_card('RSVP Form', 'Interactive RSVP form with meal selection and custom questions', embed_urls.rsvp, '700') }}
+    {% else %}
+    <div class="dashboard-card" style="margin-bottom: 1rem; opacity: 0.6;">
+        <h3>RSVP Form</h3>
+        <p class="stat-label">Enable RSVP on the <a href="{{ url_for('guests_view', wedding_id=wedding.id) }}">Guests page</a> first to get the embed code.</p>
+    </div>
+    {% endif %}
+
+    {{ embed_card('Registry', 'Your gift registry items and links', embed_urls.registry, '500') }}
+    {{ embed_card('Travel & Accommodations', 'Hotel blocks, directions, and transportation info', embed_urls.travel, '500') }}
+    {{ embed_card('Countdown Timer', 'Live countdown to your wedding day', embed_urls.countdown, '250') }}
+    {{ embed_card('Wedding Party', 'Bridal party members, roles, and bios', embed_urls.party, '500') }}
+</div>
+
+<div class="module-section" style="margin-top: 1rem;">
+    <h2 style="font-size: 1.15rem;">How It Works</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <strong>1. Set up a reverse proxy</strong> -- Point a domain (e.g., wedding.mydomain.com) to this application using nginx, Caddy, Apache, or Cloudflare Tunnel. Enable HTTPS.
+        </div>
+        <div class="info-item">
+            <strong>2. Enter your public URL above</strong> -- This tells the embed codes where to point.
+        </div>
+        <div class="info-item">
+            <strong>3. Copy embed codes</strong> -- Paste the iframe snippets into your website builder (Squarespace, WordPress, Wix, etc.) using their HTML/embed block feature.
+        </div>
+        <div class="info-item">
+            <strong>4. Guests interact directly</strong> -- RSVP submissions, form data, and all interactions go directly to your server. You own the data.
+        </div>
+    </div>
+</div>
+{% elif not wedding.embed_enabled %}
+<div class="empty-state" style="margin-top: 2rem;">
+    <h2>Embeds Not Enabled</h2>
+    <p>Check the "Enable embeddable widgets" box above and save to generate embed codes for your wedding.</p>
+</div>
+{% endif %}
+
+<div class="page-actions">
+    <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
+</div>
+{% endblock %}

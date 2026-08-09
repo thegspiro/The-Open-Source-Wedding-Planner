@@ -62,6 +62,11 @@ class Wedding(db.Model):
     # Shareable read-only link
     share_token = db.Column(db.String(64), unique=True)
 
+    # Public Access / Reverse Proxy
+    public_url = db.Column(db.String(500))  # e.g., https://wedding.mydomain.com
+    embed_enabled = db.Column(db.Boolean, default=False)
+    embed_token = db.Column(db.String(64), unique=True)  # token for embed/public page access
+
     # Relationships
     people = db.relationship('Person', backref='wedding', lazy=True, cascade='all, delete-orphan')
     tasks = db.relationship('Task', backref='wedding', lazy=True, cascade='all, delete-orphan')

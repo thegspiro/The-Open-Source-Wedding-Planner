@@ -1,0 +1,38 @@
+{% extends "embed/base.html" %}
+{% block title %}Travel & Accommodations - {{ wedding.couple_names }}{% endblock %}
+{% block content %}
+<h1>{{ wedding.couple_names }}</h1>
+<p class="subtitle">Travel & Accommodations</p>
+
+{% if accommodations %}
+{% for acc in accommodations %}
+<div class="card">
+    <span class="badge">{{ acc.accommodation_type|replace('_', ' ')|title if acc.accommodation_type else 'Accommodation' }}</span>
+    <h3>{{ acc.name }}</h3>
+    {% if acc.address %}
+    <p class="detail"><strong>Address:</strong> {{ acc.address }}</p>
+    {% endif %}
+    {% if acc.phone %}
+    <p class="detail"><strong>Phone:</strong> {{ acc.phone }}</p>
+    {% endif %}
+    {% if acc.website %}
+    <p class="detail"><a href="{{ acc.website }}" target="_blank" rel="noopener">Visit Website &rarr;</a></p>
+    {% endif %}
+    {% if acc.rate %}
+    <p class="detail"><strong>Rate:</strong> ${{ "{:,.0f}".format(acc.rate) }}/night</p>
+    {% endif %}
+    {% if acc.block_code %}
+    <p class="detail"><strong>Booking Code:</strong> <span style="font-weight: 600; color: #b76e79;">{{ acc.block_code }}</span></p>
+    {% endif %}
+    {% if acc.booking_deadline %}
+    <p class="detail"><strong>Book By:</strong> {{ acc.booking_deadline.strftime('%B %d, %Y') }}</p>
+    {% endif %}
+    {% if acc.notes %}
+    <p class="detail">{{ acc.notes }}</p>
+    {% endif %}
+</div>
+{% endfor %}
+{% else %}
+<p class="empty">Travel and accommodation details coming soon!</p>
+{% endif %}
+{% endblock %}
