@@ -126,6 +126,32 @@
             <button type="submit" class="btn-primary" style="padding: 0.75rem 2.5rem; font-size: 1rem;">Save Settings</button>
         </div>
     </form>
+
+    <form method="POST" action="{{ url_for('change_password') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <div class="module-section">
+            <h2 style="font-size: 1.15rem;">Password</h2>
+            <div class="form-group">
+                <label for="current_password">Current password</label>
+                <input type="password" id="current_password" name="current_password"
+                       autocomplete="current-password" required>
+            </div>
+            <div class="form-group">
+                <label for="new_password">New password</label>
+                <input type="password" id="new_password" name="new_password"
+                       autocomplete="new-password" required>
+                <small>At least 10 characters, with an uppercase letter, a lowercase letter, and a number.</small>
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">Confirm new password</label>
+                <input type="password" id="confirm_password" name="confirm_password"
+                       autocomplete="new-password" required>
+            </div>
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <button type="submit" class="btn-primary" style="padding: 0.75rem 2.5rem; font-size: 1rem;">Change Password</button>
+            </div>
+        </div>
+    </form>
 </div>
 
 <style>

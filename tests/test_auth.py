@@ -128,7 +128,9 @@ class TestLogout:
         with client.session_transaction() as sess:
             assert 'user_id' in sess
 
-        resp = client.get('/logout', follow_redirects=False)
+        # POST, not GET: logout is state-changing, so it must not be reachable
+        # from a third-party page's <img> tag.
+        resp = client.post('/logout', follow_redirects=False)
         assert resp.status_code == 302
         assert '/login' in resp.headers.get('Location', '')
 

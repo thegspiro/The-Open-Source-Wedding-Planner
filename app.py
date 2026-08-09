@@ -25,6 +25,7 @@ from models import (
     UNPLUGGED_CEREMONY_TEMPLATES, SOCIAL_SHARING_POLICIES
 )
 from flask_migrate import Migrate
+from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -41,6 +42,7 @@ import time as time_module
 import json
 import math
 from functools import wraps
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 from security import init_security, rate_limit, sanitize_string, validate_email, validate_phone, validate_password_strength, validate_rsvp_submission, validate_time_string, validate_name_pronunciation, validate_text_field, ROLE_HIERARCHY
@@ -102,7 +104,7 @@ def page_not_found(e):
 @app.errorhandler(429)
 def too_many_requests(e):
     flash(str(e.description) if hasattr(e, 'description') else 'Too many requests.', 'error')
-    return redirect(request.referrer or url_for('index'))
+    return safe_redirect(url_for('index'))
 
 @app.errorhandler(500)
 def internal_server_error(e):
@@ -114,8 +116,12 @@ def health_check():
     try:
         db.session.execute(db.text('SELECT 1'))
         return jsonify({'status': 'healthy', 'database': 'connected'}), 200
-    except Exception as e:
-        return jsonify({'status': 'unhealthy', 'database': str(e)}), 503
+    except Exception:
+        # This endpoint is unauthenticated, so the exception text stays in the
+        # log. SQLAlchemy connection errors quote the DSN, which for Postgres or
+        # MySQL carries the database password.
+        logger.exception('Health check failed: database is unreachable.')
+        return jsonify({'status': 'unhealthy', 'database': 'disconnected'}), 503
 
 
 # Initialize database and seed traditional elements
@@ -328,6 +334,28 @@ def generate_token():
     return secrets.token_urlsafe(32)
 
 
+# Compared against on failed logins for accounts that do not exist, so both
+# branches cost the same and timing does not disclose which emails are
+# registered. The plaintext is irrelevant and never matches anything.
+_DUMMY_PASSWORD_HASH = generate_password_hash(secrets.token_urlsafe(32))
+
+
+def start_user_session(user):
+    """Sign a user in on a brand-new session.
+
+    session.clear() first so the identifier the browser arrives with is never
+    the one that ends up authenticated — otherwise anyone able to plant a
+    session cookie before login keeps a valid session afterwards.
+
+    session.permanent makes Flask honour PERMANENT_SESSION_LIFETIME; without it
+    the configured 24-hour lifetime is dead config and the cookie carries no
+    expiry at all.
+    """
+    session.clear()
+    session.permanent = True
+    session['user_id'] = user.id
+
+
 def get_user_weddings(user):
     """Get weddings accessible to the current user."""
     access_records = WeddingAccess.query.filter_by(user_id=user.id).all()
@@ -426,6 +454,22 @@ def get_entity_or_404(model, entity_id, wedding_id):
     if hasattr(entity, 'wedding_id') and entity.wedding_id != wedding_id:
         abort(404)
     return entity
+
+
+def safe_redirect(fallback):
+    """Redirect back to the referring page, but only if it is our own.
+
+    Referer is a request header, so it is whatever the caller wants it to be.
+    Handing it straight to redirect() lets any site bounce a victim off to an
+    attacker's domain through a URL on this one, which is exactly the shape a
+    phishing link wants.
+    """
+    referrer = request.referrer
+    if referrer:
+        parsed = urlparse(referrer)
+        if not parsed.netloc or parsed.netloc == urlparse(request.host_url).netloc:
+            return redirect(referrer)
+    return redirect(fallback)
 
 
 def safe_strptime(value, fmt, default=None):
@@ -570,7 +614,7 @@ def register():
 
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
-        email = request.form.get('email', '').strip().lower()
+        email = sanitize_string(request.form.get('email', ''), max_length=120).lower()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
         user_type = request.form.get('user_type', '')
@@ -580,6 +624,11 @@ def register():
             errors.append('Name is required.')
         if not email:
             errors.append('Email is required.')
+        elif not validate_email(email):
+            # Email is the only account identifier, the key collaborator invites
+            # match on, and the sole route to any future account recovery, so it
+            # has to be a real address rather than merely non-empty.
+            errors.append('Please enter a valid email address.')
         pw_valid, pw_error = validate_password_strength(password)
         if not pw_valid:
             errors.append(pw_error)
@@ -602,7 +651,7 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        session['user_id'] = user.id
+        start_user_session(user)
         flash(f'Welcome, {user.name}! Your account has been created.', 'success')
         return redirect(url_for('index'))
 
@@ -621,21 +670,59 @@ def login():
 
         user = User.query.filter_by(email=email).first()
         if user is None or not user.check_password(password):
+            if user is None:
+                # Spend the same work on a missing account as on a real one, so
+                # response time does not reveal which addresses are registered.
+                check_password_hash(_DUMMY_PASSWORD_HASH, password)
             flash('Invalid email or password.', 'error')
             return render_template('auth/login.html', email=email)
 
-        session['user_id'] = user.id
+        start_user_session(user)
         flash(f'Welcome back, {user.name}!', 'success')
         return redirect(url_for('index'))
 
     return render_template('auth/login.html')
 
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
 def logout():
-    session.pop('user_id', None)
+    # POST, not GET: a GET logout can be fired by any third-party page with an
+    # <img> tag, signing the user out without their involvement.
+    session.clear()
     flash('You have been logged out.', 'success')
     return redirect(url_for('login'))
+
+
+@app.route('/password', methods=['POST'])
+@login_required
+def change_password():
+    """Let a signed-in user rotate their own password."""
+    user = g.user
+    current = request.form.get('current_password', '')
+    new_password = request.form.get('new_password', '')
+    confirm = request.form.get('confirm_password', '')
+
+    if not user.check_password(current):
+        flash('Your current password is incorrect.', 'error')
+        return redirect(url_for('user_settings'))
+
+    is_valid, error = validate_password_strength(new_password)
+    if not is_valid:
+        flash(error, 'error')
+        return redirect(url_for('user_settings'))
+
+    if new_password != confirm:
+        flash('New passwords do not match.', 'error')
+        return redirect(url_for('user_settings'))
+
+    user.set_password(new_password)
+    db.session.commit()
+
+    # Re-establish the session on the new credential so the change also rotates
+    # the session identifier.
+    start_user_session(user)
+    flash('Password updated.', 'success')
+    return redirect(url_for('user_settings'))
 
 
 # ============================================
@@ -716,7 +803,7 @@ def new_wedding():
         wedding_date = safe_strptime(request.form.get('wedding_date'), '%Y-%m-%d')
         if not wedding_date:
             flash('Please provide a valid wedding date.', 'error')
-            return redirect(request.referrer or url_for('index'))
+            return safe_redirect(url_for('index'))
         email = request.form['email']
 
         wedding = Wedding(
@@ -1539,7 +1626,7 @@ def ceremony_idea_include(wedding_id, element_id):
     existing = WeddingElement.query.filter_by(wedding_id=wedding_id, element_id=element_id).first()
     if existing:
         flash(f'{element.name} is already included!', 'info')
-        return redirect(request.referrer or url_for('ceremony_ideas', wedding_id=wedding_id))
+        return safe_redirect(url_for('ceremony_ideas', wedding_id=wedding_id))
 
     # Create the WeddingElement record
     we = WeddingElement(wedding_id=wedding_id, element_id=element_id)
@@ -1571,7 +1658,7 @@ def ceremony_idea_include(wedding_id, element_id):
         flash(f'{element.name} included! {count} tasks added to your task list.', 'success')
     else:
         flash(f'{element.name} included!', 'success')
-    return redirect(request.referrer or url_for('ceremony_ideas', wedding_id=wedding_id))
+    return safe_redirect(url_for('ceremony_ideas', wedding_id=wedding_id))
 
 @app.route('/wedding/<int:wedding_id>/ceremony/ideas/<int:element_id>/remove', methods=['POST'])
 @login_required
@@ -1591,7 +1678,7 @@ def ceremony_idea_remove(wedding_id, element_id):
 
     db.session.commit()
     flash(f'{element.name} removed from your ceremony.', 'info')
-    return redirect(request.referrer or url_for('ceremony_ideas', wedding_id=wedding_id))
+    return safe_redirect(url_for('ceremony_ideas', wedding_id=wedding_id))
 
 @app.route('/wedding/<int:wedding_id>/onboarding/ceremony/ideas')
 @login_required
@@ -6820,7 +6907,7 @@ def comment_add(wedding_id):
     db.session.add(comment)
     db.session.commit()
     flash('Comment added!', 'success')
-    return redirect(request.referrer or url_for('wedding_dashboard', wedding_id=wedding_id))
+    return safe_redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
 
 @app.route('/wedding/<int:wedding_id>/comment/<int:comment_id>/delete', methods=['POST'])
 @login_required
@@ -6829,7 +6916,7 @@ def comment_delete(wedding_id, comment_id):
     db.session.delete(comment)
     db.session.commit()
     flash('Comment removed.', 'success')
-    return redirect(request.referrer or url_for('wedding_dashboard', wedding_id=wedding_id))
+    return safe_redirect(url_for('wedding_dashboard', wedding_id=wedding_id))
 
 # ============================================
 # COLLABORATION / PERMISSIONS UI
@@ -7284,7 +7371,7 @@ def inventory_item_status(wedding_id, item_id):
     if new_status in ('needed', 'acquired', 'packed', 'setup', 'returned', 'lost'):
         item.status = new_status
         db.session.commit()
-    return redirect(request.referrer or url_for('inventory_view', wedding_id=wedding_id))
+    return safe_redirect(url_for('inventory_view', wedding_id=wedding_id))
 
 
 # --- Bins ---
