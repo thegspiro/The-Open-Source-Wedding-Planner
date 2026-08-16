@@ -5,6 +5,7 @@ from models import (
     Honeymoon, HoneymoonItinerary, PackingItem,
     WeddingBranding, BridalPartyMember, Guest,
     Budget, BudgetExpense, BudgetCategoryLimit, Vendor, RegistryItem, Attire, TraditionalElement,
+    WeddingElement,
     User, WeddingAccess,
     DayOfTimelineItem, PhotoShot, Song, FloralItem, Invitation,
     RehearsalDinner, Accommodation, MarriageLicense, HairMakeup,
@@ -7041,21 +7042,25 @@ def collaborator_remove(wedding_id, access_id):
 def calendar_view(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     events = []
+    # The template groups events by month and formats the day, so 'date' has to
+    # be a real date object. Task.due_date is a DateTime and the others are
+    # Dates; normalise to date so the entries stay comparable for sorting.
     # Tasks
     for t in wedding.tasks:
-        events.append({
-            'title': t.title,
-            'date': t.due_date.strftime('%Y-%m-%d') if t.due_date else '',
-            'type': 'task',
-            'completed': t.completed,
-            'category': t.category or 'general'
-        })
+        if t.due_date:
+            events.append({
+                'title': t.title,
+                'date': t.due_date.date(),
+                'type': 'task',
+                'completed': t.completed,
+                'category': t.category or 'general'
+            })
     # Vendor payment dates
     for v in wedding.vendors:
         if v.final_payment_date:
             events.append({
                 'title': f'Payment: {v.business_name}',
-                'date': v.final_payment_date.strftime('%Y-%m-%d'),
+                'date': v.final_payment_date,
                 'type': 'payment',
                 'completed': False,
                 'category': 'vendors'
@@ -7066,7 +7071,7 @@ def calendar_view(wedding_id):
             if e.payment_due_date:
                 events.append({
                     'title': f'Due: {e.item_name}',
-                    'date': e.payment_due_date.strftime('%Y-%m-%d'),
+                    'date': e.payment_due_date,
                     'type': 'payment',
                     'completed': e.payment_status == 'paid',
                     'category': 'budget'
@@ -7213,6 +7218,22 @@ def processional_order(wedding_id):
 # MUSIC DURATION TRACKING
 # ============================================
 
+MUSIC_MOMENT_LABELS = {
+    'processional': 'Processional',
+    'recessional': 'Recessional',
+    'first_dance': 'First Dance',
+    'parent_dance': 'Parent Dance',
+    'cake_cutting': 'Cake Cutting',
+    'dinner': 'Dinner',
+    'cocktail_hour': 'Cocktail Hour',
+    'dancing': 'Dancing',
+    'last_dance': 'Last Dance',
+    'do_not_play': 'Do Not Play',
+    'other': 'Other',
+    'unassigned': 'Unassigned',
+}
+
+
 @app.route('/wedding/<int:wedding_id>/music/stats')
 @login_required
 def music_stats(wedding_id):
@@ -7222,9 +7243,14 @@ def music_stats(wedding_id):
     for s in songs:
         m = s.moment or 'unassigned'
         if m not in moments:
-            moments[m] = {'songs': [], 'total_duration': 0}
+            # 'name' and 'duration' are the keys music/stats.html reads.
+            moments[m] = {
+                'name': MUSIC_MOMENT_LABELS.get(m, m.replace('_', ' ').title()),
+                'songs': [],
+                'duration': 0,
+            }
         moments[m]['songs'].append(s)
-        moments[m]['total_duration'] += s.duration_minutes or 0
+        moments[m]['duration'] += s.duration_minutes or 0
     total_duration = sum(s.duration_minutes or 0 for s in songs)
     do_not_play = [s for s in songs if s.moment == 'do_not_play']
     return render_template('music/stats.html', wedding=wedding, moments=moments,

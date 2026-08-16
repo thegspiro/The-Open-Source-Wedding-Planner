@@ -17,7 +17,7 @@
         <div class="stat-label">Total Speeches</div>
     </div>
     <div class="stat-box">
-        <div class="stat-num">{{ speeches|sum(attribute='duration_minutes') or 0 }} min</div>
+        <div class="stat-num">{{ speeches|map(attribute='duration_minutes')|select('number')|sum }} min</div>
         <div class="stat-label">Total Duration</div>
     </div>
     <div class="stat-box">

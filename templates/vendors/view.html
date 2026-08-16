@@ -27,7 +27,7 @@
     <div class="stat-box"><div class="stat-num">{{ vendors|length }}</div><div>Total Vendors</div></div>
     <div class="stat-box"><div class="stat-num">{{ contracted }}</div><div>Contracted</div></div>
     <div class="stat-box"><div class="stat-num">{{ vendors|length - contracted }}</div><div>Pending</div></div>
-    <div class="stat-box"><div class="stat-num">${{ "{:,.0f}".format(vendors|sum(attribute='total_cost', default=0)) }}</div><div>Total Cost</div></div>
+    <div class="stat-box"><div class="stat-num">${{ "{:,.0f}".format(vendors|map(attribute='total_cost')|select('number')|sum) }}</div><div>Total Cost</div></div>
 </div>
 
 <!-- Category Filter -->

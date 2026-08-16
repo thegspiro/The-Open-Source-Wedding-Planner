@@ -39,7 +39,7 @@
             </td>
             <td>{{ '$%.2f'|format(appt.cost) if appt.cost else '-' }}</td>
             <td>
-                <form method="POST" action="{{ url_for('hair_makeup_delete', wedding_id=wedding.id, appointment_id=appt.id) }}" class="form-inline">
+                <form method="POST" action="{{ url_for('hair_makeup_delete', wedding_id=wedding.id, appt_id=appt.id) }}" class="form-inline">
                     <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this appointment?')">Delete</button>
                 </form>
             </td>
