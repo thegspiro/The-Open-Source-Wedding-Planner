@@ -2382,14 +2382,21 @@ def task_delete(wedding_id, task_id):
     flash('Task deleted.', 'success')
     return redirect(url_for('tasks_view', wedding_id=wedding_id))
 
-@app.route('/task/<int:task_id>/toggle', methods=['POST'])
+@app.route('/wedding/<int:wedding_id>/tasks/<int:task_id>/toggle', methods=['POST'])
 @login_required
-def task_toggle(task_id):
-    task = Task.query.get_or_404(task_id)
+def task_toggle(wedding_id, task_id):
+    # This used to be /task/<task_id>/toggle, with no wedding in the URL.
+    # enforce_wedding_access() keys off wedding_id, so it returned early and the
+    # route was left with nothing but login_required -- any signed-in user could
+    # flip the state of any task in anyone's wedding. Carrying wedding_id puts
+    # it back under the same check as every other write, and get_entity_or_404
+    # rejects a task id belonging to a different wedding.
+    get_wedding_or_403(wedding_id)
+    task = get_entity_or_404(Task, task_id, wedding_id)
     task.completed = not task.completed
     db.session.commit()
     flash(f'Task {"completed" if task.completed else "reopened"}!', 'success')
-    return redirect(url_for('tasks_view', wedding_id=task.wedding_id))
+    return redirect(url_for('tasks_view', wedding_id=wedding_id))
 
 # ============================================
 # REGISTRY ROUTES
