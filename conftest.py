@@ -1,9 +1,13 @@
 """Shared pytest fixtures for the wedding planner test suite."""
 
+import secrets
+
 import pytest
 from datetime import datetime, timedelta
 
+from flask.testing import FlaskClient
 from sqlalchemy.pool import StaticPool
+from werkzeug.datastructures import Headers
 
 from app import app as flask_app, seed_default_emergency_kit
 from models import (
@@ -23,6 +27,40 @@ from models import (
 )
 
 
+class CsrfTestClient(FlaskClient):
+    """A test client that carries a CSRF token, the way a browser does.
+
+    The app validates a per-session token on every state-changing request. The
+    suite used to get past that by replacing security.validate_csrf_token with
+    ``lambda: True`` for the whole session, which meant the real validator never
+    ran once and nothing in the suite proved the check worked at all.
+
+    This client instead holds the session's token and sends it back, so the
+    genuine validator runs on every POST the suite makes. Tests that want to
+    exercise a *missing* or *forged* token pass ``csrf=False`` on the call and
+    supply whatever they like.
+    """
+
+    def open(self, *args, **kwargs):
+        method = str(kwargs.get("method", "GET")).upper()
+        send_token = kwargs.pop("csrf", True)
+        if send_token and method not in ("GET", "HEAD", "OPTIONS"):
+            headers = Headers(kwargs.get("headers") or {})
+            if "X-CSRF-Token" not in headers:
+                headers["X-CSRF-Token"] = self.csrf_token()
+            kwargs["headers"] = headers
+        return super().open(*args, **kwargs)
+
+    def csrf_token(self):
+        """The session's CSRF token, minting one if the session has none yet."""
+        with self.session_transaction() as sess:
+            token = sess.get("_csrf_token")
+            if not token:
+                token = secrets.token_hex(32)
+                sess["_csrf_token"] = token
+        return token
+
+
 @pytest.fixture(scope="session")
 def app():
     """Create a Flask application configured for testing."""
@@ -40,10 +78,7 @@ def app():
         WTF_CSRF_ENABLED=False,
         SERVER_NAME="localhost",
     )
-    # Disable CSRF validation during tests by monkey-patching
-    import security
-    security._original_validate_csrf = security.validate_csrf_token
-    security.validate_csrf_token = lambda: True
+    flask_app.test_client_class = CsrfTestClient
 
     yield flask_app
 

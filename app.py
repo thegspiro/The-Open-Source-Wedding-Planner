@@ -104,8 +104,13 @@ def page_not_found(e):
 
 @app.errorhandler(429)
 def too_many_requests(e):
-    flash(str(e.description) if hasattr(e, 'description') else 'Too many requests.', 'error')
-    return safe_redirect(url_for('index'))
+    # This used to flash and redirect to index. For an anonymous visitor index
+    # redirects to /login, and /login is itself rate limited, so a limited
+    # visitor bounced between the two until the browser gave up with a redirect
+    # loop. Render the refusal instead, and keep the 429 status so proxies and
+    # monitoring can see it.
+    description = str(e.description) if getattr(e, 'description', None) else 'Too many requests.'
+    return render_template('errors/429.html', description=description), 429
 
 @app.errorhandler(500)
 def internal_server_error(e):
@@ -609,7 +614,7 @@ def seed_default_emergency_kit(wedding_id):
 # ============================================
 
 @app.route('/register', methods=['GET', 'POST'])
-@rate_limit(max_requests=10, window_seconds=3600)
+@rate_limit(max_requests=10, window_seconds=3600, methods=('POST',))
 def register():
     if g.get('user'):
         return redirect(url_for('index'))
@@ -661,7 +666,7 @@ def register():
 
 
 @app.route('/login', methods=['GET', 'POST'])
-@rate_limit(max_requests=10, window_seconds=300)
+@rate_limit(max_requests=10, window_seconds=300, methods=('POST',))
 def login():
     if g.get('user'):
         return redirect(url_for('index'))

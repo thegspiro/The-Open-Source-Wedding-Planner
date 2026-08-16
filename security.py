@@ -43,6 +43,18 @@ def validate_csrf_token():
     return hmac.compare_digest(token, session_token)
 
 
+# Endpoints that are intentionally public and don't use session auth.
+#
+# This is keyed by endpoint *name*, so renaming one of these handlers silently
+# removes its exemption and starts rejecting real guests. test_csrf.py pins the
+# set and asserts every name still resolves to a registered route.
+CSRF_EXEMPT_ENDPOINTS = {
+    'rsvp_portal', 'rsvp_submit', 'shared_view',
+    'guest_identify', 'guest_checkin', 'guest_checkin_lookup',
+    'static',
+}
+
+
 def init_csrf(app):
     """Initialize CSRF protection on the app.
 
@@ -50,13 +62,6 @@ def init_csrf(app):
     - Validates CSRF tokens on all state-changing requests.
     - Exempts public endpoints that don't use session auth (RSVP, shared views).
     """
-    # Endpoints that are intentionally public and don't use session auth
-    CSRF_EXEMPT_ENDPOINTS = {
-        'rsvp_portal', 'rsvp_submit', 'shared_view',
-        'guest_identify', 'guest_checkin', 'guest_checkin_lookup',
-        'static',
-    }
-
     app.jinja_env.globals['csrf_token'] = generate_csrf_token
 
     @app.before_request
@@ -128,7 +133,7 @@ class RateLimiter:
 _rate_limiter = RateLimiter()
 
 
-def rate_limit(max_requests, window_seconds, key_func=None):
+def rate_limit(max_requests, window_seconds, key_func=None, methods=None):
     """Decorator to apply rate limiting to a route.
 
     Args:
@@ -136,10 +141,21 @@ def rate_limit(max_requests, window_seconds, key_func=None):
         window_seconds: Time window in seconds.
         key_func: Optional function to compute the rate limit key.
                   Defaults to IP address + endpoint.
+        methods: Optional collection of HTTP methods to count. Views that
+                 serve a form on GET and process it on POST should pass
+                 ('POST',), otherwise merely reloading the page burns the
+                 budget and locks the visitor out of the form entirely.
+                 Defaults to counting every method, which is what a GET-only
+                 public endpoint wants.
     """
+    counted_methods = {m.upper() for m in methods} if methods else None
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
+            if counted_methods is not None and request.method not in counted_methods:
+                return f(*args, **kwargs)
+
             if key_func:
                 key = key_func()
             else:
