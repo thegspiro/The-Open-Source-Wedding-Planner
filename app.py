@@ -6750,15 +6750,21 @@ def import_wedding_json(wedding_id):
                 continue
         return None
 
+    # `if val` would send a legitimate 0 down the None branch, so a tip of $0
+    # or a quantity of 0 came back from an import as "not recorded".
     def _safe_float(val):
+        if val is None or val == '':
+            return None
         try:
-            return float(val) if val else None
+            return float(val)
         except (ValueError, TypeError):
             return None
 
     def _safe_int(val):
+        if val is None or val == '':
+            return None
         try:
-            return int(val) if val else None
+            return int(val)
         except (ValueError, TypeError):
             return None
 
