@@ -16,7 +16,7 @@ The new onboarding system provides a module-by-module setup experience with:
    ```
 
 2. **Create a new wedding:**
-   - Go to http://localhost:5000
+   - Go to http://localhost:4345
    - Click "Add New Wedding"
    - Fill in basic details
    

@@ -221,7 +221,7 @@ The application exposes a `/health` endpoint for monitoring:
 
 ```bash
 # Check health from the host
-curl http://localhost:5000/health
+curl http://localhost:4345/health
 
 # Check Docker's built-in health status
 docker inspect --format='{{.State.Health.Status}}' wedding-organizer

@@ -26,7 +26,7 @@ Step-by-step instructions for using all features of the Wedding Organizer.
 ## Getting Started
 
 ### Creating a Wedding
-1. Open the application at `http://localhost:5000`
+1. Open the application at `http://localhost:4345`
 2. Click **"Add New Wedding"**
 3. Enter couple names, wedding date, and contact email
 4. Complete the 3-step setup:

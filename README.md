@@ -48,7 +48,7 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-Access at: **http://localhost:5000**
+Access at: **http://localhost:4345**
 
 > For detailed installation options (local development, VPS, reverse proxy, etc.), see **[INSTALL.md](INSTALL.md)**.
 

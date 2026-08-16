@@ -6,17 +6,118 @@ on:
   pull_request:
     branches: [main, master]
 
+# A new push supersedes the run already in flight for the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  test:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
+
+      - name: Install lint tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      # py_compile only proves the file parses. It cannot see an undefined name,
+      # which is how six call sites to an unimported WeddingElement shipped and
+      # made every Ceremony page raise NameError while CI stayed green.
+      # See ruff.toml for what is selected and why.
+      - name: Lint for broken code
+        run: ruff check .
+
+  migrations:
+    name: Migration drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install system dependencies for WeasyPrint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libpango-1.0-0 \
+            libpangoft2-1.0-0 \
+            libharfbuzz0b \
+            libgdk-pixbuf-2.0-0 \
+            libcairo2 \
+            libffi-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # db.create_all() runs at import, so a fresh install gets its schema from
+      # the models no matter what the migrations say. That made drift invisible
+      # everywhere except on an existing installation upgrading, where
+      # create_all() does not alter existing tables and the app dies with
+      # "no such column". Eleven tables and three columns had drifted this way.
+      - name: Check migrations reproduce models.py
+        run: python scripts/check_migration_drift.py
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install audit tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+
+      # PYSEC-2026-3412 (WeasyPrint CSS injection via presentational hints) has
+      # no fixed release upstream. It needs an attacker-controlled `background`
+      # attribute in the HTML being rendered; ours comes from our own Jinja
+      # templates with autoescaping on, so user data cannot introduce one.
+      # Remove the ignore when a fixed WeasyPrint ships.
+      - name: Audit dependencies for known vulnerabilities
+        run: |
+          pip-audit -r requirements.txt \
+            --progress-spinner off \
+            --ignore-vuln PYSEC-2026-3412
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
 
       - name: Install system dependencies for WeasyPrint
         run: |
@@ -31,8 +132,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest-cov
+          pip install -r requirements-dev.txt
 
       - name: Syntax check
         run: |
@@ -40,10 +140,50 @@ jobs:
           python -m py_compile models.py
           python -m py_compile security.py
           python -m py_compile email_service.py
+          python -m py_compile conftest.py
 
       - name: Run tests with coverage
         # --cov-fail-under is a ratchet. Coverage was measured and printed but
         # never enforced, so it was free to drift down. Raise this number as
         # coverage grows; never lower it to make a build pass.
         run: |
-          python -m pytest tests/ -v --cov --cov-report=term-missing --cov-fail-under=71
+          python -m pytest tests/ -v --cov --cov-report=term-missing --cov-fail-under=72
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Nothing built the image before, so a broken Dockerfile or a dependency
+      # that will not install under python:3.11-slim reached users first.
+      - name: Build the image
+        run: docker build -t wedding-organizer:ci .
+
+      # Starting it proves more than the build: that the app imports, binds the
+      # port the Dockerfile advertises, and answers its own HEALTHCHECK.
+      - name: Boot it and check /health
+        run: |
+          docker run -d --name wedding-ci \
+            -e SECRET_KEY=ci-smoke-test \
+            -p 4345:4345 \
+            wedding-organizer:ci
+
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:4345/health > /tmp/health.json; then
+              echo "healthy after ${attempt}s:"
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "the container never answered /health"
+          docker logs wedding-ci
+          exit 1
+
+      - name: Container logs
+        if: always()
+        run: docker logs wedding-ci || true

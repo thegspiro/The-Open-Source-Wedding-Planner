@@ -133,14 +133,24 @@ def health_check():
 # Initialize database and seed traditional elements
 # Note: db.create_all() is kept for initial setup / development convenience.
 # For production schema changes, use Flask-Migrate: flask db migrate / flask db upgrade
+#
+# SKIP_DB_CREATE_ALL exists because create_all() runs at import, which means it
+# runs before `flask db upgrade` too -- the tables already exist by the time
+# Alembic issues its CREATE TABLE, so the upgrade dies on the first migration
+# and the chain could never be applied or verified. Set it to 1 to import the
+# app without touching the schema.
 with app.app_context():
-    try:
-        db.create_all()
-    except Exception:
-        pass
+    if os.environ.get('SKIP_DB_CREATE_ALL') == '1':
+        _schema_ready = False
+    else:
+        try:
+            db.create_all()
+            _schema_ready = True
+        except Exception:
+            _schema_ready = False
 
     # Seed traditional elements if none exist
-    if TraditionalElement.query.count() == 0:
+    if _schema_ready and TraditionalElement.query.count() == 0:
         traditional_elements = [
             # Ceremony Elements
             TraditionalElement(
@@ -4027,11 +4037,11 @@ def guest_meal_summary(wedding_id):
     guests = [g for g in wedding.guests if g.rsvp_status == 'accepted']
     meal_counts = {}
     dietary_counts = {}
-    for g in guests:
-        mc = g.meal_choice or 'Not Selected'
+    for guest in guests:
+        mc = guest.meal_choice or 'Not Selected'
         meal_counts[mc] = meal_counts.get(mc, 0) + 1
-        if g.dietary_restrictions:
-            for d in g.dietary_restrictions.split(','):
+        if guest.dietary_restrictions:
+            for d in guest.dietary_restrictions.split(','):
                 d = d.strip()
                 if d:
                     dietary_counts[d] = dietary_counts.get(d, 0) + 1
@@ -4731,8 +4741,8 @@ def seating_chart(wedding_id):
 
     # Flag guests assigned to tables who haven't accepted RSVP
     if pending_assigned:
-        for g in pending_assigned:
-            violations.append(f'{g.name} is assigned to a table but RSVP status is "{g.rsvp_status or "pending"}"')
+        for guest in pending_assigned:
+            violations.append(f'{guest.name} is assigned to a table but RSVP status is "{guest.rsvp_status or "pending"}"')
 
     # Detect "lonely" guests — assigned to a table but share no household, social group, or side with tablemates
     lonely_guests = []
@@ -4867,9 +4877,9 @@ def seating_chart(wedding_id):
         if len(guests) < 3:
             continue
         restriction_counts = {}
-        for g in guests:
-            if g.dietary_restrictions:
-                for r in g.dietary_restrictions.split(','):
+        for guest in guests:
+            if guest.dietary_restrictions:
+                for r in guest.dietary_restrictions.split(','):
                     r = r.strip().lower()
                     if r:
                         restriction_counts[r] = restriction_counts.get(r, 0) + 1
@@ -4961,8 +4971,8 @@ def seating_table_edit(wedding_id, table_id):
 def seating_table_delete(wedding_id, table_id):
     table = get_entity_or_404(SeatingTable, table_id, wedding_id)
     # Unassign guests from this table
-    for g in table.assigned_guests:
-        g.table_id = None
+    for guest in table.assigned_guests:
+        guest.table_id = None
     db.session.delete(table)
     db.session.commit()
     flash('Table removed. Guests have been unassigned.', 'success')
@@ -5127,8 +5137,8 @@ def seating_bulk_assign(wedding_id):
 def seating_clear_all(wedding_id):
     """Remove all guest-to-table assignments."""
     wedding = get_wedding_or_403(wedding_id)
-    for g in wedding.guests:
-        g.table_id = None
+    for guest in wedding.guests:
+        guest.table_id = None
     db.session.commit()
     flash('All seating assignments cleared.', 'success')
     return redirect(url_for('seating_chart', wedding_id=wedding_id))
@@ -5335,9 +5345,9 @@ def seating_auto_assign(wedding_id):
         guests_to_assign = [g for g in wedding.guests if g.rsvp_status == 'accepted' and not g.table_id]
     else:
         # Clear all assignments first
-        for g in wedding.guests:
-            if g.rsvp_status == 'accepted':
-                g.table_id = None
+        for guest in wedding.guests:
+            if guest.rsvp_status == 'accepted':
+                guest.table_id = None
         guests_to_assign = [g for g in wedding.guests if g.rsvp_status == 'accepted']
 
     if not guests_to_assign:
@@ -5374,27 +5384,27 @@ def seating_auto_assign(wedding_id):
 
     # Also merge by household_group (case-insensitive, whitespace-normalized)
     household_map = {}
-    for g in guests_to_assign:
-        if g.household_group:
-            key = g.household_group.strip().lower()
+    for guest in guests_to_assign:
+        if guest.household_group:
+            key = guest.household_group.strip().lower()
             if key in household_map:
-                union(g.id, household_map[key])
+                union(guest.id, household_map[key])
             else:
-                household_map[key] = g.id
+                household_map[key] = guest.id
 
     # Also group plus-ones with their hosts (case-insensitive, whitespace-normalized)
     name_to_id = {g.name.strip().lower(): g.id for g in guests_to_assign if g.name}
-    for g in guests_to_assign:
-        if g.is_plus_one and g.plus_one_of:
-            host_key = g.plus_one_of.strip().lower()
+    for guest in guests_to_assign:
+        if guest.is_plus_one and guest.plus_one_of:
+            host_key = guest.plus_one_of.strip().lower()
             if host_key in name_to_id:
-                union(g.id, name_to_id[host_key])
+                union(guest.id, name_to_id[host_key])
 
     # Build actual groups
     from collections import defaultdict
     groups = defaultdict(list)
-    for g in guests_to_assign:
-        groups[find(g.id)].append(g)
+    for guest in guests_to_assign:
+        groups[find(guest.id)].append(guest)
 
     # Build apart-set (which group roots must not share a table) with priority
     apart_roots = {}  # (root_a, root_b) -> priority
@@ -5408,9 +5418,9 @@ def seating_auto_assign(wedding_id):
     group_tags = {}
     for root, members in groups.items():
         tags = set()
-        for g in members:
-            if g.social_groups:
-                for tag in g.social_groups.split(','):
+        for guest in members:
+            if guest.social_groups:
+                for tag in guest.social_groups.split(','):
                     tag = tag.strip()
                     if tag:
                         tags.add(tag)
@@ -5504,8 +5514,8 @@ def seating_auto_assign(wedding_id):
 
     def place_group(grp, table):
         root = find(grp[0].id)
-        for g in grp:
-            g.table_id = table.id
+        for guest in grp:
+            guest.table_id = table.id
         table_counts[table.id] = table_counts.get(table.id, 0) + len(grp)
         table_assignments[table.id].add(root)
 
@@ -5557,11 +5567,11 @@ def seating_auto_assign(wedding_id):
 
     # Try to place remaining individually
     still_unplaced = 0
-    for g in unplaced:
+    for guest in unplaced:
         placed = False
         for table in tables:
             if table_counts.get(table.id, 0) < table.capacity:
-                g.table_id = table.id
+                guest.table_id = table.id
                 table_counts[table.id] = table_counts.get(table.id, 0) + 1
                 placed = True
                 break
@@ -5616,16 +5626,16 @@ def export_guests_csv(wedding_id):
     writer.writerow(['Name', 'Email', 'Phone', 'Address', 'RSVP Status', 'Meal Choice',
                      'Dietary Restrictions', 'Side', 'Guest Type', 'Table',
                      'Plus One', 'Gift Received', 'Thank You Sent'])
-    for g in wedding.guests:
+    for guest in wedding.guests:
         table_name = ''
-        if g.seating_table:
-            table_name = g.seating_table.table_name or g.seating_table.table_number
+        if guest.seating_table:
+            table_name = guest.seating_table.table_name or guest.seating_table.table_number
         writer.writerow([
-            g.name, g.email or '', g.phone or '', g.address or '',
-            g.rsvp_status or 'pending', g.meal_choice or '', g.dietary_restrictions or '',
-            g.side or '', g.guest_type or '', table_name,
-            g.plus_one_of if g.is_plus_one else '', 'Yes' if g.gift_received else 'No',
-            'Yes' if g.thank_you_sent else 'No'
+            guest.name, guest.email or '', guest.phone or '', guest.address or '',
+            guest.rsvp_status or 'pending', guest.meal_choice or '', guest.dietary_restrictions or '',
+            guest.side or '', guest.guest_type or '', table_name,
+            guest.plus_one_of if guest.is_plus_one else '', 'Yes' if guest.gift_received else 'No',
+            'Yes' if guest.thank_you_sent else 'No'
         ])
     response = make_response(output.getvalue())
     response.headers['Content-Type'] = 'text/csv'
@@ -6186,9 +6196,9 @@ def export_mailing_labels(wedding_id):
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Name', 'Address'])
-    for g in wedding.guests:
-        if g.address:
-            writer.writerow([g.name, g.address])
+    for guest in wedding.guests:
+        if guest.address:
+            writer.writerow([guest.name, guest.address])
     response = make_response(output.getvalue())
     response.headers['Content-Type'] = 'text/csv'
     response.headers['Content-Disposition'] = f'attachment; filename=mailing_labels_{wedding_id}.csv'
@@ -6296,11 +6306,11 @@ def export_gifts_csv(wedding_id):
     writer = csv.writer(output)
     writer.writerow(['Event', 'From', 'Description', 'Estimated Value', 'Date Received',
                      'Thank You Sent', 'Notes'])
-    for g in wedding.gifts:
+    for gift in wedding.gifts:
         writer.writerow([
-            g.event, g.from_name, g.description or '', g.estimated_value or 0,
-            str(g.date_received or ''), 'Yes' if g.thank_you_sent else 'No',
-            g.notes or ''
+            gift.event, gift.from_name, gift.description or '', gift.estimated_value or 0,
+            str(gift.date_received or ''), 'Yes' if gift.thank_you_sent else 'No',
+            gift.notes or ''
         ])
     response = make_response(output.getvalue())
     response.headers['Content-Type'] = 'text/csv'
@@ -7278,8 +7288,14 @@ def music_stats(wedding_id):
 # Background task for email reminders
 def check_reminders():
     while True:
-        try:
-            with app.app_context():
+        # The app context has to be the outer block. It used to be the inner
+        # one, so an exception unwound it before the handler ran and the
+        # db.session.rollback() below raised RuntimeError: Working outside of
+        # application context. That escaped the except, broke the while loop and
+        # killed the thread -- after the first database error, no reminder was
+        # ever sent again until the process restarted.
+        with app.app_context():
+            try:
                 reminder_threshold = datetime.utcnow() + timedelta(days=3)
                 rows = db.session.query(Task, Wedding).join(
                     Wedding, Task.wedding_id == Wedding.id
@@ -7303,9 +7319,9 @@ def check_reminders():
 
                 db.session.commit()
 
-        except Exception as e:
-            db.session.rollback()
-            logger.error("Error checking reminders: %s", e)
+            except Exception as e:
+                db.session.rollback()
+                logger.error("Error checking reminders: %s", e)
 
         time_module.sleep(3600)  # Check every hour
 

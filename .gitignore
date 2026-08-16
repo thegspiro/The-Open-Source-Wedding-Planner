@@ -5,6 +5,15 @@ __pycache__/
 dist/
 build/
 
+# Test and coverage artifacts. .coverage was committed and rewritten by every
+# test run, so it showed up as a binary diff in every pull request.
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+
 # Flask / SQLite
 instance/
 *.db

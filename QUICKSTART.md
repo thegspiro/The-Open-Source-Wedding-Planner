@@ -17,7 +17,7 @@ docker-compose up -d
 > **Tip:** Generate a secret key with: `python3 -c "import secrets; print(secrets.token_hex(32))"`
 
 ### Step 2: Access the Application
-Open: **http://localhost:5000**
+Open: **http://localhost:4345**
 
 ### Step 3: Create Your Wedding
 1. Click "Add New Wedding"
