@@ -452,8 +452,19 @@ class SeatingPreference(db.Model):
     priority = db.Column(db.Integer, default=5)  # 1-10, higher = more important
     notes = db.Column(db.String(200))
 
-    guest = db.relationship('Guest', foreign_keys=[guest_id], backref='seating_prefs_as_guest')
-    other_guest = db.relationship('Guest', foreign_keys=[other_guest_id], backref='seating_prefs_as_other')
+    # Both FKs are NOT NULL, so these have to cascade. Without a cascade
+    # SQLAlchemy tries to NULL the column when the guest goes, the database
+    # refuses, and the delete fails outright -- which meant a couple who had
+    # set a single seating preference could no longer delete that guest, or
+    # their wedding.
+    guest = db.relationship(
+        'Guest', foreign_keys=[guest_id],
+        backref=db.backref('seating_prefs_as_guest',
+                           cascade='all, delete-orphan'))
+    other_guest = db.relationship(
+        'Guest', foreign_keys=[other_guest_id],
+        backref=db.backref('seating_prefs_as_other',
+                           cascade='all, delete-orphan'))
 
 
 class GuestGroup(db.Model):

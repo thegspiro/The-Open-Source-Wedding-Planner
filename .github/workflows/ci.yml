@@ -42,5 +42,8 @@ jobs:
           python -m py_compile email_service.py
 
       - name: Run tests with coverage
+        # --cov-fail-under is a ratchet. Coverage was measured and printed but
+        # never enforced, so it was free to drift down. Raise this number as
+        # coverage grows; never lower it to make a build pass.
         run: |
-          python -m pytest tests/ -v --cov --cov-report=term-missing
+          python -m pytest tests/ -v --cov --cov-report=term-missing --cov-fail-under=69
