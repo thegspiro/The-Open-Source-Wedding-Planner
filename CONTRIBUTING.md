@@ -33,7 +33,7 @@ cp .env.example .env
 python app.py
 ```
 
-Access at: **http://localhost:5000**
+Access at: **http://localhost:4345**
 
 ### Running with Docker
 
@@ -116,7 +116,7 @@ docker-compose up -d --build
 docker-compose logs -f
 
 # Verify health check
-curl http://localhost:5000/health
+curl http://localhost:4345/health
 ```
 
 Test the following when applicable:

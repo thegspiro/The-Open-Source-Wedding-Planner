@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Too Many Requests{% endblock %}
+{% block content %}
+<div class="form-container" style="text-align: center; padding: 3rem 1rem;">
+    <h1>429</h1>
+    <p>{{ description }}</p>
+    <p>Wait for the time above to pass, then try again. Reloading this page will not help.</p>
+</div>
+{% endblock %}

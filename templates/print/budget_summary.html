@@ -184,9 +184,9 @@
     </div>
 
     {% if budget %}
-    {% set total_estimated = expenses|sum(attribute='estimated_cost', default=0) %}
-    {% set total_actual = expenses|sum(attribute='actual_cost', default=0) %}
-    {% set total_paid = expenses|sum(attribute='paid_amount', default=0) %}
+    {% set total_estimated = expenses|map(attribute='estimated_cost')|select('number')|sum %}
+    {% set total_actual = expenses|map(attribute='actual_cost')|select('number')|sum %}
+    {% set total_paid = expenses|map(attribute='paid_amount')|select('number')|sum %}
     {% set remaining = total_actual - total_paid if total_actual else total_estimated - total_paid %}
 
     <div class="summary-row">

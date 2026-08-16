@@ -33,7 +33,7 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-Access at: **http://localhost:5000**
+Access at: **http://localhost:4345**
 
 ### Generate a Secret Key
 
@@ -116,14 +116,14 @@ cp .env.example .env
 python app.py
 ```
 
-Access at: **http://localhost:5000**
+Access at: **http://localhost:4345**
 
 The SQLite database is automatically created at `instance/wedding_organizer.db`.
 
 ### Running with Gunicorn (Production-like)
 
 ```bash
-gunicorn --bind 0.0.0.0:5000 --workers 2 --threads 2 app:app
+gunicorn --bind 0.0.0.0:4345 --workers 2 --threads 2 app:app
 ```
 
 ---
@@ -137,7 +137,7 @@ Before exposing to the internet:
 - [ ] Generate and set a strong `SECRET_KEY`
 - [ ] Set up a reverse proxy with SSL/TLS (see [docs/REVERSE-PROXY.md](docs/REVERSE-PROXY.md))
 - [ ] Configure automated backups (see [Database Backups](#database-backups))
-- [ ] Restrict port 5000 to the reverse proxy only (don't expose directly)
+- [ ] Restrict port 4345 to the reverse proxy only (don't expose directly)
 - [ ] Review firewall rules
 
 ### Reverse Proxy / SSL
@@ -296,11 +296,11 @@ See **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** for common issues and fixes.
 
 ### Common Issues
 
-**Port 5000 already in use:**
+**Port 4345 already in use:**
 ```bash
 # Change the port mapping in docker-compose.yml
 ports:
-  - "8080:5000"  # Access at http://localhost:8080
+  - "8080:4345"  # Access at http://localhost:8080
 ```
 
 **Permission denied on instance/ directory:**

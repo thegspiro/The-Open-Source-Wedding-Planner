@@ -5,7 +5,7 @@ This guide covers setting up a reverse proxy in front of Wedding Organizer for S
 ## Why Use a Reverse Proxy?
 
 - **HTTPS/SSL** - Encrypt traffic with Let's Encrypt certificates
-- **Custom domain** - Access via `wedding.yourdomain.com` instead of `IP:5000`
+- **Custom domain** - Access via `wedding.yourdomain.com` instead of `IP:4345`
 - **Security** - Hide the application server, add rate limiting
 - **Performance** - Static file caching, compression
 
@@ -77,7 +77,7 @@ server {
 
     # Proxy to Wedding Organizer
     location / {
-        proxy_pass http://wedding-organizer:5000;
+        proxy_pass http://wedding-organizer:4345;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -91,7 +91,7 @@ server {
 
     # Cache static files
     location /static/ {
-        proxy_pass http://wedding-organizer:5000/static/;
+        proxy_pass http://wedding-organizer:4345/static/;
         expires 7d;
         add_header Cache-Control "public, immutable";
     }
@@ -109,7 +109,7 @@ services:
     volumes:
       - ./instance:/app/instance
     restart: unless-stopped
-    # No need to expose port 5000 externally
+    # No need to expose port 4345 externally
 
   nginx:
     image: nginx:alpine
@@ -191,7 +191,7 @@ services:
       - "traefik.http.routers.wedding.rule=Host(`wedding.yourdomain.com`)"
       - "traefik.http.routers.wedding.entrypoints=websecure"
       - "traefik.http.routers.wedding.tls.certresolver=letsencrypt"
-      - "traefik.http.services.wedding.loadbalancer.server.port=5000"
+      - "traefik.http.services.wedding.loadbalancer.server.port=4345"
     restart: unless-stopped
 ```
 
@@ -207,7 +207,7 @@ Caddy automatically provisions and renews SSL certificates with zero configurati
 
 ```
 wedding.yourdomain.com {
-    reverse_proxy wedding-organizer:5000
+    reverse_proxy wedding-organizer:4345
 
     header {
         X-Frame-Options "SAMEORIGIN"
@@ -218,7 +218,7 @@ wedding.yourdomain.com {
     @static path /static/*
     handle @static {
         header Cache-Control "public, max-age=604800, immutable"
-        reverse_proxy wedding-organizer:5000
+        reverse_proxy wedding-organizer:4345
     }
 }
 ```
@@ -262,7 +262,7 @@ server {
     server_name _;
 
     location / {
-        proxy_pass http://wedding-organizer:5000;
+        proxy_pass http://wedding-organizer:4345;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -270,7 +270,7 @@ server {
 }
 ```
 
-Or access directly at `http://YOUR_SERVER_IP:5000`.
+Or access directly at `http://YOUR_SERVER_IP:4345`.
 
 ---
 
@@ -286,4 +286,4 @@ docker run -d --name cloudflared \
   tunnel --no-autoupdate run --token YOUR_TUNNEL_TOKEN
 ```
 
-Configure the tunnel in the Cloudflare Zero Trust dashboard to point to `http://localhost:5000`.
+Configure the tunnel in the Cloudflare Zero Trust dashboard to point to `http://localhost:4345`.

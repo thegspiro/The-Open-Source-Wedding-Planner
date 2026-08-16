@@ -196,8 +196,8 @@
             {% endfor %}
             <tr class="totals-row">
                 <td colspan="2" style="text-align: right;">Totals</td>
-                <td class="amount">${{ '%.2f'|format(tips|sum(attribute='suggested_amount', default=0)) }}</td>
-                <td class="amount">${{ '%.2f'|format(tips|sum(attribute='actual_amount', default=0)) }}</td>
+                <td class="amount">${{ '%.2f'|format(tips|map(attribute='suggested_amount')|select('number')|sum) }}</td>
+                <td class="amount">${{ '%.2f'|format(tips|map(attribute='actual_amount')|select('number')|sum) }}</td>
                 <td colspan="4"></td>
             </tr>
         </tbody>

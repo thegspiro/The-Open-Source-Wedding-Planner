@@ -42,7 +42,7 @@ If the Wedding Organizer template is available in Community Applications:
 | **Name** | `wedding-organizer` |
 | **Repository** | Build from Dockerfile or use your image |
 | **Network Type** | `bridge` |
-| **Port Mapping** | Host: `5000` -> Container: `5000` |
+| **Port Mapping** | Host: `4345` -> Container: `4345` |
 
 4. Add a **Path** mapping:
 
@@ -89,7 +89,7 @@ If you have the **Docker Compose Manager** plugin installed:
 
 ### Accessing on Unraid
 
-- **Local:** `http://YOUR_UNRAID_IP:5000`
+- **Local:** `http://YOUR_UNRAID_IP:4345`
 - **With reverse proxy:** Use Nginx Proxy Manager (available in Community Apps) for SSL and custom domain
 
 ### Unraid Backup
@@ -160,7 +160,7 @@ docker compose up -d
 
 #### 4. Access
 
-`http://LXC_IP_ADDRESS:5000`
+`http://LXC_IP_ADDRESS:4345`
 
 Find the IP with: `ip addr show eth0`
 
@@ -191,7 +191,7 @@ cp .env.example .env
 nano .env  # Set SECRET_KEY
 
 # Run with gunicorn
-gunicorn --bind 0.0.0.0:5000 --workers 2 --threads 2 app:app
+gunicorn --bind 0.0.0.0:4345 --workers 2 --threads 2 app:app
 ```
 
 To run as a service, create `/etc/systemd/system/wedding-organizer.service`:
@@ -206,7 +206,7 @@ Type=simple
 User=root
 WorkingDirectory=/opt/the-open-source-wedding-planner
 Environment=PATH=/opt/the-open-source-wedding-planner/venv/bin
-ExecStart=/opt/the-open-source-wedding-planner/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --threads 2 app:app
+ExecStart=/opt/the-open-source-wedding-planner/venv/bin/gunicorn --bind 0.0.0.0:4345 --workers 2 --threads 2 app:app
 Restart=always
 RestartSec=5
 
@@ -272,7 +272,7 @@ volumes:
 
 ### Access
 
-`http://YOUR_NAS_IP:5000`
+`http://YOUR_NAS_IP:4345`
 
 ---
 
@@ -332,7 +332,7 @@ spec:
           image: ghcr.io/thegspiro/the-open-source-wedding-planner:latest
           # Or build your own: docker build -t wedding-organizer .
           ports:
-            - containerPort: 5000
+            - containerPort: 4345
           env:
             - name: SECRET_KEY
               valueFrom:
@@ -345,13 +345,13 @@ spec:
           livenessProbe:
             httpGet:
               path: /health
-              port: 5000
+              port: 4345
             initialDelaySeconds: 15
             periodSeconds: 30
           readinessProbe:
             httpGet:
               path: /health
-              port: 5000
+              port: 4345
             initialDelaySeconds: 5
             periodSeconds: 10
           resources:
@@ -377,7 +377,7 @@ spec:
     app: wedding-organizer
   ports:
     - port: 80
-      targetPort: 5000
+      targetPort: 4345
   type: ClusterIP
 
 ---
@@ -470,7 +470,7 @@ cp .env.example .env
 nano .env
 
 # Run
-gunicorn --bind 0.0.0.0:5000 --workers 2 --threads 2 app:app
+gunicorn --bind 0.0.0.0:4345 --workers 2 --threads 2 app:app
 ```
 
 ### Run as a Service
@@ -488,7 +488,7 @@ User=pi
 WorkingDirectory=/home/pi/the-open-source-wedding-planner
 Environment=PATH=/home/pi/the-open-source-wedding-planner/venv/bin
 EnvironmentFile=/home/pi/the-open-source-wedding-planner/.env
-ExecStart=/home/pi/the-open-source-wedding-planner/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --threads 2 app:app
+ExecStart=/home/pi/the-open-source-wedding-planner/venv/bin/gunicorn --bind 0.0.0.0:4345 --workers 2 --threads 2 app:app
 Restart=always
 RestartSec=5
 
@@ -503,7 +503,7 @@ sudo systemctl enable --now wedding-organizer
 
 ### Access
 
-`http://RASPBERRY_PI_IP:5000`
+`http://RASPBERRY_PI_IP:4345`
 
 ---
 
@@ -548,7 +548,7 @@ sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw enable
 
-# Don't expose port 5000 directly - use a reverse proxy
+# Don't expose port 4345 directly - use a reverse proxy
 ```
 
 ### Add SSL with Caddy (Simplest)
@@ -563,7 +563,7 @@ sudo apt update && sudo apt install caddy
 # Configure Caddy
 sudo tee /etc/caddy/Caddyfile <<EOF
 wedding.yourdomain.com {
-    reverse_proxy localhost:5000
+    reverse_proxy localhost:4345
 }
 EOF
 
@@ -596,7 +596,7 @@ TrueNAS Scale supports Docker containers through its Apps system.
 2. Configure:
    - **Application Name:** `wedding-organizer`
    - **Image Repository:** Build from source or use your own registry
-   - **Container Port:** `5000`
+   - **Container Port:** `4345`
 3. Add **Host Path Volume:**
    - **Host Path:** `/mnt/pool/apps/wedding-organizer/instance`
    - **Mount Path:** `/app/instance`
@@ -633,7 +633,7 @@ services:
     image: wedding-organizer:latest
     build: .
     ports:
-      - "5000:5000"
+      - "4345:4345"
     volumes:
       - wedding-data:/app/instance
     environment:

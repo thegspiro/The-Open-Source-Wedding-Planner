@@ -72,7 +72,7 @@
                     {% if task.assigned_to %}<span class="category-badge">{{ task.assigned_to }}</span>{% endif %}
                 </div>
                 <div style="display: flex; gap: 0.3rem;">
-                    <form method="POST" action="{{ url_for('task_toggle', task_id=task.id) }}" style="display:inline;"><button type="submit" class="btn-success">&#10003;</button></form>
+                    <form method="POST" action="{{ url_for('task_toggle', wedding_id=wedding.id, task_id=task.id) }}" style="display:inline;"><button type="submit" class="btn-success">&#10003;</button></form>
                     <a href="{{ url_for('task_edit', wedding_id=wedding.id, task_id=task.id) }}" class="btn-secondary btn-small">Edit</a>
                     <form method="POST" action="{{ url_for('task_delete', wedding_id=wedding.id, task_id=task.id) }}" style="display:inline;">
                         <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this task?')">X</button>
@@ -100,7 +100,7 @@
             <div class="task-header">
                 <h3>{{ task.title }}</h3>
                 <div style="display: flex; gap: 0.3rem;">
-                    <form method="POST" action="{{ url_for('task_toggle', task_id=task.id) }}" style="display:inline;"><button type="submit" class="btn-secondary btn-small">Reopen</button></form>
+                    <form method="POST" action="{{ url_for('task_toggle', wedding_id=wedding.id, task_id=task.id) }}" style="display:inline;"><button type="submit" class="btn-secondary btn-small">Reopen</button></form>
                     <form method="POST" action="{{ url_for('task_delete', wedding_id=wedding.id, task_id=task.id) }}" style="display:inline;">
                         <button type="submit" class="btn-danger btn-small" onclick="return confirm('Delete this task?')">X</button>
                     </form>

@@ -5,6 +5,7 @@ from models import (
     Honeymoon, HoneymoonItinerary, PackingItem,
     WeddingBranding, BridalPartyMember, Guest,
     Budget, BudgetExpense, BudgetCategoryLimit, Vendor, RegistryItem, Attire, TraditionalElement,
+    WeddingElement,
     User, WeddingAccess,
     DayOfTimelineItem, PhotoShot, Song, FloralItem, Invitation,
     RehearsalDinner, Accommodation, MarriageLicense, HairMakeup,
@@ -103,8 +104,13 @@ def page_not_found(e):
 
 @app.errorhandler(429)
 def too_many_requests(e):
-    flash(str(e.description) if hasattr(e, 'description') else 'Too many requests.', 'error')
-    return safe_redirect(url_for('index'))
+    # This used to flash and redirect to index. For an anonymous visitor index
+    # redirects to /login, and /login is itself rate limited, so a limited
+    # visitor bounced between the two until the browser gave up with a redirect
+    # loop. Render the refusal instead, and keep the 429 status so proxies and
+    # monitoring can see it.
+    description = str(e.description) if getattr(e, 'description', None) else 'Too many requests.'
+    return render_template('errors/429.html', description=description), 429
 
 @app.errorhandler(500)
 def internal_server_error(e):
@@ -127,14 +133,24 @@ def health_check():
 # Initialize database and seed traditional elements
 # Note: db.create_all() is kept for initial setup / development convenience.
 # For production schema changes, use Flask-Migrate: flask db migrate / flask db upgrade
+#
+# SKIP_DB_CREATE_ALL exists because create_all() runs at import, which means it
+# runs before `flask db upgrade` too -- the tables already exist by the time
+# Alembic issues its CREATE TABLE, so the upgrade dies on the first migration
+# and the chain could never be applied or verified. Set it to 1 to import the
+# app without touching the schema.
 with app.app_context():
-    try:
-        db.create_all()
-    except Exception:
-        pass
+    if os.environ.get('SKIP_DB_CREATE_ALL') == '1':
+        _schema_ready = False
+    else:
+        try:
+            db.create_all()
+            _schema_ready = True
+        except Exception:
+            _schema_ready = False
 
     # Seed traditional elements if none exist
-    if TraditionalElement.query.count() == 0:
+    if _schema_ready and TraditionalElement.query.count() == 0:
         traditional_elements = [
             # Ceremony Elements
             TraditionalElement(
@@ -608,7 +624,7 @@ def seed_default_emergency_kit(wedding_id):
 # ============================================
 
 @app.route('/register', methods=['GET', 'POST'])
-@rate_limit(max_requests=10, window_seconds=3600)
+@rate_limit(max_requests=10, window_seconds=3600, methods=('POST',))
 def register():
     if g.get('user'):
         return redirect(url_for('index'))
@@ -660,7 +676,7 @@ def register():
 
 
 @app.route('/login', methods=['GET', 'POST'])
-@rate_limit(max_requests=10, window_seconds=300)
+@rate_limit(max_requests=10, window_seconds=300, methods=('POST',))
 def login():
     if g.get('user'):
         return redirect(url_for('index'))
@@ -2376,14 +2392,21 @@ def task_delete(wedding_id, task_id):
     flash('Task deleted.', 'success')
     return redirect(url_for('tasks_view', wedding_id=wedding_id))
 
-@app.route('/task/<int:task_id>/toggle', methods=['POST'])
+@app.route('/wedding/<int:wedding_id>/tasks/<int:task_id>/toggle', methods=['POST'])
 @login_required
-def task_toggle(task_id):
-    task = Task.query.get_or_404(task_id)
+def task_toggle(wedding_id, task_id):
+    # This used to be /task/<task_id>/toggle, with no wedding in the URL.
+    # enforce_wedding_access() keys off wedding_id, so it returned early and the
+    # route was left with nothing but login_required -- any signed-in user could
+    # flip the state of any task in anyone's wedding. Carrying wedding_id puts
+    # it back under the same check as every other write, and get_entity_or_404
+    # rejects a task id belonging to a different wedding.
+    get_wedding_or_403(wedding_id)
+    task = get_entity_or_404(Task, task_id, wedding_id)
     task.completed = not task.completed
     db.session.commit()
     flash(f'Task {"completed" if task.completed else "reopened"}!', 'success')
-    return redirect(url_for('tasks_view', wedding_id=task.wedding_id))
+    return redirect(url_for('tasks_view', wedding_id=wedding_id))
 
 # ============================================
 # REGISTRY ROUTES
@@ -4014,11 +4037,11 @@ def guest_meal_summary(wedding_id):
     guests = [g for g in wedding.guests if g.rsvp_status == 'accepted']
     meal_counts = {}
     dietary_counts = {}
-    for g in guests:
-        mc = g.meal_choice or 'Not Selected'
+    for guest in guests:
+        mc = guest.meal_choice or 'Not Selected'
         meal_counts[mc] = meal_counts.get(mc, 0) + 1
-        if g.dietary_restrictions:
-            for d in g.dietary_restrictions.split(','):
+        if guest.dietary_restrictions:
+            for d in guest.dietary_restrictions.split(','):
                 d = d.strip()
                 if d:
                     dietary_counts[d] = dietary_counts.get(d, 0) + 1
@@ -4718,8 +4741,8 @@ def seating_chart(wedding_id):
 
     # Flag guests assigned to tables who haven't accepted RSVP
     if pending_assigned:
-        for g in pending_assigned:
-            violations.append(f'{g.name} is assigned to a table but RSVP status is "{g.rsvp_status or "pending"}"')
+        for guest in pending_assigned:
+            violations.append(f'{guest.name} is assigned to a table but RSVP status is "{guest.rsvp_status or "pending"}"')
 
     # Detect "lonely" guests — assigned to a table but share no household, social group, or side with tablemates
     lonely_guests = []
@@ -4854,9 +4877,9 @@ def seating_chart(wedding_id):
         if len(guests) < 3:
             continue
         restriction_counts = {}
-        for g in guests:
-            if g.dietary_restrictions:
-                for r in g.dietary_restrictions.split(','):
+        for guest in guests:
+            if guest.dietary_restrictions:
+                for r in guest.dietary_restrictions.split(','):
                     r = r.strip().lower()
                     if r:
                         restriction_counts[r] = restriction_counts.get(r, 0) + 1
@@ -4948,8 +4971,8 @@ def seating_table_edit(wedding_id, table_id):
 def seating_table_delete(wedding_id, table_id):
     table = get_entity_or_404(SeatingTable, table_id, wedding_id)
     # Unassign guests from this table
-    for g in table.assigned_guests:
-        g.table_id = None
+    for guest in table.assigned_guests:
+        guest.table_id = None
     db.session.delete(table)
     db.session.commit()
     flash('Table removed. Guests have been unassigned.', 'success')
@@ -5114,8 +5137,8 @@ def seating_bulk_assign(wedding_id):
 def seating_clear_all(wedding_id):
     """Remove all guest-to-table assignments."""
     wedding = get_wedding_or_403(wedding_id)
-    for g in wedding.guests:
-        g.table_id = None
+    for guest in wedding.guests:
+        guest.table_id = None
     db.session.commit()
     flash('All seating assignments cleared.', 'success')
     return redirect(url_for('seating_chart', wedding_id=wedding_id))
@@ -5322,9 +5345,9 @@ def seating_auto_assign(wedding_id):
         guests_to_assign = [g for g in wedding.guests if g.rsvp_status == 'accepted' and not g.table_id]
     else:
         # Clear all assignments first
-        for g in wedding.guests:
-            if g.rsvp_status == 'accepted':
-                g.table_id = None
+        for guest in wedding.guests:
+            if guest.rsvp_status == 'accepted':
+                guest.table_id = None
         guests_to_assign = [g for g in wedding.guests if g.rsvp_status == 'accepted']
 
     if not guests_to_assign:
@@ -5361,27 +5384,27 @@ def seating_auto_assign(wedding_id):
 
     # Also merge by household_group (case-insensitive, whitespace-normalized)
     household_map = {}
-    for g in guests_to_assign:
-        if g.household_group:
-            key = g.household_group.strip().lower()
+    for guest in guests_to_assign:
+        if guest.household_group:
+            key = guest.household_group.strip().lower()
             if key in household_map:
-                union(g.id, household_map[key])
+                union(guest.id, household_map[key])
             else:
-                household_map[key] = g.id
+                household_map[key] = guest.id
 
     # Also group plus-ones with their hosts (case-insensitive, whitespace-normalized)
     name_to_id = {g.name.strip().lower(): g.id for g in guests_to_assign if g.name}
-    for g in guests_to_assign:
-        if g.is_plus_one and g.plus_one_of:
-            host_key = g.plus_one_of.strip().lower()
+    for guest in guests_to_assign:
+        if guest.is_plus_one and guest.plus_one_of:
+            host_key = guest.plus_one_of.strip().lower()
             if host_key in name_to_id:
-                union(g.id, name_to_id[host_key])
+                union(guest.id, name_to_id[host_key])
 
     # Build actual groups
     from collections import defaultdict
     groups = defaultdict(list)
-    for g in guests_to_assign:
-        groups[find(g.id)].append(g)
+    for guest in guests_to_assign:
+        groups[find(guest.id)].append(guest)
 
     # Build apart-set (which group roots must not share a table) with priority
     apart_roots = {}  # (root_a, root_b) -> priority
@@ -5395,9 +5418,9 @@ def seating_auto_assign(wedding_id):
     group_tags = {}
     for root, members in groups.items():
         tags = set()
-        for g in members:
-            if g.social_groups:
-                for tag in g.social_groups.split(','):
+        for guest in members:
+            if guest.social_groups:
+                for tag in guest.social_groups.split(','):
                     tag = tag.strip()
                     if tag:
                         tags.add(tag)
@@ -5491,8 +5514,8 @@ def seating_auto_assign(wedding_id):
 
     def place_group(grp, table):
         root = find(grp[0].id)
-        for g in grp:
-            g.table_id = table.id
+        for guest in grp:
+            guest.table_id = table.id
         table_counts[table.id] = table_counts.get(table.id, 0) + len(grp)
         table_assignments[table.id].add(root)
 
@@ -5544,11 +5567,11 @@ def seating_auto_assign(wedding_id):
 
     # Try to place remaining individually
     still_unplaced = 0
-    for g in unplaced:
+    for guest in unplaced:
         placed = False
         for table in tables:
             if table_counts.get(table.id, 0) < table.capacity:
-                g.table_id = table.id
+                guest.table_id = table.id
                 table_counts[table.id] = table_counts.get(table.id, 0) + 1
                 placed = True
                 break
@@ -5603,16 +5626,16 @@ def export_guests_csv(wedding_id):
     writer.writerow(['Name', 'Email', 'Phone', 'Address', 'RSVP Status', 'Meal Choice',
                      'Dietary Restrictions', 'Side', 'Guest Type', 'Table',
                      'Plus One', 'Gift Received', 'Thank You Sent'])
-    for g in wedding.guests:
+    for guest in wedding.guests:
         table_name = ''
-        if g.seating_table:
-            table_name = g.seating_table.table_name or g.seating_table.table_number
+        if guest.seating_table:
+            table_name = guest.seating_table.table_name or guest.seating_table.table_number
         writer.writerow([
-            g.name, g.email or '', g.phone or '', g.address or '',
-            g.rsvp_status or 'pending', g.meal_choice or '', g.dietary_restrictions or '',
-            g.side or '', g.guest_type or '', table_name,
-            g.plus_one_of if g.is_plus_one else '', 'Yes' if g.gift_received else 'No',
-            'Yes' if g.thank_you_sent else 'No'
+            guest.name, guest.email or '', guest.phone or '', guest.address or '',
+            guest.rsvp_status or 'pending', guest.meal_choice or '', guest.dietary_restrictions or '',
+            guest.side or '', guest.guest_type or '', table_name,
+            guest.plus_one_of if guest.is_plus_one else '', 'Yes' if guest.gift_received else 'No',
+            'Yes' if guest.thank_you_sent else 'No'
         ])
     response = make_response(output.getvalue())
     response.headers['Content-Type'] = 'text/csv'
@@ -6173,9 +6196,9 @@ def export_mailing_labels(wedding_id):
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Name', 'Address'])
-    for g in wedding.guests:
-        if g.address:
-            writer.writerow([g.name, g.address])
+    for guest in wedding.guests:
+        if guest.address:
+            writer.writerow([guest.name, guest.address])
     response = make_response(output.getvalue())
     response.headers['Content-Type'] = 'text/csv'
     response.headers['Content-Disposition'] = f'attachment; filename=mailing_labels_{wedding_id}.csv'
@@ -6283,11 +6306,11 @@ def export_gifts_csv(wedding_id):
     writer = csv.writer(output)
     writer.writerow(['Event', 'From', 'Description', 'Estimated Value', 'Date Received',
                      'Thank You Sent', 'Notes'])
-    for g in wedding.gifts:
+    for gift in wedding.gifts:
         writer.writerow([
-            g.event, g.from_name, g.description or '', g.estimated_value or 0,
-            str(g.date_received or ''), 'Yes' if g.thank_you_sent else 'No',
-            g.notes or ''
+            gift.event, gift.from_name, gift.description or '', gift.estimated_value or 0,
+            str(gift.date_received or ''), 'Yes' if gift.thank_you_sent else 'No',
+            gift.notes or ''
         ])
     response = make_response(output.getvalue())
     response.headers['Content-Type'] = 'text/csv'
@@ -6744,15 +6767,21 @@ def import_wedding_json(wedding_id):
                 continue
         return None
 
+    # `if val` would send a legitimate 0 down the None branch, so a tip of $0
+    # or a quantity of 0 came back from an import as "not recorded".
     def _safe_float(val):
+        if val is None or val == '':
+            return None
         try:
-            return float(val) if val else None
+            return float(val)
         except (ValueError, TypeError):
             return None
 
     def _safe_int(val):
+        if val is None or val == '':
+            return None
         try:
-            return int(val) if val else None
+            return int(val)
         except (ValueError, TypeError):
             return None
 
@@ -7041,21 +7070,25 @@ def collaborator_remove(wedding_id, access_id):
 def calendar_view(wedding_id):
     wedding = get_wedding_or_403(wedding_id)
     events = []
+    # The template groups events by month and formats the day, so 'date' has to
+    # be a real date object. Task.due_date is a DateTime and the others are
+    # Dates; normalise to date so the entries stay comparable for sorting.
     # Tasks
     for t in wedding.tasks:
-        events.append({
-            'title': t.title,
-            'date': t.due_date.strftime('%Y-%m-%d') if t.due_date else '',
-            'type': 'task',
-            'completed': t.completed,
-            'category': t.category or 'general'
-        })
+        if t.due_date:
+            events.append({
+                'title': t.title,
+                'date': t.due_date.date(),
+                'type': 'task',
+                'completed': t.completed,
+                'category': t.category or 'general'
+            })
     # Vendor payment dates
     for v in wedding.vendors:
         if v.final_payment_date:
             events.append({
                 'title': f'Payment: {v.business_name}',
-                'date': v.final_payment_date.strftime('%Y-%m-%d'),
+                'date': v.final_payment_date,
                 'type': 'payment',
                 'completed': False,
                 'category': 'vendors'
@@ -7066,7 +7099,7 @@ def calendar_view(wedding_id):
             if e.payment_due_date:
                 events.append({
                     'title': f'Due: {e.item_name}',
-                    'date': e.payment_due_date.strftime('%Y-%m-%d'),
+                    'date': e.payment_due_date,
                     'type': 'payment',
                     'completed': e.payment_status == 'paid',
                     'category': 'budget'
@@ -7213,6 +7246,22 @@ def processional_order(wedding_id):
 # MUSIC DURATION TRACKING
 # ============================================
 
+MUSIC_MOMENT_LABELS = {
+    'processional': 'Processional',
+    'recessional': 'Recessional',
+    'first_dance': 'First Dance',
+    'parent_dance': 'Parent Dance',
+    'cake_cutting': 'Cake Cutting',
+    'dinner': 'Dinner',
+    'cocktail_hour': 'Cocktail Hour',
+    'dancing': 'Dancing',
+    'last_dance': 'Last Dance',
+    'do_not_play': 'Do Not Play',
+    'other': 'Other',
+    'unassigned': 'Unassigned',
+}
+
+
 @app.route('/wedding/<int:wedding_id>/music/stats')
 @login_required
 def music_stats(wedding_id):
@@ -7222,9 +7271,14 @@ def music_stats(wedding_id):
     for s in songs:
         m = s.moment or 'unassigned'
         if m not in moments:
-            moments[m] = {'songs': [], 'total_duration': 0}
+            # 'name' and 'duration' are the keys music/stats.html reads.
+            moments[m] = {
+                'name': MUSIC_MOMENT_LABELS.get(m, m.replace('_', ' ').title()),
+                'songs': [],
+                'duration': 0,
+            }
         moments[m]['songs'].append(s)
-        moments[m]['total_duration'] += s.duration_minutes or 0
+        moments[m]['duration'] += s.duration_minutes or 0
     total_duration = sum(s.duration_minutes or 0 for s in songs)
     do_not_play = [s for s in songs if s.moment == 'do_not_play']
     return render_template('music/stats.html', wedding=wedding, moments=moments,
@@ -7234,8 +7288,14 @@ def music_stats(wedding_id):
 # Background task for email reminders
 def check_reminders():
     while True:
-        try:
-            with app.app_context():
+        # The app context has to be the outer block. It used to be the inner
+        # one, so an exception unwound it before the handler ran and the
+        # db.session.rollback() below raised RuntimeError: Working outside of
+        # application context. That escaped the except, broke the while loop and
+        # killed the thread -- after the first database error, no reminder was
+        # ever sent again until the process restarted.
+        with app.app_context():
+            try:
                 reminder_threshold = datetime.utcnow() + timedelta(days=3)
                 rows = db.session.query(Task, Wedding).join(
                     Wedding, Task.wedding_id == Wedding.id
@@ -7259,9 +7319,9 @@ def check_reminders():
 
                 db.session.commit()
 
-        except Exception as e:
-            db.session.rollback()
-            logger.error("Error checking reminders: %s", e)
+            except Exception as e:
+                db.session.rollback()
+                logger.error("Error checking reminders: %s", e)
 
         time_module.sleep(3600)  # Check every hour
 
