@@ -2,13 +2,13 @@
 {% block content %}
 <h1>Add Guest</h1>
 <form method="POST">
-    <div class="form-group"><label>Name *</label><input type="text" name="name" required></div>
-    <div class="form-group"><label>Email</label><input type="email" name="email"></div>
-    <div class="form-group"><label>Phone</label><input type="text" name="phone"></div>
-    <div class="form-group"><label>Address</label><textarea name="address" rows="2"></textarea></div>
+    <div class="form-group"><label for="name">Name *</label><input type="text" name="name" required id="name"></div>
+    <div class="form-group"><label for="email">Email</label><input type="email" name="email" id="email"></div>
+    <div class="form-group"><label for="phone">Phone</label><input type="text" name="phone" id="phone"></div>
+    <div class="form-group"><label for="address">Address</label><textarea name="address" rows="2" id="address"></textarea></div>
     <div class="form-group">
-        <label>Guest Type</label>
-        <select name="guest_type">
+        <label for="guest-type">Guest Type</label>
+        <select name="guest_type" id="guest-type">
             <option>family</option>
             <option>friend</option>
             <option>colleague</option>
@@ -16,8 +16,8 @@
         </select>
     </div>
     <div class="form-group">
-        <label>Side / Association</label>
-        <select name="side">
+        <label for="side">Side / Association</label>
+        <select name="side" id="side">
             <option value="">Not specified</option>
             {% for person in wedding.people|sort(attribute='display_order') %}
                 {% if person.side_label %}
@@ -29,16 +29,16 @@
             <option value="Both">Both / Shared</option>
         </select>
     </div>
-    <div class="form-group"><label>Dietary Restrictions</label><input type="text" name="dietary_restrictions"></div>
+    <div class="form-group"><label for="dietary-restrictions">Dietary Restrictions</label><input type="text" name="dietary_restrictions" id="dietary-restrictions"></div>
     <div class="form-group">
-        <label>Accessibility Needs</label>
-        <input type="text" name="accessibility_needs" placeholder="e.g., wheelchair, mobility aid, near exit, hearing assistance">
+        <label for="accessibility-needs">Accessibility Needs</label>
+        <input type="text" name="accessibility_needs" placeholder="e.g., wheelchair, mobility aid, near exit, hearing assistance" id="accessibility-needs">
         <p class="form-help">Any seating accommodations needed. The seating chart will flag these guests so you can place them at accessible tables.</p>
     </div>
-    <div class="form-group"><label>Household Group</label><input type="text" name="household_group" placeholder="e.g., Smith Family"></div>
+    <div class="form-group"><label for="household-group">Household Group</label><input type="text" name="household_group" placeholder="e.g., Smith Family" id="household-group"></div>
     <div class="form-group">
-        <label>Social Groups</label>
-        <input type="text" name="social_groups" placeholder="e.g., Church Group, Work Colleagues, Book Club">
+        <label for="social-groups">Social Groups</label>
+        <input type="text" name="social_groups" placeholder="e.g., Church Group, Work Colleagues, Book Club" id="social-groups">
         <p class="form-help">Comma-separated list of social circles this guest belongs to. Used by the seating algorithm to group people who know each other.</p>
     </div>
     <button type="submit" class="btn-primary">Add Guest</button>

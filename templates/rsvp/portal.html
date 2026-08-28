@@ -22,12 +22,12 @@
 
             <form method="POST" action="{{ url_for('rsvp_submit', token=token) }}" style="text-align: left; margin-top: 2rem;">
                 <div class="form-group">
-                    <label>Your Name *</label>
-                    <input type="text" name="guest_name" required placeholder="Enter your full name as it appears on the invitation">
+                    <label for="guest-name">Your Name *</label>
+                    <input type="text" name="guest_name" required placeholder="Enter your full name as it appears on the invitation" id="guest-name">
                 </div>
                 <div class="form-group">
-                    <label>Will you be attending? *</label>
-                    <select name="rsvp_status" required>
+                    <label for="rsvp-status">Will you be attending? *</label>
+                    <select name="rsvp_status" required id="rsvp-status">
                         <option value="">-- Please Select --</option>
                         <option value="accepted">Joyfully Accept</option>
                         <option value="declined">Respectfully Decline</option>
@@ -35,8 +35,8 @@
                 </div>
                 {% if menu_items %}
                 <div class="form-group">
-                    <label>Meal Selection</label>
-                    <select name="meal_choice">
+                    <label for="meal-choice">Meal Selection</label>
+                    <select name="meal_choice" id="meal-choice">
                         <option value="">-- Select Meal --</option>
                         {% for item in menu_items %}
                         <option value="{{ item.name }}">{{ item.name }}{% if item.dietary_tags %} ({{ item.dietary_tags }}){% endif %}</option>
@@ -45,39 +45,39 @@
                 </div>
                 {% endif %}
                 <div class="form-group">
-                    <label>Dietary Restrictions</label>
-                    <input type="text" name="dietary_restrictions" placeholder="e.g., vegetarian, gluten-free, nut allergy">
+                    <label for="dietary-restrictions">Dietary Restrictions</label>
+                    <input type="text" name="dietary_restrictions" placeholder="e.g., vegetarian, gluten-free, nut allergy" id="dietary-restrictions">
                 </div>
                 <div class="form-group">
-                    <label>Plus One Name (if applicable)</label>
-                    <input type="text" name="plus_one_name" placeholder="Guest name">
+                    <label for="plus-one-name">Plus One Name (if applicable)</label>
+                    <input type="text" name="plus_one_name" placeholder="Guest name" id="plus-one-name">
                 </div>
                 {% if custom_questions %}
                 {% for q in custom_questions %}
                 <div class="form-group">
-                    <label>{{ q.question_text }}{% if q.required %} *{% endif %}</label>
+                    <label for="custom-q-{{ q.id }}">{{ q.question_text }}{% if q.required %} *{% endif %}</label>
                     {% if q.question_type == 'select' and q.options %}
-                    <select name="custom_q_{{ q.id }}" {% if q.required %}required{% endif %}>
+                    <select name="custom_q_{{ q.id }}" {% if q.required %}required{% endif %} id="custom-q-{{ q.id }}">
                         <option value="">-- Select --</option>
                         {% for opt in q.options|from_json %}
                         <option value="{{ opt }}">{{ opt }}</option>
                         {% endfor %}
                     </select>
                     {% elif q.question_type == 'checkbox' %}
-                    <select name="custom_q_{{ q.id }}">
+                    <select name="custom_q_{{ q.id }}" id="custom-q-{{ q.id }}">
                         <option value="">-- Select --</option>
                         <option value="Yes">Yes</option>
                         <option value="No">No</option>
                     </select>
                     {% else %}
-                    <input type="text" name="custom_q_{{ q.id }}" placeholder="Your answer" {% if q.required %}required{% endif %}>
+                    <input type="text" name="custom_q_{{ q.id }}" placeholder="Your answer" {% if q.required %}required{% endif %} id="custom-q-{{ q.id }}">
                     {% endif %}
                 </div>
                 {% endfor %}
                 {% endif %}
                 <div class="form-group">
-                    <label>Notes</label>
-                    <textarea name="rsvp_notes" rows="3" placeholder="Any message for the couple..."></textarea>
+                    <label for="rsvp-notes">Notes</label>
+                    <textarea name="rsvp_notes" rows="3" placeholder="Any message for the couple..." id="rsvp-notes"></textarea>
                 </div>
                 <button type="submit" class="btn-primary" style="width: 100%; padding: 1rem;">Submit RSVP</button>
             </form>

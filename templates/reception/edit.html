@@ -11,51 +11,51 @@
     <form method="POST" action="{{ url_for('reception_edit', wedding_id=wedding.id) }}">
         <h2>Venue Information</h2>
         <div class="form-group">
-            <label>Venue Name</label>
-            <input type="text" name="venue_name" value="{{ reception.venue_name or '' }}" placeholder="e.g., Grand Ballroom">
+            <label for="venue-name">Venue Name</label>
+            <input type="text" name="venue_name" value="{{ reception.venue_name or '' }}" placeholder="e.g., Grand Ballroom" id="venue-name">
         </div>
         <div class="form-group">
-            <label>Venue Address</label>
-            <input type="text" name="venue_address" value="{{ reception.venue_address or '' }}" placeholder="Full address">
+            <label for="venue-address">Venue Address</label>
+            <input type="text" name="venue_address" value="{{ reception.venue_address or '' }}" placeholder="Full address" id="venue-address">
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Venue Contact</label>
-                <input type="text" name="venue_contact" value="{{ reception.venue_contact or '' }}" placeholder="Contact name">
+                <label for="venue-contact">Venue Contact</label>
+                <input type="text" name="venue_contact" value="{{ reception.venue_contact or '' }}" placeholder="Contact name" id="venue-contact">
             </div>
             <div class="form-group">
-                <label>Venue Phone</label>
-                <input type="text" name="venue_phone" value="{{ reception.venue_phone or '' }}" placeholder="Phone number">
+                <label for="venue-phone">Venue Phone</label>
+                <input type="text" name="venue_phone" value="{{ reception.venue_phone or '' }}" placeholder="Phone number" id="venue-phone">
             </div>
         </div>
         <div class="form-group">
-            <label>Venue Capacity</label>
-            <input type="number" name="venue_capacity" value="{{ reception.venue_capacity or '' }}" min="1" placeholder="e.g., 200">
+            <label for="venue-capacity">Venue Capacity</label>
+            <input type="number" name="venue_capacity" value="{{ reception.venue_capacity or '' }}" min="1" placeholder="e.g., 200" id="venue-capacity">
         </div>
 
         <div class="form-group">
-            <label>Venue Load-In Time</label>
-            <input type="time" name="venue_load_in_time" value="{{ reception.venue_load_in_time.strftime('%H:%M') if reception.venue_load_in_time else '' }}">
+            <label for="venue-load-in-time">Venue Load-In Time</label>
+            <input type="time" name="venue_load_in_time" value="{{ reception.venue_load_in_time.strftime('%H:%M') if reception.venue_load_in_time else '' }}" id="venue-load-in-time">
             <p class="form-help">When vendors can start setting up at the venue</p>
         </div>
 
         <h2>Timing</h2>
         <div class="form-row">
             <div class="form-group">
-                <label>Start Time</label>
-                <input type="time" name="start_time" value="{{ reception.start_time.strftime('%H:%M') if reception.start_time else '' }}">
+                <label for="start-time">Start Time</label>
+                <input type="time" name="start_time" value="{{ reception.start_time.strftime('%H:%M') if reception.start_time else '' }}" id="start-time">
             </div>
             <div class="form-group">
-                <label>End Time</label>
-                <input type="time" name="end_time" value="{{ reception.end_time.strftime('%H:%M') if reception.end_time else '' }}">
+                <label for="end-time">End Time</label>
+                <input type="time" name="end_time" value="{{ reception.end_time.strftime('%H:%M') if reception.end_time else '' }}" id="end-time">
             </div>
         </div>
 
         <h2>Catering</h2>
         <div class="form-row">
             <div class="form-group">
-                <label>Catering Style</label>
-                <select name="catering_style">
+                <label for="catering-style">Catering Style</label>
+                <select name="catering_style" id="catering-style">
                     <option value="">-- Select --</option>
                     <option value="plated" {% if reception.catering_style == 'plated' %}selected{% endif %}>Plated</option>
                     <option value="buffet" {% if reception.catering_style == 'buffet' %}selected{% endif %}>Buffet</option>
@@ -64,8 +64,8 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Bar Service</label>
-                <select name="bar_service">
+                <label for="bar-service">Bar Service</label>
+                <select name="bar_service" id="bar-service">
                     <option value="">-- Select --</option>
                     <option value="open" {% if reception.bar_service == 'open' %}selected{% endif %}>Open Bar</option>
                     <option value="cash" {% if reception.bar_service == 'cash' %}selected{% endif %}>Cash Bar</option>
@@ -75,33 +75,33 @@
             </div>
         </div>
         <div class="form-group">
-            <label>Cake Flavor</label>
-            <input type="text" name="cake_flavor" value="{{ reception.cake_flavor or '' }}" placeholder="e.g., Vanilla with buttercream">
+            <label for="cake-flavor">Cake Flavor</label>
+            <input type="text" name="cake_flavor" value="{{ reception.cake_flavor or '' }}" placeholder="e.g., Vanilla with buttercream" id="cake-flavor">
         </div>
         <div class="form-group">
-            <label>Cake Design</label>
-            <textarea name="cake_design" rows="3" placeholder="Describe the cake design...">{{ reception.cake_design or '' }}</textarea>
+            <label for="cake-design">Cake Design</label>
+            <textarea name="cake_design" rows="3" placeholder="Describe the cake design..." id="cake-design">{{ reception.cake_design or '' }}</textarea>
         </div>
 
         <h2>Cocktail Hour</h2>
         <div class="form-group">
-            <label>Cocktail Menu</label>
-            <textarea name="cocktail_menu" rows="3" placeholder="Signature cocktails, appetizers...">{{ reception.cocktail_menu or '' }}</textarea>
+            <label for="cocktail-menu">Cocktail Menu</label>
+            <textarea name="cocktail_menu" rows="3" placeholder="Signature cocktails, appetizers..." id="cocktail-menu">{{ reception.cocktail_menu or '' }}</textarea>
         </div>
         <div class="form-group">
-            <label>Cocktail Entertainment</label>
-            <input type="text" name="cocktail_entertainment" value="{{ reception.cocktail_entertainment or '' }}" placeholder="e.g., String quartet, lawn games">
+            <label for="cocktail-entertainment">Cocktail Entertainment</label>
+            <input type="text" name="cocktail_entertainment" value="{{ reception.cocktail_entertainment or '' }}" placeholder="e.g., String quartet, lawn games" id="cocktail-entertainment">
         </div>
         <div class="form-group">
-            <label>Cocktail Hour Notes</label>
-            <textarea name="cocktail_hour_notes" rows="2" placeholder="Location, timing, flow...">{{ reception.cocktail_hour_notes or '' }}</textarea>
+            <label for="cocktail-hour-notes">Cocktail Hour Notes</label>
+            <textarea name="cocktail_hour_notes" rows="2" placeholder="Location, timing, flow..." id="cocktail-hour-notes">{{ reception.cocktail_hour_notes or '' }}</textarea>
         </div>
 
         <h2>Entertainment</h2>
         <div class="form-row">
             <div class="form-group">
-                <label>Music Type</label>
-                <select name="music_type">
+                <label for="music-type">Music Type</label>
+                <select name="music_type" id="music-type">
                     <option value="">-- Select --</option>
                     <option value="DJ" {% if reception.music_type == 'DJ' %}selected{% endif %}>DJ</option>
                     <option value="band" {% if reception.music_type == 'band' %}selected{% endif %}>Band</option>
@@ -110,63 +110,63 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>First Dance Song</label>
-                <input type="text" name="first_dance_song" value="{{ reception.first_dance_song or '' }}" placeholder="e.g., At Last - Etta James">
+                <label for="first-dance-song">First Dance Song</label>
+                <input type="text" name="first_dance_song" value="{{ reception.first_dance_song or '' }}" placeholder="e.g., At Last - Etta James" id="first-dance-song">
             </div>
         </div>
         <div class="form-group">
-            <label>Dance Floor Size</label>
-            <input type="text" name="dance_floor_size" value="{{ reception.dance_floor_size or '' }}" placeholder="e.g., 20x20 feet">
+            <label for="dance-floor-size">Dance Floor Size</label>
+            <input type="text" name="dance_floor_size" value="{{ reception.dance_floor_size or '' }}" placeholder="e.g., 20x20 feet" id="dance-floor-size">
         </div>
 
         <h2>Kids & Family</h2>
         <div class="form-group">
-            <label>Kids Activities</label>
-            <textarea name="kids_activities" rows="2" placeholder="Coloring books, games, movie room...">{{ reception.kids_activities or '' }}</textarea>
+            <label for="kids-activities">Kids Activities</label>
+            <textarea name="kids_activities" rows="2" placeholder="Coloring books, games, movie room..." id="kids-activities">{{ reception.kids_activities or '' }}</textarea>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Sitter Name</label>
-                <input type="text" name="kids_sitter_name" value="{{ reception.kids_sitter_name or '' }}" placeholder="Childcare provider name">
+                <label for="kids-sitter-name">Sitter Name</label>
+                <input type="text" name="kids_sitter_name" value="{{ reception.kids_sitter_name or '' }}" placeholder="Childcare provider name" id="kids-sitter-name">
             </div>
             <div class="form-group">
-                <label>Sitter Phone</label>
-                <input type="text" name="kids_sitter_phone" value="{{ reception.kids_sitter_phone or '' }}" placeholder="Phone number">
+                <label for="kids-sitter-phone">Sitter Phone</label>
+                <input type="text" name="kids_sitter_phone" value="{{ reception.kids_sitter_phone or '' }}" placeholder="Phone number" id="kids-sitter-phone">
             </div>
         </div>
 
         <h2>Decor</h2>
         <div class="form-group">
-            <label>Theme</label>
-            <input type="text" name="theme" value="{{ reception.theme or '' }}" placeholder="e.g., Rustic Garden">
+            <label for="theme">Theme</label>
+            <input type="text" name="theme" value="{{ reception.theme or '' }}" placeholder="e.g., Rustic Garden" id="theme">
         </div>
         <div class="form-group">
-            <label>Centerpiece Description</label>
-            <textarea name="centerpiece_description" rows="3" placeholder="Describe the centerpieces...">{{ reception.centerpiece_description or '' }}</textarea>
+            <label for="centerpiece-description">Centerpiece Description</label>
+            <textarea name="centerpiece_description" rows="3" placeholder="Describe the centerpieces..." id="centerpiece-description">{{ reception.centerpiece_description or '' }}</textarea>
         </div>
         <div class="form-group">
-            <label>Lighting Notes</label>
-            <textarea name="lighting_notes" rows="3" placeholder="Describe the lighting setup...">{{ reception.lighting_notes or '' }}</textarea>
+            <label for="lighting-notes">Lighting Notes</label>
+            <textarea name="lighting_notes" rows="3" placeholder="Describe the lighting setup..." id="lighting-notes">{{ reception.lighting_notes or '' }}</textarea>
         </div>
 
         <h2>Guest Count</h2>
         <div class="form-group">
-            <label>Expected Guest Count</label>
-            <input type="number" name="expected_guest_count" value="{{ reception.expected_guest_count or '' }}" min="1" placeholder="e.g., 150">
+            <label for="expected-guest-count">Expected Guest Count</label>
+            <input type="number" name="expected_guest_count" value="{{ reception.expected_guest_count or '' }}" min="1" placeholder="e.g., 150" id="expected-guest-count">
         </div>
 
         <h2>After-Party</h2>
         <div class="form-group">
-            <label>After-Party Venue</label>
-            <input type="text" name="after_party_venue" value="{{ reception.after_party_venue or '' }}" placeholder="e.g., The Rooftop Bar" maxlength="200">
+            <label for="after-party-venue">After-Party Venue</label>
+            <input type="text" name="after_party_venue" value="{{ reception.after_party_venue or '' }}" placeholder="e.g., The Rooftop Bar" maxlength="200" id="after-party-venue">
         </div>
         <div class="form-group">
-            <label>After-Party Address</label>
-            <textarea name="after_party_address" rows="2" placeholder="Full address of after-party location">{{ reception.after_party_address or '' }}</textarea>
+            <label for="after-party-address">After-Party Address</label>
+            <textarea name="after_party_address" rows="2" placeholder="Full address of after-party location" id="after-party-address">{{ reception.after_party_address or '' }}</textarea>
         </div>
         <div class="form-group">
-            <label>After-Party Start Time</label>
-            <input type="time" name="after_party_start_time" value="{{ reception.after_party_start_time.strftime('%H:%M') if reception.after_party_start_time else '' }}">
+            <label for="after-party-start-time">After-Party Start Time</label>
+            <input type="time" name="after_party_start_time" value="{{ reception.after_party_start_time.strftime('%H:%M') if reception.after_party_start_time else '' }}" id="after-party-start-time">
         </div>
 
         <div class="form-actions">

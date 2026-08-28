@@ -13,8 +13,8 @@
     <div class="form-container">
         <form method="POST" action="{{ url_for('vendor_note_add', wedding_id=wedding.id, vendor_id=vendor.id) }}">
             <div class="form-group">
-                <label>Type *</label>
-                <select name="note_type" required>
+                <label for="note-type">Type *</label>
+                <select name="note_type" required id="note-type">
                     <option value="">-- Select --</option>
                     <option value="email">Email</option>
                     <option value="call">Call</option>
@@ -23,12 +23,12 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Subject *</label>
-                <input type="text" name="subject" required placeholder="Brief subject of the communication">
+                <label for="subject">Subject *</label>
+                <input type="text" name="subject" required placeholder="Brief subject of the communication" id="subject">
             </div>
             <div class="form-group">
-                <label>Content</label>
-                <textarea name="content" rows="4" placeholder="Details of the communication..."></textarea>
+                <label for="content">Content</label>
+                <textarea name="content" rows="4" placeholder="Details of the communication..." id="content"></textarea>
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn-primary">Add Note</button>

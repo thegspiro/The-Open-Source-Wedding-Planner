@@ -111,8 +111,8 @@
             <form method="POST" action="{{ url_for('seating_table_add', wedding_id=wedding.id) }}">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Table Preset</label>
-                        <select name="preset">
+                        <label for="preset">Table Preset</label>
+                        <select name="preset" id="preset">
                             <option value="">-- Custom --</option>
                             {% for key, ref in table_size_ref.items() %}
                             <option value="{{ key }}">{{ ref.label }} (seats {{ ref.capacity }})</option>
@@ -120,14 +120,14 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Custom Name</label>
-                        <input type="text" name="table_name" placeholder="e.g., Rose Table">
+                        <label for="table-name">Custom Name</label>
+                        <input type="text" name="table_name" placeholder="e.g., Rose Table" id="table-name">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Shape</label>
-                        <select name="table_shape">
+                        <label for="table-shape">Shape</label>
+                        <select name="table_shape" id="table-shape">
                             <option value="round">Round</option>
                             <option value="rectangular">Rectangular / Banquet</option>
                             <option value="square">Square</option>
@@ -136,12 +136,12 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Capacity</label>
-                        <input type="number" name="capacity" value="8" min="1" max="30">
+                        <label for="capacity">Capacity</label>
+                        <input type="number" name="capacity" value="8" min="1" max="30" id="capacity">
                     </div>
                     <div class="form-group">
-                        <label>Role</label>
-                        <select name="table_role">
+                        <label for="table-role">Role</label>
+                        <select name="table_role" id="table-role">
                             {% for key, label in table_roles.items() %}
                             <option value="{{ key }}">{{ label }}</option>
                             {% endfor %}
@@ -158,12 +158,12 @@
             <form method="POST" action="{{ url_for('seating_tables_bulk_add', wedding_id=wedding.id) }}">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Number of Guest Tables</label>
-                        <input type="number" name="count" value="10" min="1" max="50">
+                        <label for="count">Number of Guest Tables</label>
+                        <input type="number" name="count" value="10" min="1" max="50" id="count">
                     </div>
                     <div class="form-group">
-                        <label>Table Type</label>
-                        <select name="preset">
+                        <label for="preset-2">Table Type</label>
+                        <select name="preset" id="preset-2">
                             {% for key, ref in table_size_ref.items() %}
                             <option value="{{ key }}" {% if key == 'round_60' %}selected{% endif %}>{{ ref.label }} (seats {{ ref.capacity }})</option>
                             {% endfor %}
@@ -172,20 +172,20 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label><input type="checkbox" name="include_head"> Include Head Table</label>
+                        <label><input type="checkbox" name="include_head" id="include-head"> Include Head Table</label>
                     </div>
                     <div class="form-group">
-                        <label>Head Table Seats</label>
-                        <input type="number" name="head_capacity" value="8" min="2" max="30">
+                        <label for="head-capacity">Head Table Seats</label>
+                        <input type="number" name="head_capacity" value="8" min="2" max="30" id="head-capacity">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label><input type="checkbox" name="include_kids"> Include Kids Table</label>
+                        <label><input type="checkbox" name="include_kids" id="include-kids"> Include Kids Table</label>
                     </div>
                     <div class="form-group">
-                        <label>Kids Table Seats</label>
-                        <input type="number" name="kids_capacity" value="8" min="2" max="20">
+                        <label for="kids-capacity">Kids Table Seats</label>
+                        <input type="number" name="kids_capacity" value="8" min="2" max="20" id="kids-capacity">
                     </div>
                 </div>
                 <button type="submit" class="btn-primary btn-small">Create Tables</button>
@@ -205,7 +205,7 @@
             <form method="POST" action="{{ url_for('fixture_add', wedding_id=wedding.id) }}">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Fixture Type</label>
+                        <label for="fixture-type-select">Fixture Type</label>
                         <select name="fixture_type" id="fixture-type-select">
                             <optgroup label="Entertainment">
                                 {% for key, ft in fixture_types.items() if ft.category == 'entertainment' %}
@@ -230,8 +230,8 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Custom Label (optional)</label>
-                        <input type="text" name="label" placeholder="Override default name">
+                        <label for="label">Custom Label (optional)</label>
+                        <input type="text" name="label" placeholder="Override default name" id="label">
                     </div>
                 </div>
                 <button type="submit" class="btn-primary btn-small">Add to Floor Plan</button>
@@ -264,14 +264,14 @@
     <form method="POST" action="{{ url_for('seating_auto_assign', wedding_id=wedding.id) }}">
         <div class="form-row">
             <div class="form-group">
-                <label>Strategy</label>
-                <select name="strategy">
+                <label for="strategy">Strategy</label>
+                <select name="strategy" id="strategy">
                     <option value="balanced">Balanced (fill evenly)</option>
                     <option value="grouped">Grouped (keep sides together)</option>
                 </select>
             </div>
             <div class="form-group" style="padding-top: 1.5rem;">
-                <label><input type="checkbox" name="only_unassigned" checked> Only assign unassigned guests</label>
+                <label><input type="checkbox" name="only_unassigned" checked id="only-unassigned"> Only assign unassigned guests</label>
             </div>
         </div>
         <button type="submit" class="btn-primary" onclick="return confirm('This will auto-assign guests to tables. Continue?')">Auto-Assign</button>
@@ -436,26 +436,26 @@
                     <form method="POST" action="{{ url_for('seating_table_edit', wedding_id=wedding.id, table_id=table.id) }}">
                         <div class="form-row" style="gap:0.5rem; margin-top:0.5rem;">
                             <div class="form-group" style="flex:1;">
-                                <label>Name</label>
-                                <input type="text" name="table_name" value="{{ table.table_name or '' }}" placeholder="Custom name">
+                                <label for="table-name-2">Name</label>
+                                <input type="text" name="table_name" value="{{ table.table_name or '' }}" placeholder="Custom name" id="table-name-2">
                             </div>
                             <div class="form-group" style="flex:0 0 70px;">
-                                <label>Seats</label>
-                                <input type="number" name="capacity" value="{{ table.capacity }}" min="1" max="30">
+                                <label for="capacity-2">Seats</label>
+                                <input type="number" name="capacity" value="{{ table.capacity }}" min="1" max="30" id="capacity-2">
                             </div>
                         </div>
                         <div class="form-row" style="gap:0.5rem;">
                             <div class="form-group" style="flex:1;">
-                                <label>Shape</label>
-                                <select name="table_shape">
+                                <label for="table-shape-2">Shape</label>
+                                <select name="table_shape" id="table-shape-2">
                                     {% for s in ['round','rectangular','square','oval','serpentine'] %}
                                     <option value="{{ s }}" {% if table.table_shape == s %}selected{% endif %}>{{ s|title }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
                             <div class="form-group" style="flex:1;">
-                                <label>Role</label>
-                                <select name="table_role">
+                                <label for="table-role-2">Role</label>
+                                <select name="table_role" id="table-role-2">
                                     {% for key, label in table_roles.items() %}
                                     <option value="{{ key }}" {% if table.table_role == key %}selected{% endif %}>{{ label }}</option>
                                     {% endfor %}
@@ -463,15 +463,15 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label>Size Preset</label>
-                            <select name="table_size">
+                            <label for="table-size">Size Preset</label>
+                            <select name="table_size" id="table-size">
                                 <option value="">Custom</option>
                                 {% for key, ref in table_size_ref.items() %}
                                 <option value="{{ key }}" {% if table.table_size == key %}selected{% endif %}>{{ ref.label }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <input type="hidden" name="notes" value="{{ table.notes or '' }}">
+                        <input type="hidden" name="notes" value="{{ table.notes or '' }}" id="notes">
                         <button type="submit" class="btn-primary btn-tiny" style="margin-top:0.25rem;">Save</button>
                     </form>
                 </div>
@@ -525,11 +525,11 @@
         <h3>Bulk Assign</h3>
         <form method="POST" action="{{ url_for('seating_bulk_assign', wedding_id=wedding.id) }}">
             <div class="form-group">
-                <label>Select Guests</label>
+                <span class="form-label">Select Guests</span>
                 <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 0.5rem; border-radius: 4px; background: #fff;">
                     {% for guest in unassigned_guests %}
                     <label style="display: block; padding: 0.25rem 0; cursor: pointer;">
-                        <input type="checkbox" name="guest_ids" value="{{ guest.id }}">
+                        <input type="checkbox" name="guest_ids" value="{{ guest.id }}" id="guest-{{ guest.id }}">
                         {{ guest.name }}
                         {% if guest.side %}<span class="stat-label"> ({{ guest.side }})</span>{% endif %}
                         {% if guest.household_group %}<span class="stat-label"> [{{ guest.household_group }}]</span>{% endif %}
@@ -538,8 +538,8 @@
                 </div>
             </div>
             <div class="form-group">
-                <label>Assign to Table</label>
-                <select name="table_id" required>
+                <label for="table-id">Assign to Table</label>
+                <select name="table_id" required id="table-id">
                     <option value="">-- Select Table --</option>
                     {% for table in tables %}
                     <option value="{{ table.id }}">
@@ -582,8 +582,8 @@
                 {% if tables %}
                 <td>
                     <form method="POST" action="{{ url_for('seating_assign', wedding_id=wedding.id) }}" class="form-inline">
-                        <input type="hidden" name="guest_id" value="{{ guest.id }}">
-                        <select name="table_id" required style="max-width: 150px;">
+                        <input type="hidden" name="guest_id" value="{{ guest.id }}" id="guest-id">
+                        <select name="table_id" required style="max-width: 150px;" id="table-id-2">
                             <option value="">--</option>
                             {% for table in tables %}
                             <option value="{{ table.id }}">

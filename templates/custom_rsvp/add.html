@@ -8,12 +8,12 @@
 <div class="form-container">
     <form method="POST">
         <div class="form-group">
-            <label>Question *</label>
-            <input type="text" name="question_text" required placeholder="e.g., Any song requests for the DJ?">
+            <label for="question-text">Question *</label>
+            <input type="text" name="question_text" required placeholder="e.g., Any song requests for the DJ?" id="question-text">
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Question Type</label>
+                <label for="question_type">Question Type</label>
                 <select name="question_type" id="question_type" onchange="toggleOptions()">
                     <option value="text">Text (free-form answer)</option>
                     <option value="select">Dropdown (pick one option)</option>
@@ -22,13 +22,13 @@
             </div>
             <div class="form-group">
                 <label>
-                    <input type="checkbox" name="required"> Required question
+                    <input type="checkbox" name="required" id="required"> Required question
                 </label>
             </div>
         </div>
         <div class="form-group" id="options_group" style="display: none;">
-            <label>Options (one per line)</label>
-            <textarea name="options" rows="4" placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
+            <label for="options">Options (one per line)</label>
+            <textarea name="options" rows="4" placeholder="Option 1&#10;Option 2&#10;Option 3" id="options"></textarea>
             <small class="form-help">Enter each option on a separate line. Only used for dropdown questions.</small>
         </div>
         <div class="form-actions">

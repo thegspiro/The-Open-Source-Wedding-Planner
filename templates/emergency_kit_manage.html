@@ -110,13 +110,13 @@
                     <!-- Inline Edit Form (hidden by default) -->
                     <form method="POST" action="{{ url_for('emergency_kit_edit', wedding_id=wedding.id, item_id=item.id) }}" id="edit-form-{{ item.id }}" style="display: none; margin-top: 0.5rem;">
                         <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-                            <input type="text" name="item_name" value="{{ item.item_name }}" required style="font-size: 0.85rem; padding: 0.3rem 0.5rem;">
-                            <select name="category" style="font-size: 0.85rem; padding: 0.3rem 0.5rem;">
+                            <input type="text" name="item_name" value="{{ item.item_name }}" required style="font-size: 0.85rem; padding: 0.3rem 0.5rem;" id="item-name-{{ item.id }}">
+                            <select name="category" style="font-size: 0.85rem; padding: 0.3rem 0.5rem;" id="category-{{ item.id }}">
                                 {% for c in categories %}
                                 <option value="{{ c }}" {% if c == item.category %}selected{% endif %}>{{ c|capitalize }}</option>
                                 {% endfor %}
                             </select>
-                            <input type="text" name="notes" value="{{ item.notes or '' }}" placeholder="Notes" style="font-size: 0.85rem; padding: 0.3rem 0.5rem;">
+                            <input type="text" name="notes" value="{{ item.notes or '' }}" placeholder="Notes" style="font-size: 0.85rem; padding: 0.3rem 0.5rem;" id="notes-2">
                             <div style="display: flex; gap: 0.3rem;">
                                 <button type="submit" class="btn-primary btn-small">Save</button>
                                 <button type="button" class="btn-secondary btn-small" onclick="toggleEdit({{ item.id }})">Cancel</button>

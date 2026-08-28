@@ -20,8 +20,8 @@
     <form method="POST" action="{{ url_for('seating_preference_add', wedding_id=wedding.id) }}">
         <div class="form-row">
             <div class="form-group">
-                <label>Guest 1</label>
-                <select name="guest_id" required>
+                <label for="guest-id">Guest 1</label>
+                <select name="guest_id" required id="guest-id">
                     <option value="">-- Select --</option>
                     {% for guest in guests|sort(attribute='name') %}
                     <option value="{{ guest.id }}">{{ guest.name }}{% if guest.side %} ({{ guest.side }}){% endif %}</option>
@@ -29,15 +29,15 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Preference</label>
-                <select name="preference_type">
+                <label for="preference-type">Preference</label>
+                <select name="preference_type" id="preference-type">
                     <option value="together">Seat TOGETHER</option>
                     <option value="apart">Keep APART</option>
                 </select>
             </div>
             <div class="form-group">
-                <label>Guest 2</label>
-                <select name="other_guest_id" required>
+                <label for="other-guest-id">Guest 2</label>
+                <select name="other_guest_id" required id="other-guest-id">
                     <option value="">-- Select --</option>
                     {% for guest in guests|sort(attribute='name') %}
                     <option value="{{ guest.id }}">{{ guest.name }}{% if guest.side %} ({{ guest.side }}){% endif %}</option>
@@ -47,12 +47,12 @@
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Priority (1=low, 10=must)</label>
-                <input type="number" name="priority" value="5" min="1" max="10">
+                <label for="priority">Priority (1=low, 10=must)</label>
+                <input type="number" name="priority" value="5" min="1" max="10" id="priority">
             </div>
             <div class="form-group">
-                <label>Reason (optional)</label>
-                <input type="text" name="notes" placeholder="e.g., They are exes, They are best friends">
+                <label for="notes">Reason (optional)</label>
+                <input type="text" name="notes" placeholder="e.g., They are exes, They are best friends" id="notes">
             </div>
         </div>
         <button type="submit" class="btn-primary btn-small">Add Preference</button>

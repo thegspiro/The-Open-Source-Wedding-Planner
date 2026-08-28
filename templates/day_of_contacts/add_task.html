@@ -8,17 +8,17 @@
 <div class="form-container">
     <form method="POST">
         <div class="form-group">
-            <label>Task *</label>
-            <input type="text" name="task" required placeholder="e.g., Collect gifts and cards at end of night">
+            <label for="task">Task *</label>
+            <input type="text" name="task" required placeholder="e.g., Collect gifts and cards at end of night" id="task">
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Assigned To</label>
-                <input type="text" name="assigned_to" placeholder="Who is responsible?">
+                <label for="assigned-to">Assigned To</label>
+                <input type="text" name="assigned_to" placeholder="Who is responsible?" id="assigned-to">
             </div>
             <div class="form-group">
-                <label>Category *</label>
-                <select name="category" required>
+                <label for="category">Category *</label>
+                <select name="category" required id="category">
                     <option value="">-- Select --</option>
                     <option value="setup">Setup / Before Ceremony</option>
                     <option value="during">During the Event</option>
@@ -28,12 +28,12 @@
             </div>
         </div>
         <div class="form-group">
-            <label>Timing</label>
-            <input type="text" name="timing" placeholder="e.g., Before ceremony, End of night, All day">
+            <label for="timing">Timing</label>
+            <input type="text" name="timing" placeholder="e.g., Before ceremony, End of night, All day" id="timing">
         </div>
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="2" placeholder="Additional details"></textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="2" placeholder="Additional details" id="notes"></textarea>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn-primary">Add Task</button>

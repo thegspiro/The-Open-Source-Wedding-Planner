@@ -4,13 +4,13 @@
 <h1>Add Task</h1>
 <div class="form-container">
     <form method="POST">
-        <div class="form-group"><label>Title *</label><input type="text" name="title" required></div>
-        <div class="form-group"><label>Description</label><textarea name="description" rows="3"></textarea></div>
-        <div class="form-group"><label>Due Date *</label><input type="date" name="due_date" required></div>
+        <div class="form-group"><label for="title">Title *</label><input type="text" name="title" required id="title"></div>
+        <div class="form-group"><label for="description">Description</label><textarea name="description" rows="3" id="description"></textarea></div>
+        <div class="form-group"><label for="due-date">Due Date *</label><input type="date" name="due_date" required id="due-date"></div>
         <div class="form-row">
-            <div class="form-group"><label>Priority</label><select name="priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
-            <div class="form-group"><label>Category</label>
-                <select name="category">
+            <div class="form-group"><label for="priority">Priority</label><select name="priority" id="priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+            <div class="form-group"><label for="category">Category</label>
+                <select name="category" id="category">
                     <option value="">-- Select --</option>
                     <option value="ceremony">Ceremony</option>
                     <option value="reception">Reception</option>
@@ -33,7 +33,7 @@
                 </select>
             </div>
         </div>
-        <div class="form-group"><label>Assigned To</label><input type="text" name="assigned_to" placeholder="Name of person responsible"></div>
+        <div class="form-group"><label for="assigned-to">Assigned To</label><input type="text" name="assigned_to" placeholder="Name of person responsible" id="assigned-to"></div>
         <div class="form-actions">
             <button type="submit" class="btn-primary">Add Task</button>
             <a href="{{ url_for('tasks_view', wedding_id=wedding.id) }}" class="btn-secondary">Cancel</a>

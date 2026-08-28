@@ -8,8 +8,8 @@
 <div class="form-container">
     <form method="POST">
         <div class="form-group">
-            <label>Category *</label>
-            <select name="category" required>
+            <label for="category">Category *</label>
+            <select name="category" required id="category">
                 <option value="">-- Select --</option>
                 <option value="weather">Weather (Rain/Heat/Cold)</option>
                 <option value="vendor_backup">Vendor No-Show / Backup</option>
@@ -22,26 +22,26 @@
             </select>
         </div>
         <div class="form-group">
-            <label>Plan Title *</label>
-            <input type="text" name="title" required placeholder="e.g., Indoor ceremony backup if rain">
+            <label for="title">Plan Title *</label>
+            <input type="text" name="title" required placeholder="e.g., Indoor ceremony backup if rain" id="title">
         </div>
         <div class="form-group">
-            <label>Description</label>
-            <textarea name="description" rows="4" placeholder="What is the backup plan? Where, when, how will it work?"></textarea>
+            <label for="description">Description</label>
+            <textarea name="description" rows="4" placeholder="What is the backup plan? Where, when, how will it work?" id="description"></textarea>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Emergency Contact Name</label>
-                <input type="text" name="contact_name" placeholder="Who to call if needed">
+                <label for="contact-name">Emergency Contact Name</label>
+                <input type="text" name="contact_name" placeholder="Who to call if needed" id="contact-name">
             </div>
             <div class="form-group">
-                <label>Emergency Contact Phone</label>
-                <input type="text" name="contact_phone" placeholder="Phone number">
+                <label for="contact-phone">Emergency Contact Phone</label>
+                <input type="text" name="contact_phone" placeholder="Phone number" id="contact-phone">
             </div>
         </div>
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="2" placeholder="Additional notes"></textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="2" placeholder="Additional notes" id="notes"></textarea>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn-primary">Add Plan</button>

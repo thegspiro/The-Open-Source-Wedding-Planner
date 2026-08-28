@@ -48,7 +48,7 @@
             <div class="element-actions">
                 {% if elem.id in included_ids %}
                 <form method="POST" action="{{ url_for('ceremony_idea_remove', wedding_id=wedding.id, element_id=elem.id) }}" class="inline-form" onsubmit="return confirmRemove(this, '{{ elem.name }}', {{ task_count }})">
-                    <input type="hidden" name="delete_tasks" value="false">
+                    <input type="hidden" name="delete_tasks" value="false" id="delete-tasks-{{ loop.index }}">
                     <button type="submit" class="btn-outline btn-small btn-danger">Remove</button>
                 </form>
                 {% else %}

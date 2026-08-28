@@ -9,32 +9,32 @@
 
         <form method="POST">
             <div class="form-group">
-                <label>Your Name</label>
-                <input type="text" name="name" required value="{{ name|default('') }}" placeholder="e.g., Sarah Johnson">
+                <label for="name">Your Name</label>
+                <input type="text" name="name" required value="{{ name|default('') }}" placeholder="e.g., Sarah Johnson" id="name">
             </div>
 
             <div class="form-group">
-                <label>Email</label>
-                <input type="email" name="email" required value="{{ email|default('') }}" placeholder="you@example.com">
+                <label for="email">Email</label>
+                <input type="email" name="email" required value="{{ email|default('') }}" placeholder="you@example.com" id="email">
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" name="password" required minlength="6" placeholder="At least 6 characters">
+                    <label for="password">Password</label>
+                    <input type="password" name="password" required minlength="6" placeholder="At least 6 characters" id="password">
                 </div>
 
                 <div class="form-group">
-                    <label>Confirm Password</label>
-                    <input type="password" name="confirm_password" required minlength="6" placeholder="Confirm your password">
+                    <label for="confirm-password">Confirm Password</label>
+                    <input type="password" name="confirm_password" required minlength="6" placeholder="Confirm your password" id="confirm-password">
                 </div>
             </div>
 
             <div class="form-group">
-                <label>How will you be using Wedding Organizer?</label>
+                <label for="user-type">How will you be using Wedding Organizer?</label>
                 <div class="user-type-cards">
-                    <label class="user-type-card">
-                        <input type="radio" name="user_type" value="self" {{ 'checked' if user_type|default('') == 'self' }}>
+                    <label class="user-type-card" for="user-type">
+                        <input type="radio" name="user_type" value="self" {{ 'checked' if user_type|default('') == 'self' }} id="user-type">
                         <div class="user-type-content">
                             <div class="user-type-icon">💍</div>
                             <div>
@@ -44,8 +44,8 @@
                         </div>
                     </label>
 
-                    <label class="user-type-card">
-                        <input type="radio" name="user_type" value="friend" {{ 'checked' if user_type|default('') == 'friend' }}>
+                    <label class="user-type-card" for="user-type-2">
+                        <input type="radio" name="user_type" value="friend" {{ 'checked' if user_type|default('') == 'friend' }} id="user-type-2">
                         <div class="user-type-content">
                             <div class="user-type-icon">🤝</div>
                             <div>
@@ -55,8 +55,8 @@
                         </div>
                     </label>
 
-                    <label class="user-type-card">
-                        <input type="radio" name="user_type" value="professional" {{ 'checked' if user_type|default('') == 'professional' }}>
+                    <label class="user-type-card" for="user-type-3">
+                        <input type="radio" name="user_type" value="professional" {{ 'checked' if user_type|default('') == 'professional' }} id="user-type-3">
                         <div class="user-type-content">
                             <div class="user-type-icon">💼</div>
                             <div>
