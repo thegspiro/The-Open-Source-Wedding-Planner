@@ -52,16 +52,16 @@
 {% endif %}
 
 <!-- Tabs -->
-<div class="tabs" id="budget-tabs">
-    <button class="tab-btn active" onclick="switchTab(event, 'expenses-tab')">Expenses</button>
-    <button class="tab-btn" onclick="switchTab(event, 'limits-tab')">Category Limits {% if limit_warnings %}<span class="tab-count" style="background: var(--color-danger-bg); color: var(--color-danger);">{{ limit_warnings|length }}</span>{% endif %}</button>
-    <button class="tab-btn" onclick="switchTab(event, 'hidden-tab')">Hidden Costs {% if hidden_cost_suggestions|length > 5 %}<span class="tab-count" style="background: var(--color-warning-bg, #fff8e1); color: var(--color-warning, #f57c00);">{{ hidden_cost_suggestions|length }}</span>{% endif %}</button>
-    <button class="tab-btn" onclick="switchTab(event, 'templates-tab')">Templates</button>
-    <button class="tab-btn" onclick="switchTab(event, 'settings-tab')">Budget Settings</button>
+<div class="tabs" id="budget-tabs" role="tablist" aria-label="Budget sections">
+    <button type="button" id="budget-expenses-tab" class="tab-btn active" role="tab" aria-selected="true" aria-controls="expenses-tab" tabindex="0">Expenses</button>
+    <button type="button" id="budget-limits-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="limits-tab" tabindex="-1">Category Limits {% if limit_warnings %}<span class="tab-count" style="background: var(--color-danger-bg); color: var(--color-danger);">{{ limit_warnings|length }}</span>{% endif %}</button>
+    <button type="button" id="budget-hidden-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="hidden-tab" tabindex="-1">Hidden Costs {% if hidden_cost_suggestions|length > 5 %}<span class="tab-count" style="background: var(--color-warning-bg, #fff8e1); color: var(--color-warning, #f57c00);">{{ hidden_cost_suggestions|length }}</span>{% endif %}</button>
+    <button type="button" id="budget-templates-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="templates-tab" tabindex="-1">Templates</button>
+    <button type="button" id="budget-settings-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="settings-tab" tabindex="-1">Budget Settings</button>
 </div>
 
 <!-- Tab: Expenses -->
-<div class="tab-panel active" id="expenses-tab" data-print-title="Expenses">
+<div class="tab-panel active" id="expenses-tab" role="tabpanel" aria-labelledby="budget-expenses-tab" data-print-title="Expenses">
     <div class="split-layout">
         <div class="split-main">
             <div class="budget-breakdown" style="margin-bottom: 1rem;">
@@ -202,7 +202,7 @@
 </div>
 
 <!-- Tab: Category Limits -->
-<div class="tab-panel" id="limits-tab" data-print-title="Category Limits">
+<div class="tab-panel" id="limits-tab" role="tabpanel" aria-labelledby="budget-limits-tab" hidden data-print-title="Category Limits">
     <p class="form-help" style="margin-bottom: 1rem;">Set spending caps per category to keep individual areas in check.</p>
 
     {% if limit_warnings %}
@@ -288,7 +288,7 @@
 </div>
 
 <!-- Tab: Hidden Costs -->
-<div class="tab-panel" id="hidden-tab" data-print-title="Hidden Cost Reminders">
+<div class="tab-panel" id="hidden-tab" role="tabpanel" aria-labelledby="budget-hidden-tab" hidden data-print-title="Hidden Cost Reminders">
     <p class="form-help" style="margin-bottom: 1.25rem;">These are costs that couples commonly forget to budget for. Click "Add to Budget" to add any item as an expense line.</p>
     {% if hidden_cost_suggestions %}
     <table class="data-table">
@@ -324,7 +324,7 @@
 </div>
 
 <!-- Tab: Templates -->
-<div class="tab-panel" id="templates-tab" data-print-title="Budget Templates">
+<div class="tab-panel" id="templates-tab" role="tabpanel" aria-labelledby="budget-templates-tab" hidden data-print-title="Budget Templates">
     <p class="form-help" style="margin-bottom: 1.25rem;">Apply a pre-built budget template to auto-create expense categories. This will add items that don't already exist.</p>
     <div class="info-cards-grid">
         <div class="info-card">
@@ -364,7 +364,7 @@
 </div>
 
 <!-- Tab: Budget Settings -->
-<div class="tab-panel" id="settings-tab" data-print-title="Budget Settings">
+<div class="tab-panel" id="settings-tab" role="tabpanel" aria-labelledby="budget-settings-tab" hidden data-print-title="Budget Settings">
     <div class="info-card" style="max-width: 400px;">
         <div class="info-card-header">
             <h3 style="margin: 0; border: none; padding: 0;">Update Total Budget</h3>
@@ -383,12 +383,4 @@
     <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
 </div>
 
-<script>
-function switchTab(e, tabId) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    e.currentTarget.classList.add('active');
-    document.getElementById(tabId).classList.add('active');
-}
-</script>
 {% endblock %}

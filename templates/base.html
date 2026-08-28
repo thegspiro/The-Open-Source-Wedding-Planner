@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
 </head>
 <body data-theme="{{ user_theme }}" data-mode="{{ 'dark' if user_dark_mode else 'light' }}">
     <nav class="navbar">
