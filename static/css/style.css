@@ -202,6 +202,21 @@ body {
     flex-wrap: nowrap;
     gap: 1rem;
 }
+.navbar-top-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+.nav-menu {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0;
+    flex: 1;
+}
+.nav-menu-toggle { display: none; }
 .logo {
     font-family: var(--font-heading);
     font-size: 1.35rem;
@@ -328,6 +343,17 @@ body {
     font-size: 0.85rem;
 }
 .btn-logout:hover { opacity: 1; color: var(--color-danger) !important; }
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
 
 /* ============================================
    Main Content Area
@@ -2247,11 +2273,64 @@ footer p { margin: 0; }
    ============================================ */
 @media (max-width: 768px) {
     .page-header { flex-direction: column; align-items: flex-start; }
-    .navbar .container { flex-direction: column; gap: 0.5rem; height: auto; padding: 0.75rem 16px; }
     .navbar { height: auto; }
-    .module-nav { justify-content: flex-start; width: 100%; overflow-x: auto; }
-    .wedding-nav { width: 100%; }
-    .nav-links { width: 100%; justify-content: center; flex-wrap: wrap; gap: 0.35rem; }
+    .navbar .container { display: block; height: auto; padding: 0 16px; }
+    .navbar-top-row { height: var(--header-height); width: 100%; }
+    .navbar-top-row .logo { font-size: 1.05rem; }
+    .navbar-top-row .wedding-name {
+        min-width: 0;
+        max-width: 42%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 0.25rem 0.55rem;
+        font-size: 0.8rem;
+    }
+    .nav-menu-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-left: auto;
+        padding: 0.45rem 0.65rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-card);
+        color: var(--color-text);
+        font: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .nav-menu-toggle:focus-visible { outline: 3px solid var(--color-primary-light); outline-offset: 2px; }
+    .nav-menu-icon,
+    .nav-menu-icon::before,
+    .nav-menu-icon::after { display: block; width: 16px; height: 2px; background: currentColor; content: ""; }
+    .nav-menu-icon { position: relative; }
+    .nav-menu-icon::before { position: absolute; top: -5px; }
+    .nav-menu-icon::after { position: absolute; top: 5px; }
+    .nav-menu {
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        max-height: calc(100vh - var(--header-height));
+        overflow-y: auto;
+        padding: 0.75rem 0 1rem;
+        border-top: 1px solid var(--color-border-light);
+    }
+    .nav-menu.is-open { display: flex; }
+    .module-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; overflow: visible; }
+    .module-nav a { padding: 0.55rem 0.7rem; }
+    .wedding-nav { flex-direction: column; align-items: stretch; width: 100%; overflow: visible; }
+    .global-search,
+    .global-search input { width: 100% !important; }
+    .nav-links { flex-direction: column; align-items: stretch; width: 100%; gap: 0.2rem; }
+    .nav-links li,
+    .nav-links a,
+    .nav-links form,
+    .nav-links .btn-logout { width: 100%; }
+    .nav-links a,
+    .nav-links .btn-logout { display: block; padding: 0.55rem 0.7rem; text-align: left; }
+    .user-info { justify-content: space-between; border-radius: var(--radius-sm); }
     .dashboard-grid { grid-template-columns: 1fr; }
     .wedding-grid { grid-template-columns: 1fr; }
     .task-header { flex-direction: column; gap: 0.75rem; }
@@ -2290,8 +2369,7 @@ footer p { margin: 0; }
     .stat-large { font-size: 1.85rem; }
     .handler-summary-grid { grid-template-columns: 1fr; }
     .calc-grid { grid-template-columns: 1fr; }
-    .nav-links { gap: 0.2rem; }
-    .nav-links a { padding: 0.35rem 0.5rem; font-size: 0.8rem; }
+    .navbar-top-row .logo { max-width: 34%; overflow: hidden; text-overflow: ellipsis; }
 }
 
 /* ============================================
