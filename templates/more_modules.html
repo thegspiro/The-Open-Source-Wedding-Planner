@@ -5,7 +5,7 @@
     <h1>All Planning Modules</h1>
     <div class="header-actions">
         <form action="{{ url_for('global_search', wedding_id=wedding.id) }}" method="GET" class="search-form-inline">
-            <input type="text" name="q" placeholder="Search everything..." class="search-input-inline">
+            <input type="text" name="q" placeholder="Search everything..." class="search-input-inline" id="q">
             <button type="submit" class="btn-primary btn-small">Search</button>
         </form>
         <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">Back to Dashboard</a>

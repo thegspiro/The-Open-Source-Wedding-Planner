@@ -9,12 +9,12 @@
     <form method="POST">
         <div class="form-row">
             <div class="form-group">
-                <label>Item Name *</label>
-                <input type="text" name="name" required value="{{ item.name }}">
+                <label for="name">Item Name *</label>
+                <input type="text" name="name" required value="{{ item.name }}" id="name">
             </div>
             <div class="form-group">
-                <label>Category</label>
-                <select name="category">
+                <label for="category">Category</label>
+                <select name="category" id="category">
                     <option value="">-- Select --</option>
                     {% for key, label in categories %}
                     <option value="{{ key }}" {% if item.category == key %}selected{% endif %}>{{ label }}</option>
@@ -25,12 +25,12 @@
 
         <div class="form-row">
             <div class="form-group">
-                <label>Quantity</label>
-                <input type="number" name="quantity" min="1" value="{{ item.quantity or 1 }}">
+                <label for="quantity">Quantity</label>
+                <input type="number" name="quantity" min="1" value="{{ item.quantity or 1 }}" id="quantity">
             </div>
             <div class="form-group">
-                <label>Area</label>
-                <select name="area">
+                <label for="area">Area</label>
+                <select name="area" id="area">
                     <option value="">-- Select --</option>
                     {% for key, label in areas %}
                     <option value="{{ key }}" {% if item.area == key %}selected{% endif %}>{{ label }}</option>
@@ -38,15 +38,15 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Table Number</label>
-                <input type="number" name="table_number" min="1" value="{{ item.table_number or '' }}">
+                <label for="table-number">Table Number</label>
+                <input type="number" name="table_number" min="1" value="{{ item.table_number or '' }}" id="table-number">
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
-                <label>Source</label>
-                <select name="source">
+                <label for="source">Source</label>
+                <select name="source" id="source">
                     <option value="">-- Select --</option>
                     <option value="purchased" {% if item.source == 'purchased' %}selected{% endif %}>Purchased</option>
                     <option value="rented" {% if item.source == 'rented' %}selected{% endif %}>Rented</option>
@@ -56,15 +56,15 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Source Detail</label>
-                <input type="text" name="source_detail" value="{{ item.source_detail or '' }}">
+                <label for="source-detail">Source Detail</label>
+                <input type="text" name="source_detail" value="{{ item.source_detail or '' }}" id="source-detail">
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
-                <label>Status</label>
-                <select name="status">
+                <label for="status">Status</label>
+                <select name="status" id="status">
                     <option value="needed" {% if item.status == 'needed' %}selected{% endif %}>Needed</option>
                     <option value="acquired" {% if item.status == 'acquired' %}selected{% endif %}>Acquired</option>
                     <option value="packed" {% if item.status == 'packed' %}selected{% endif %}>Packed</option>
@@ -74,8 +74,8 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Condition</label>
-                <select name="condition">
+                <label for="condition">Condition</label>
+                <select name="condition" id="condition">
                     <option value="">-- Select --</option>
                     <option value="new" {% if item.condition == 'new' %}selected{% endif %}>New</option>
                     <option value="good" {% if item.condition == 'good' %}selected{% endif %}>Good</option>
@@ -84,15 +84,15 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Cost ($)</label>
-                <input type="number" name="cost" step="0.01" min="0" value="{{ item.cost or '' }}">
+                <label for="cost">Cost ($)</label>
+                <input type="number" name="cost" step="0.01" min="0" value="{{ item.cost or '' }}" id="cost">
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
-                <label>Assign to Bin</label>
-                <select name="bin_id">
+                <label for="bin-id">Assign to Bin</label>
+                <select name="bin_id" id="bin-id">
                     <option value="">-- No Bin --</option>
                     {% for bin in bins %}
                     <option value="{{ bin.id }}" {% if item.bin_id == bin.id %}selected{% endif %}>{{ bin.label }}{% if bin.table_number %} (Table {{ bin.table_number }}){% endif %}</option>
@@ -103,23 +103,23 @@
 
         <div class="form-row">
             <div class="form-group">
-                <label>Return By (for rentals)</label>
-                <input type="date" name="return_by" value="{{ item.return_by.strftime('%Y-%m-%d') if item.return_by else '' }}">
+                <label for="return-by">Return By (for rentals)</label>
+                <input type="date" name="return_by" value="{{ item.return_by.strftime('%Y-%m-%d') if item.return_by else '' }}" id="return-by">
             </div>
             <div class="form-group">
-                <label>Return To</label>
-                <input type="text" name="return_to" value="{{ item.return_to or '' }}">
+                <label for="return-to">Return To</label>
+                <input type="text" name="return_to" value="{{ item.return_to or '' }}" id="return-to">
             </div>
         </div>
 
         <div class="form-group">
-            <label>Setup Instructions</label>
-            <textarea name="setup_instructions" rows="2">{{ item.setup_instructions or '' }}</textarea>
+            <label for="setup-instructions">Setup Instructions</label>
+            <textarea name="setup_instructions" rows="2" id="setup-instructions">{{ item.setup_instructions or '' }}</textarea>
         </div>
 
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="2">{{ item.notes or '' }}</textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="2" id="notes">{{ item.notes or '' }}</textarea>
         </div>
 
         <div class="form-actions">

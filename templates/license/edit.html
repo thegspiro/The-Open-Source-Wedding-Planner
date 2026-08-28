@@ -10,54 +10,54 @@
 <div class="form-container">
     <form method="POST" action="{{ url_for('license_edit', wedding_id=wedding.id) }}">
         <div class="form-group">
-            <label>County</label>
-            <input type="text" name="county" value="{{ license_info.county or '' if license_info else '' }}" placeholder="e.g., Los Angeles County">
+            <label for="county">County</label>
+            <input type="text" name="county" value="{{ license_info.county or '' if license_info else '' }}" placeholder="e.g., Los Angeles County" id="county">
         </div>
         <div class="form-group">
-            <label>State</label>
-            <input type="text" name="state" value="{{ license_info.state or '' if license_info else '' }}" placeholder="e.g., California">
+            <label for="state">State</label>
+            <input type="text" name="state" value="{{ license_info.state or '' if license_info else '' }}" placeholder="e.g., California" id="state">
         </div>
         <div class="form-group">
-            <label>Application Date</label>
-            <input type="date" name="application_date" value="{{ license_info.application_date.strftime('%Y-%m-%d') if license_info and license_info.application_date else '' }}">
+            <label for="application-date">Application Date</label>
+            <input type="date" name="application_date" value="{{ license_info.application_date.strftime('%Y-%m-%d') if license_info and license_info.application_date else '' }}" id="application-date">
         </div>
         <div class="form-group">
-            <label>Pickup Date</label>
-            <input type="date" name="pickup_date" value="{{ license_info.pickup_date.strftime('%Y-%m-%d') if license_info and license_info.pickup_date else '' }}">
+            <label for="pickup-date">Pickup Date</label>
+            <input type="date" name="pickup_date" value="{{ license_info.pickup_date.strftime('%Y-%m-%d') if license_info and license_info.pickup_date else '' }}" id="pickup-date">
         </div>
         <div class="form-group">
-            <label>Expiration Date</label>
-            <input type="date" name="expiration_date" value="{{ license_info.expiration_date.strftime('%Y-%m-%d') if license_info and license_info.expiration_date else '' }}">
+            <label for="expiration-date">Expiration Date</label>
+            <input type="date" name="expiration_date" value="{{ license_info.expiration_date.strftime('%Y-%m-%d') if license_info and license_info.expiration_date else '' }}" id="expiration-date">
         </div>
         <div class="form-group">
-            <label>Filing Deadline</label>
-            <input type="date" name="filing_deadline" value="{{ license_info.filing_deadline.strftime('%Y-%m-%d') if license_info and license_info.filing_deadline else '' }}">
+            <label for="filing-deadline">Filing Deadline</label>
+            <input type="date" name="filing_deadline" value="{{ license_info.filing_deadline.strftime('%Y-%m-%d') if license_info and license_info.filing_deadline else '' }}" id="filing-deadline">
         </div>
         <div class="form-group">
             <label>
-                <input type="checkbox" name="filed" {% if license_info and license_info.filed %}checked{% endif %}>
+                <input type="checkbox" name="filed" {% if license_info and license_info.filed %}checked{% endif %} id="filed">
                 Filed
             </label>
         </div>
         <div class="form-group">
-            <label>Filed Date</label>
-            <input type="date" name="filed_date" value="{{ license_info.filed_date.strftime('%Y-%m-%d') if license_info and license_info.filed_date else '' }}">
+            <label for="filed-date">Filed Date</label>
+            <input type="date" name="filed_date" value="{{ license_info.filed_date.strftime('%Y-%m-%d') if license_info and license_info.filed_date else '' }}" id="filed-date">
         </div>
         <div class="form-group">
-            <label>Documents Needed</label>
-            <textarea name="documents_needed" rows="4" placeholder="One document per line, e.g.:&#10;Valid photo ID&#10;Birth certificate&#10;Social Security number">{{ license_info.documents_needed or '' if license_info else '' }}</textarea>
+            <label for="documents-needed">Documents Needed</label>
+            <textarea name="documents_needed" rows="4" placeholder="One document per line, e.g.:&#10;Valid photo ID&#10;Birth certificate&#10;Social Security number" id="documents-needed">{{ license_info.documents_needed or '' if license_info else '' }}</textarea>
         </div>
         <div class="form-group">
-            <label>Cost ($)</label>
-            <input type="number" name="cost" step="0.01" min="0" value="{{ license_info.cost or '' if license_info else '' }}" placeholder="e.g., 90.00">
+            <label for="cost">Cost ($)</label>
+            <input type="number" name="cost" step="0.01" min="0" value="{{ license_info.cost or '' if license_info else '' }}" placeholder="e.g., 90.00" id="cost">
         </div>
         <div class="form-group">
-            <label>Waiting Period (days)</label>
-            <input type="number" name="waiting_period_days" min="0" value="{{ license_info.waiting_period_days or '' if license_info else '' }}" placeholder="e.g., 3">
+            <label for="waiting-period-days">Waiting Period (days)</label>
+            <input type="number" name="waiting_period_days" min="0" value="{{ license_info.waiting_period_days or '' if license_info else '' }}" placeholder="e.g., 3" id="waiting-period-days">
         </div>
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="3" placeholder="Any additional details...">{{ license_info.notes or '' if license_info else '' }}</textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="3" placeholder="Any additional details..." id="notes">{{ license_info.notes or '' if license_info else '' }}</textarea>
         </div>
 
         <div class="form-actions">

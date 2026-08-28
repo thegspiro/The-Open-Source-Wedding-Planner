@@ -10,8 +10,8 @@
 <div class="form-container">
     <form method="POST" action="{{ url_for('flowers_add', wedding_id=wedding.id) }}">
         <div class="form-group">
-            <label>Item Type *</label>
-            <select name="item_type" required>
+            <label for="item-type">Item Type *</label>
+            <select name="item_type" required id="item-type">
                 <option value="">-- Select --</option>
                 <option value="bouquet">Bouquet</option>
                 <option value="boutonniere">Boutonniere</option>
@@ -25,29 +25,29 @@
             </select>
         </div>
         <div class="form-group">
-            <label>Recipient</label>
-            <input type="text" name="recipient" placeholder="e.g., Bride, Mother of the Groom">
+            <label for="recipient">Recipient</label>
+            <input type="text" name="recipient" placeholder="e.g., Bride, Mother of the Groom" id="recipient">
         </div>
         <div class="form-group">
-            <label>Flowers</label>
-            <textarea name="flowers" rows="3" placeholder="Describe flower types, e.g., white roses, baby's breath, eucalyptus"></textarea>
+            <label for="flowers">Flowers</label>
+            <textarea name="flowers" rows="3" placeholder="Describe flower types, e.g., white roses, baby's breath, eucalyptus" id="flowers"></textarea>
         </div>
         <div class="form-group">
-            <label>Colors</label>
-            <input type="text" name="colors" placeholder="e.g., blush pink, ivory, sage green">
+            <label for="colors">Colors</label>
+            <input type="text" name="colors" placeholder="e.g., blush pink, ivory, sage green" id="colors">
         </div>
         <div class="form-group">
-            <label>Quantity</label>
-            <input type="number" name="quantity" min="1" value="1">
+            <label for="quantity">Quantity</label>
+            <input type="number" name="quantity" min="1" value="1" id="quantity">
         </div>
         <div class="form-group">
-            <label>Cost per Item ($)</label>
-            <input type="number" name="cost" step="0.01" min="0" placeholder="e.g., 150.00">
+            <label for="cost">Cost per Item ($)</label>
+            <input type="number" name="cost" step="0.01" min="0" placeholder="e.g., 150.00" id="cost">
             <p class="form-help">This cost will appear in your wedding budget.</p>
         </div>
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="3" placeholder="Any additional details..."></textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="3" placeholder="Any additional details..." id="notes"></textarea>
         </div>
 
         <div class="form-actions">

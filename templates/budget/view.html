@@ -10,8 +10,8 @@
         <a href="{{ url_for('export_budget_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
         <a href="{{ url_for('download_sample_csv', template_name='budget') }}" class="btn-secondary btn-small">Download Template</a>
         <form method="POST" action="{{ url_for('import_budget_csv', wedding_id=wedding.id) }}" enctype="multipart/form-data" style="display:inline;">
-            <label class="btn-secondary btn-small" style="cursor:pointer;">Import CSV
-                <input type="file" name="file" accept=".csv" onchange="this.form.submit()" style="display:none;">
+            <label class="btn-secondary btn-small" style="cursor:pointer;" for="file">Import CSV
+                <input type="file" name="file" accept=".csv" onchange="this.form.submit()" style="display:none;" id="file">
             </label>
         </form>
         <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
@@ -135,8 +135,8 @@
             <h3>Add Expense</h3>
             <form method="POST" action="{{ url_for('budget_expense_add', wedding_id=wedding.id) }}">
                 <div class="form-group">
-                    <label>Category *</label>
-                    <select name="category" required>
+                    <label for="category">Category *</label>
+                    <select name="category" required id="category">
                         <option value="">-- Select --</option>
                         <option value="venue">Venue</option>
                         <option value="catering">Catering</option>
@@ -159,28 +159,28 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Item Name *</label>
-                    <input type="text" name="item_name" required placeholder="e.g., Photographer deposit">
+                    <label for="item-name">Item Name *</label>
+                    <input type="text" name="item_name" required placeholder="e.g., Photographer deposit" id="item-name">
                 </div>
                 <div class="form-group">
-                    <label>Estimated Cost ($)</label>
-                    <input type="number" name="estimated_cost" step="0.01" min="0" placeholder="3000">
+                    <label for="estimated-cost">Estimated Cost ($)</label>
+                    <input type="number" name="estimated_cost" step="0.01" min="0" placeholder="3000" id="estimated-cost">
                 </div>
                 <div class="form-group">
-                    <label>Actual Cost ($)</label>
-                    <input type="number" name="actual_cost" step="0.01" min="0">
+                    <label for="actual-cost">Actual Cost ($)</label>
+                    <input type="number" name="actual_cost" step="0.01" min="0" id="actual-cost">
                 </div>
                 <div class="form-group">
-                    <label>Paid Amount ($)</label>
-                    <input type="number" name="paid_amount" step="0.01" min="0">
+                    <label for="paid-amount">Paid Amount ($)</label>
+                    <input type="number" name="paid_amount" step="0.01" min="0" id="paid-amount">
                 </div>
                 <div class="form-group">
-                    <label>Due Date</label>
-                    <input type="date" name="payment_due_date">
+                    <label for="payment-due-date">Due Date</label>
+                    <input type="date" name="payment_due_date" id="payment-due-date">
                 </div>
                 <div class="form-group">
-                    <label>Status</label>
-                    <select name="payment_status">
+                    <label for="payment-status">Status</label>
+                    <select name="payment_status" id="payment-status">
                         <option value="unpaid">Unpaid</option>
                         <option value="deposit">Deposit</option>
                         <option value="partial">Partial</option>
@@ -188,12 +188,12 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Covered By</label>
-                    <input type="text" name="covered_by" placeholder="e.g., Bride's parents">
+                    <label for="covered-by">Covered By</label>
+                    <input type="text" name="covered_by" placeholder="e.g., Bride's parents" id="covered-by">
                 </div>
                 <div class="form-group">
-                    <label>Notes</label>
-                    <textarea name="notes" rows="2" placeholder="Optional"></textarea>
+                    <label for="notes">Notes</label>
+                    <textarea name="notes" rows="2" placeholder="Optional" id="notes"></textarea>
                 </div>
                 <button type="submit" class="btn-primary" style="width: 100%;">Add Expense</button>
             </form>
@@ -256,8 +256,8 @@
         </div>
         <form method="POST" action="{{ url_for('budget_category_limit_add', wedding_id=wedding.id) }}" style="display: flex; gap: 0.5rem; align-items: flex-end;">
             <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                <label>Category</label>
-                <select name="category" required>
+                <label for="category-2">Category</label>
+                <select name="category" required id="category-2">
                     <option value="">-- Category --</option>
                     <option value="venue">Venue</option>
                     <option value="catering">Catering</option>
@@ -279,8 +279,8 @@
                 </select>
             </div>
             <div class="form-group" style="width: 130px; margin-bottom: 0;">
-                <label>Limit ($)</label>
-                <input type="number" name="limit_amount" step="1" min="0" placeholder="5000" required>
+                <label for="limit-amount">Limit ($)</label>
+                <input type="number" name="limit_amount" step="1" min="0" placeholder="5000" required id="limit-amount">
             </div>
             <button type="submit" class="btn-primary btn-small" style="margin-bottom: 0;">Set</button>
         </form>
@@ -304,10 +304,10 @@
                 <td>${{ "{:,.0f}".format(item.typical_cost) }}</td>
                 <td>
                     <form method="POST" action="{{ url_for('budget_add_hidden_cost', wedding_id=wedding.id) }}" class="form-inline">
-                        <input type="hidden" name="item_name" value="{{ item.name }}">
-                        <input type="hidden" name="category" value="{{ item.category }}">
-                        <input type="hidden" name="estimated_cost" value="{{ item.typical_cost }}">
-                        <input type="hidden" name="description" value="{{ item.description }}">
+                        <input type="hidden" name="item_name" value="{{ item.name }}" id="item-name-{{ loop.index }}">
+                        <input type="hidden" name="category" value="{{ item.category }}" id="category-{{ loop.index }}">
+                        <input type="hidden" name="estimated_cost" value="{{ item.typical_cost }}" id="estimated-cost-{{ loop.index }}">
+                        <input type="hidden" name="description" value="{{ item.description }}" id="description-{{ loop.index }}">
                         <button type="submit" class="btn-primary btn-small">Add to Budget</button>
                     </form>
                 </td>
@@ -334,7 +334,7 @@
             </div>
             <p style="color: var(--color-text-light); font-size: 0.88rem; margin-bottom: 0.75rem;">~50 guests. Intimate celebration with essential vendors.</p>
             <form method="POST" action="{{ url_for('budget_apply_template', wedding_id=wedding.id) }}">
-                <input type="hidden" name="template_name" value="small">
+                <input type="hidden" name="template_name" value="small" id="template-name">
                 <button type="submit" class="btn-secondary btn-small">Apply Template</button>
             </form>
         </div>
@@ -345,7 +345,7 @@
             </div>
             <p style="color: var(--color-text-light); font-size: 0.88rem; margin-bottom: 0.75rem;">~100 guests. Traditional celebration with full vendor lineup.</p>
             <form method="POST" action="{{ url_for('budget_apply_template', wedding_id=wedding.id) }}">
-                <input type="hidden" name="template_name" value="medium">
+                <input type="hidden" name="template_name" value="medium" id="template-name-2">
                 <button type="submit" class="btn-secondary btn-small">Apply Template</button>
             </form>
         </div>
@@ -356,7 +356,7 @@
             </div>
             <p style="color: var(--color-text-light); font-size: 0.88rem; margin-bottom: 0.75rem;">~200 guests. Grand celebration with premium services.</p>
             <form method="POST" action="{{ url_for('budget_apply_template', wedding_id=wedding.id) }}">
-                <input type="hidden" name="template_name" value="large">
+                <input type="hidden" name="template_name" value="large" id="template-name-3">
                 <button type="submit" class="btn-secondary btn-small">Apply Template</button>
             </form>
         </div>
@@ -371,8 +371,8 @@
         </div>
         <form method="POST" action="{{ url_for('budget_update', wedding_id=wedding.id) }}">
             <div class="form-group">
-                <label>Total Budget ($)</label>
-                <input type="number" name="total_budget" step="0.01" min="0" value="{{ budget.total_budget if budget else '' }}" placeholder="e.g., 25000" required>
+                <label for="total-budget">Total Budget ($)</label>
+                <input type="number" name="total_budget" step="0.01" min="0" value="{{ budget.total_budget if budget else '' }}" placeholder="e.g., 25000" required id="total-budget">
             </div>
             <button type="submit" class="btn-primary">Update Budget</button>
         </form>

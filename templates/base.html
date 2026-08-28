@@ -61,7 +61,7 @@
                     <li><a href="{{ url_for('user_settings') }}">Account settings</a></li>
                     <li>
                         <form method="POST" action="{{ url_for('logout') }}" style="display: inline;">
-                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" id="-csrf-token">
                             <button type="submit" class="btn-logout">Log Out</button>
                         </form>
                     </li>

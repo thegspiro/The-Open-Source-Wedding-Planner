@@ -8,8 +8,8 @@
 <div class="form-container">
     <form method="POST">
         <div class="form-group">
-            <label>Event *</label>
-            <select name="event" required>
+            <label for="event">Event *</label>
+            <select name="event" required id="event">
                 <option value="engagement">Engagement Party</option>
                 <option value="shower">Wedding Shower</option>
                 <option value="wedding" selected>Wedding Day</option>
@@ -17,26 +17,26 @@
             </select>
         </div>
         <div class="form-group">
-            <label>From *</label>
-            <input type="text" name="from_name" required placeholder="e.g., Aunt Susan & Uncle Bob">
+            <label for="from-name">From *</label>
+            <input type="text" name="from_name" required placeholder="e.g., Aunt Susan & Uncle Bob" id="from-name">
         </div>
         <div class="form-group">
-            <label>Gift Description</label>
-            <textarea name="description" rows="2" placeholder="e.g., KitchenAid Stand Mixer, silver"></textarea>
+            <label for="description">Gift Description</label>
+            <textarea name="description" rows="2" placeholder="e.g., KitchenAid Stand Mixer, silver" id="description"></textarea>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Estimated Value ($)</label>
-                <input type="number" name="estimated_value" step="0.01" min="0">
+                <label for="estimated-value">Estimated Value ($)</label>
+                <input type="number" name="estimated_value" step="0.01" min="0" id="estimated-value">
             </div>
             <div class="form-group">
-                <label>Date Received</label>
-                <input type="date" name="date_received">
+                <label for="date-received">Date Received</label>
+                <input type="date" name="date_received" id="date-received">
             </div>
         </div>
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="2" placeholder="e.g., Registry item, need to exchange for correct color"></textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="2" placeholder="e.g., Registry item, need to exchange for correct color" id="notes"></textarea>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn-primary">Record Gift</button>

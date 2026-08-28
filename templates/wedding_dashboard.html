@@ -234,7 +234,7 @@
             <a href="{{ url_for('collaborators_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Manage Share Link</a>
             {% else %}
             <form method="POST" action="{{ url_for('share_enable', wedding_id=wedding.id) }}" style="display: inline;">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" id="-csrf-token">
                 <button type="submit" class="btn-secondary btn-small">Generate Share Link</button>
             </form>
             {% endif %}

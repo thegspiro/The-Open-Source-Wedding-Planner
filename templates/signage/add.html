@@ -9,12 +9,12 @@
     <form method="POST">
         <div class="form-row">
             <div class="form-group">
-                <label>Sign Name *</label>
-                <input type="text" name="name" required placeholder="e.g., Welcome Sign">
+                <label for="name">Sign Name *</label>
+                <input type="text" name="name" required placeholder="e.g., Welcome Sign" id="name">
             </div>
             <div class="form-group">
-                <label>Category *</label>
-                <select name="category" required>
+                <label for="category">Category *</label>
+                <select name="category" required id="category">
                     <option value="">-- Select --</option>
                     <option value="ceremony">Ceremony</option>
                     <option value="reception">Reception</option>
@@ -25,36 +25,36 @@
             </div>
         </div>
         <div class="form-group">
-            <label>Description</label>
-            <textarea name="description" rows="2" placeholder="What does this sign say or show?"></textarea>
+            <label for="description">Description</label>
+            <textarea name="description" rows="2" placeholder="What does this sign say or show?" id="description"></textarea>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Location</label>
-                <input type="text" name="location" placeholder="Where will it be placed?">
+                <label for="location">Location</label>
+                <input type="text" name="location" placeholder="Where will it be placed?" id="location">
             </div>
             <div class="form-group">
-                <label>Size</label>
-                <input type="text" name="size" placeholder="e.g., 24x36, 8.5x11">
+                <label for="size">Size</label>
+                <input type="text" name="size" placeholder="e.g., 24x36, 8.5x11" id="size">
             </div>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Material</label>
-                <input type="text" name="material" placeholder="e.g., acrylic, chalkboard, printed">
+                <label for="material">Material</label>
+                <input type="text" name="material" placeholder="e.g., acrylic, chalkboard, printed" id="material">
             </div>
             <div class="form-group">
-                <label>Vendor / Made By</label>
-                <input type="text" name="vendor" placeholder="Who is making it?">
+                <label for="vendor">Vendor / Made By</label>
+                <input type="text" name="vendor" placeholder="Who is making it?" id="vendor">
             </div>
             <div class="form-group">
-                <label>Cost ($)</label>
-                <input type="number" name="cost" step="0.01" min="0">
+                <label for="cost">Cost ($)</label>
+                <input type="number" name="cost" step="0.01" min="0" id="cost">
             </div>
         </div>
         <div class="form-group">
-            <label>Status</label>
-            <select name="status">
+            <label for="status">Status</label>
+            <select name="status" id="status">
                 <option value="needed">Needed</option>
                 <option value="ordered">Ordered</option>
                 <option value="received">Received</option>
@@ -62,8 +62,8 @@
             </select>
         </div>
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="2" placeholder="Additional notes"></textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="2" placeholder="Additional notes" id="notes"></textarea>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn-primary">Add Sign</button>

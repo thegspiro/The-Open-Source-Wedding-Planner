@@ -9,13 +9,13 @@
 
         <form method="POST">
             <div class="form-group">
-                <label>Email</label>
-                <input type="email" name="email" required value="{{ email|default('') }}" placeholder="you@example.com">
+                <label for="email">Email</label>
+                <input type="email" name="email" required value="{{ email|default('') }}" placeholder="you@example.com" id="email">
             </div>
 
             <div class="form-group">
-                <label>Password</label>
-                <input type="password" name="password" required placeholder="Your password">
+                <label for="password">Password</label>
+                <input type="password" name="password" required placeholder="Your password" id="password">
             </div>
 
             <div class="form-actions">

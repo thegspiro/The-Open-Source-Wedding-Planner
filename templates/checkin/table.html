@@ -57,9 +57,9 @@
 
                 <form method="POST" action="{{ url_for('guest_checkin_lookup', rsvp_token=rsvp_token) }}" style="margin-top: 1.5rem; text-align: left;">
                     <div class="form-group">
-                        <label>Your Name</label>
+                        <label for="name">Your Name</label>
                         <input type="text" name="name" required placeholder="Enter your name as it appears on the invitation"
-                               value="{{ searched_name or '' }}" style="text-align: center; font-size: 1.1rem;">
+                               value="{{ searched_name or '' }}" style="text-align: center; font-size: 1.1rem;" id="name">
                     </div>
                     <button type="submit" class="btn-primary" style="width: 100%; padding: 1rem;">Find My Table</button>
                 </form>
