@@ -547,6 +547,18 @@ main {
     border-radius: 3px;
     transition: width 0.5s ease;
 }
+.progress-fill-danger {
+    background: var(--color-danger);
+}
+.budget-over-state {
+    margin: -0.25rem 0 0.75rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
 
 /* ============================================
    Wedding Grid (Index Page)

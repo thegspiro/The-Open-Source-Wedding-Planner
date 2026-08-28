@@ -27,6 +27,7 @@ New routes are covered the moment they are registered.
 import pytest
 
 from app import app as flask_app
+from models import Budget, BudgetExpense, db
 
 
 def _renderable_rules():
@@ -82,3 +83,57 @@ def test_page_renders_for_a_populated_wedding(populated_client, rule):
     """The same pages, once the wedding actually has data in it."""
     client, populated = populated_client
     _assert_renders(client, rule, populated["wedding_id"])
+
+
+@pytest.mark.parametrize(
+    ("total_budget", "spent", "expected_width", "expected_raw_percentage"),
+    [
+        pytest.param(1000, 500, "50.0%", "50.0", id="partially-spent"),
+        pytest.param(1000, 1000, "100.0%", "100.0", id="exactly-spent"),
+        pytest.param(1000, 1500, "100%", "150.0", id="over-budget"),
+    ],
+)
+def test_dashboard_budget_progress_is_clamped(
+        auth_client, app, total_budget, spent, expected_width,
+        expected_raw_percentage):
+    """The raw percentage remains accurate while the visual never exceeds 100%."""
+    client, seed = auth_client
+    with app.app_context():
+        budget = Budget(wedding_id=seed["wedding_id"], total_budget=total_budget)
+        db.session.add(budget)
+        db.session.flush()
+        db.session.add(BudgetExpense(
+            budget_id=budget.id,
+            category="venue",
+            item_name="Venue",
+            paid_amount=spent,
+        ))
+        db.session.commit()
+
+    html = client.get(f'/wedding/{seed["wedding_id"]}').get_data(as_text=True)
+
+    assert f'aria-valuenow="{expected_raw_percentage}"' in html
+    assert f'style="width: {expected_width}"' in html
+    if spent > total_budget:
+        assert 'class="progress-fill progress-fill-danger"' in html
+        assert 'class="budget-over-state"' in html
+        assert "Over budget by $500" in html
+        assert "50.0% over" in html
+    else:
+        assert "budget-over-state" not in html
+        assert "progress-fill-danger" not in html
+
+
+def test_dashboard_handles_a_zero_budget(auth_client, app):
+    """A zero budget avoids division and does not claim an over-budget state."""
+    client, seed = auth_client
+    with app.app_context():
+        db.session.add(Budget(wedding_id=seed["wedding_id"], total_budget=0))
+        db.session.commit()
+
+    response = client.get(f'/wedding/{seed["wedding_id"]}')
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'aria-label="Budget spent"' not in html
+    assert "budget-over-state" not in html
