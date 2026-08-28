@@ -61,6 +61,28 @@ def test_renderable_rules_were_found():
     )
 
 
+@pytest.mark.parametrize(
+    ("category", "message", "accessibility_attributes"),
+    [
+        ("success", "Wedding saved successfully.",
+         'role="status" aria-live="polite"'),
+        ("error", "Wedding could not be saved.", 'role="alert"'),
+    ],
+)
+def test_flash_messages_have_category_appropriate_live_regions(
+        client, category, message, accessibility_attributes):
+    """Routine feedback is polite while failures interrupt immediately."""
+    with client.session_transaction() as session:
+        session["_flashes"] = [(category, message)]
+
+    page = client.get("/login").get_data(as_text=True)
+
+    assert (
+        f'class="alert alert-{category}" {accessibility_attributes}' in page
+    )
+    assert message in page
+
+
 def _assert_renders(client, rule, wedding_id):
     url = rule.build({"wedding_id": wedding_id}, append_unknown=False)[1]
     response = client.get(url)

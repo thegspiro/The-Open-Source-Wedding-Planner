@@ -13,16 +13,16 @@
 </div>
 
 <!-- Tabs -->
-<div class="tabs">
-    <button class="tab-btn active" onclick="switchTab(event, 'venue-tab')">Venue & Timing</button>
-    <button class="tab-btn" onclick="switchTab(event, 'catering-tab')">Catering & Menu</button>
-    <button class="tab-btn" onclick="switchTab(event, 'entertainment-tab')">Entertainment</button>
-    <button class="tab-btn" onclick="switchTab(event, 'timeline-tab')">Timeline</button>
-    <button class="tab-btn" onclick="switchTab(event, 'seating-tab')">Seating</button>
+<div class="tabs" role="tablist" aria-label="Reception sections">
+    <button type="button" id="reception-venue-tab" class="tab-btn active" role="tab" aria-selected="true" aria-controls="venue-tab" tabindex="0">Venue & Timing</button>
+    <button type="button" id="reception-catering-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="catering-tab" tabindex="-1">Catering & Menu</button>
+    <button type="button" id="reception-entertainment-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="entertainment-tab" tabindex="-1">Entertainment</button>
+    <button type="button" id="reception-timeline-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="timeline-tab" tabindex="-1">Timeline</button>
+    <button type="button" id="reception-seating-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="seating-tab" tabindex="-1">Seating</button>
 </div>
 
 <!-- Tab: Venue & Timing -->
-<div class="tab-panel active" id="venue-tab" data-print-title="Venue & Timing">
+<div class="tab-panel active" id="venue-tab" role="tabpanel" aria-labelledby="reception-venue-tab" data-print-title="Venue & Timing">
     <div class="info-cards-grid">
         <div class="info-card">
             <div class="info-card-header">
@@ -60,7 +60,7 @@
 </div>
 
 <!-- Tab: Catering & Menu -->
-<div class="tab-panel" id="catering-tab" data-print-title="Catering & Menu">
+<div class="tab-panel" id="catering-tab" role="tabpanel" aria-labelledby="reception-catering-tab" hidden data-print-title="Catering & Menu">
     <div class="info-cards-grid" style="margin-bottom: 1.5rem;">
         <div class="info-card">
             <div class="info-card-header">
@@ -117,7 +117,7 @@
 </div>
 
 <!-- Tab: Entertainment -->
-<div class="tab-panel" id="entertainment-tab" data-print-title="Entertainment">
+<div class="tab-panel" id="entertainment-tab" role="tabpanel" aria-labelledby="reception-entertainment-tab" hidden data-print-title="Entertainment">
     <div class="info-cards-grid">
         <div class="info-card">
             <div class="info-card-header">
@@ -132,7 +132,7 @@
 </div>
 
 <!-- Tab: Timeline -->
-<div class="tab-panel" id="timeline-tab" data-print-title="Reception Timeline">
+<div class="tab-panel" id="timeline-tab" role="tabpanel" aria-labelledby="reception-timeline-tab" hidden data-print-title="Reception Timeline">
     {% if timeline_items %}
     <div class="timeline-list">
         {% for item in timeline_items %}
@@ -159,7 +159,7 @@
 </div>
 
 <!-- Tab: Seating -->
-<div class="tab-panel" id="seating-tab" data-print-title="Seating">
+<div class="tab-panel" id="seating-tab" role="tabpanel" aria-labelledby="reception-seating-tab" hidden data-print-title="Seating">
     {% if tables %}
     <div class="info-cards-grid">
         {% for table in tables %}
@@ -189,12 +189,4 @@
     <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
 </div>
 
-<script>
-function switchTab(e, tabId) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    e.currentTarget.classList.add('active');
-    document.getElementById(tabId).classList.add('active');
-}
-</script>
 {% endblock %}

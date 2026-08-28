@@ -8,15 +8,25 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/tabs.js') }}" defer></script>
 </head>
 <body data-theme="{{ user_theme }}" data-mode="{{ 'dark' if user_dark_mode else 'light' }}">
     <nav class="navbar">
         <div class="container">
-            <a href="{{ url_for('index') }}" class="logo">Wedding Organizer</a>
+            <div class="navbar-top-row">
+                <a href="{{ url_for('index') }}" class="logo">Wedding Organizer</a>
+                {% if wedding %}
+                    <span class="wedding-name" title="{{ wedding.couple_names }}">{{ wedding.couple_names }}</span>
+                {% endif %}
+                <button class="nav-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation">
+                    <span class="nav-menu-icon" aria-hidden="true"></span>
+                    <span>Menu</span>
+                </button>
+            </div>
 
-            {% if wedding %}
-            <div class="wedding-nav">
-                <span class="wedding-name">{{ wedding.couple_names }}</span>
+            <div class="nav-menu" id="primary-navigation">
+                {% if wedding %}
+                <div class="wedding-nav">
                 <div class="module-nav">
                     <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}">Dashboard</a>
                     <a href="{{ url_for('day_of_view', wedding_id=wedding.id) }}">Day-Of</a>
@@ -29,13 +39,14 @@
                     <a href="{{ url_for('tasks_view', wedding_id=wedding.id) }}">Tasks</a>
                     <a href="{{ url_for('more_modules', wedding_id=wedding.id) }}">More</a>
                 </div>
-                <form action="{{ url_for('global_search', wedding_id=wedding.id) }}" method="GET" style="display:inline;">
-                    <input type="text" name="q" placeholder="Search..." style="padding:0.4rem 0.75rem;border:1px solid #e8e4e0;border-radius:20px;font-size:0.85rem;width:140px;background:#faf9f7;" id="q">
+                <form class="global-search" action="{{ url_for('global_search', wedding_id=wedding.id) }}" method="GET">
+                    <label class="visually-hidden" for="global-search-input">Search this wedding</label>
+                    <input id="global-search-input" type="search" name="q" placeholder="Search this wedding">
                 </form>
-            </div>
-            {% endif %}
+                </div>
+                {% endif %}
 
-            <ul class="nav-links">
+                <ul class="nav-links">
                 <li><a href="{{ url_for('traditional_elements') }}">Traditions</a></li>
                 {% if current_user %}
                     <li><a href="{{ url_for('index') }}">My Weddings</a></li>
@@ -47,7 +58,7 @@
                             {% else %}Planner{% endif %}
                         </span>
                     </li>
-                    <li><a href="{{ url_for('user_settings') }}" style="font-size: 1.1rem; text-decoration: none;" title="Settings">&#9881;</a></li>
+                    <li><a href="{{ url_for('user_settings') }}">Account settings</a></li>
                     <li>
                         <form method="POST" action="{{ url_for('logout') }}" style="display: inline;">
                             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" id="-csrf-token">
@@ -58,7 +69,8 @@
                     <li><a href="{{ url_for('login') }}">Log In</a></li>
                     <li><a href="{{ url_for('register') }}">Sign Up</a></li>
                 {% endif %}
-            </ul>
+                </ul>
+            </div>
         </div>
     </nav>
 
@@ -66,7 +78,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">
+                    <div class="alert alert-{{ category }}"{% if category in ('error', 'danger', 'warning') %} role="alert"{% else %} role="status" aria-live="polite"{% endif %}>
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -113,6 +125,44 @@
             });
         });
         observer.observe(document.body, { childList: true, subtree: true });
+    })();
+    </script>
+
+    <script>
+    (function() {
+        var navbar = document.querySelector('.navbar');
+        var toggle = document.querySelector('.nav-menu-toggle');
+        var menu = document.getElementById('primary-navigation');
+        if (!navbar || !toggle || !menu) return;
+
+        function closeMenu(returnFocus) {
+            menu.classList.remove('is-open');
+            toggle.setAttribute('aria-expanded', 'false');
+            if (returnFocus) toggle.focus();
+        }
+
+        toggle.addEventListener('click', function() {
+            var willOpen = toggle.getAttribute('aria-expanded') !== 'true';
+            menu.classList.toggle('is-open', willOpen);
+            toggle.setAttribute('aria-expanded', String(willOpen));
+            if (!willOpen) toggle.focus();
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+                closeMenu(true);
+            }
+        });
+
+        document.addEventListener('click', function(event) {
+            if (toggle.getAttribute('aria-expanded') === 'true' && !navbar.contains(event.target)) {
+                closeMenu(false);
+            }
+        });
+
+        window.matchMedia('(min-width: 769px)').addEventListener('change', function(event) {
+            if (event.matches) closeMenu(false);
+        });
     })();
     </script>
 
