@@ -364,9 +364,14 @@ main {
 }
 .header-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.6rem;
     align-items: center;
-    flex-wrap: wrap;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+}
+.header-actions .btn-primary,
+.header-actions .btn-secondary {
+    white-space: nowrap;
 }
 .subtitle {
     color: var(--color-text-light);
@@ -952,6 +957,49 @@ main {
     font-weight: 700;
 }
 .action-buttons { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+.dashboard-secondary-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-top: 2rem;
+    align-items: start;
+}
+.dashboard-secondary-sections .quick-actions { margin-top: 0; }
+.dashboard-tools summary {
+    cursor: pointer;
+    color: var(--color-text);
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+.dashboard-tools summary::marker { color: var(--color-primary); }
+.dashboard-tools summary:focus-visible {
+    outline: 3px solid var(--color-primary-light);
+    outline-offset: 4px;
+    border-radius: var(--radius-sm);
+}
+.tools-description {
+    color: var(--color-text-light);
+    font-size: 0.88rem;
+    margin: 0.65rem 0 1rem;
+}
+.tools-actions { margin-bottom: 1rem; }
+.import-wedding-form {
+    display: grid;
+    grid-template-columns: minmax(150px, auto) minmax(180px, 1fr) auto;
+    gap: 0.6rem;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border-light);
+}
+.import-wedding-form label { font-size: 0.88rem; font-weight: 600; }
+.import-wedding-form input[type="file"] {
+    min-width: 0;
+    color: var(--color-text-light);
+    font: inherit;
+    font-size: 0.82rem;
+}
 
 /* ============================================
    Empty State
@@ -2207,7 +2255,17 @@ footer p { margin: 0; }
     .dashboard-grid { grid-template-columns: 1fr; }
     .wedding-grid { grid-template-columns: 1fr; }
     .task-header { flex-direction: column; gap: 0.75rem; }
-    .header-actions { flex-direction: column; align-items: flex-start; }
+    .header-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+        align-items: stretch;
+    }
+    .header-actions .btn-primary,
+    .header-actions .btn-secondary { text-align: center; }
+    .header-actions .btn-secondary { grid-column: 1 / -1; }
+    .dashboard-secondary-sections { grid-template-columns: 1fr; }
+    .import-wedding-form { grid-template-columns: 1fr; align-items: start; }
     .participant-grid { grid-template-columns: 1fr; }
     .handler-time-header { flex-direction: column; }
     .handler-summary-grid { grid-template-columns: 1fr 1fr; }
