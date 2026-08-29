@@ -93,9 +93,17 @@
         <p class="stat-label">Spent</p>
         <p class="stat-small">of ${{ "{:,.0f}".format(stats.budget_total) }}</p>
         {% if stats.budget_total > 0 %}
-        <div class="progress-bar">
-            <div class="progress-fill" style="width: {{ (stats.budget_spent / stats.budget_total * 100)|int }}%"></div>
+        {% set budget_percentage = stats.budget_spent / stats.budget_total * 100 %}
+        {% set budget_bar_width = 0 if budget_percentage < 0 else (100 if budget_percentage > 100 else budget_percentage) %}
+        <div class="progress-bar" role="progressbar" aria-label="Budget spent" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ budget_percentage|round(1) }}">
+            <div class="progress-fill{% if budget_percentage > 100 %} progress-fill-danger{% endif %}" style="width: {{ budget_bar_width|round(1) }}%"></div>
         </div>
+        {% if budget_percentage > 100 %}
+        <p class="budget-over-state">
+            Over budget by ${{ "{:,.0f}".format(stats.budget_spent - stats.budget_total) }}
+            ({{ (budget_percentage - 100)|round(1) }}% over)
+        </p>
+        {% endif %}
         {% endif %}
         <a href="{{ url_for('budget_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">View Budget</a>
     </div>
