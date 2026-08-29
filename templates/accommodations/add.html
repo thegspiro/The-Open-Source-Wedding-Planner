@@ -10,8 +10,8 @@
 <div class="form-container">
     <form method="POST" action="{{ url_for('accommodations_add', wedding_id=wedding.id) }}">
         <div class="form-group">
-            <label>Type *</label>
-            <select name="accommodation_type" required>
+            <label for="accommodation-type">Type *</label>
+            <select name="accommodation_type" required id="accommodation-type">
                 <option value="">-- Select --</option>
                 <option value="hotel_block">Hotel Block</option>
                 <option value="recommended_hotel">Recommended Hotel</option>
@@ -20,55 +20,55 @@
             </select>
         </div>
         <div class="form-group">
-            <label>Name *</label>
-            <input type="text" name="name" required placeholder="e.g., Marriott Downtown">
+            <label for="name">Name *</label>
+            <input type="text" name="name" required placeholder="e.g., Marriott Downtown" id="name">
         </div>
         <div class="form-group">
-            <label>Address</label>
-            <textarea name="address" rows="2" placeholder="Full address"></textarea>
+            <label for="address">Address</label>
+            <textarea name="address" rows="2" placeholder="Full address" id="address"></textarea>
         </div>
         <div class="form-group">
-            <label>Phone</label>
-            <input type="text" name="phone" placeholder="Phone number">
+            <label for="phone">Phone</label>
+            <input type="text" name="phone" placeholder="Phone number" id="phone">
         </div>
         <div class="form-group">
-            <label>Website</label>
-            <input type="url" name="website" placeholder="https://example.com">
+            <label for="website">Website</label>
+            <input type="url" name="website" placeholder="https://example.com" id="website">
         </div>
         <div class="form-group">
-            <label>Block Code</label>
-            <input type="text" name="block_code" placeholder="e.g., SMITH2026">
+            <label for="block-code">Block Code</label>
+            <input type="text" name="block_code" placeholder="e.g., SMITH2026" id="block-code">
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Rate</label>
-                <input type="text" name="rate" placeholder="e.g., $149/night">
+                <label for="rate">Rate</label>
+                <input type="text" name="rate" placeholder="e.g., $149/night" id="rate">
             </div>
             <div class="form-group">
-                <label>Rooms Reserved</label>
-                <input type="number" name="rooms_reserved" min="0" placeholder="e.g., 20">
+                <label for="rooms-reserved">Rooms Reserved</label>
+                <input type="number" name="rooms_reserved" min="0" placeholder="e.g., 20" id="rooms-reserved">
             </div>
         </div>
         <div class="form-group">
-            <label>Deadline</label>
-            <input type="date" name="deadline">
+            <label for="deadline">Deadline</label>
+            <input type="date" name="deadline" id="deadline">
         </div>
 
         <h2>Welcome / Gift Bags</h2>
         <p class="form-help">Track welcome bags or gifts placed in guest hotel rooms.</p>
         <div class="form-group">
             <label>
-                <input type="checkbox" name="welcome_bag">
+                <input type="checkbox" name="welcome_bag" id="welcome-bag">
                 Providing Welcome Bags
             </label>
         </div>
         <div class="form-group">
-            <label>Welcome Bag Contents</label>
-            <textarea name="welcome_bag_items" rows="3" placeholder="e.g., Water bottles, snacks, local map, itinerary card, hangover kit"></textarea>
+            <label for="welcome-bag-items">Welcome Bag Contents</label>
+            <textarea name="welcome_bag_items" rows="3" placeholder="e.g., Water bottles, snacks, local map, itinerary card, hangover kit" id="welcome-bag-items"></textarea>
         </div>
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="3" placeholder="Any additional details..."></textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="3" placeholder="Any additional details..." id="notes"></textarea>
         </div>
 
         <div class="form-actions">

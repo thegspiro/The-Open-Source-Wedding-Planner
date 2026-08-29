@@ -9,12 +9,12 @@
     <form method="POST">
         <div class="form-row">
             <div class="form-group">
-                <label>Item Name *</label>
-                <input type="text" name="name" required placeholder="e.g., Glass votive holders">
+                <label for="name">Item Name *</label>
+                <input type="text" name="name" required placeholder="e.g., Glass votive holders" id="name">
             </div>
             <div class="form-group">
-                <label>Category</label>
-                <select name="category">
+                <label for="category">Category</label>
+                <select name="category" id="category">
                     <option value="">-- Select --</option>
                     {% for key, label in categories %}
                     <option value="{{ key }}">{{ label }}</option>
@@ -25,12 +25,12 @@
 
         <div class="form-row">
             <div class="form-group">
-                <label>Quantity</label>
-                <input type="number" name="quantity" min="1" value="1">
+                <label for="quantity">Quantity</label>
+                <input type="number" name="quantity" min="1" value="1" id="quantity">
             </div>
             <div class="form-group">
-                <label>Area</label>
-                <select name="area">
+                <label for="area">Area</label>
+                <select name="area" id="area">
                     <option value="">-- Select --</option>
                     {% for key, label in areas %}
                     <option value="{{ key }}">{{ label }}</option>
@@ -38,15 +38,15 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Table Number</label>
-                <input type="number" name="table_number" min="1" placeholder="Optional">
+                <label for="table-number">Table Number</label>
+                <input type="number" name="table_number" min="1" placeholder="Optional" id="table-number">
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
-                <label>Source</label>
-                <select name="source">
+                <label for="source">Source</label>
+                <select name="source" id="source">
                     <option value="">-- Select --</option>
                     <option value="purchased">Purchased</option>
                     <option value="rented">Rented</option>
@@ -56,15 +56,15 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Source Detail</label>
-                <input type="text" name="source_detail" placeholder="Vendor name, who it's from, etc.">
+                <label for="source-detail">Source Detail</label>
+                <input type="text" name="source_detail" placeholder="Vendor name, who it's from, etc." id="source-detail">
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
-                <label>Status</label>
-                <select name="status">
+                <label for="status">Status</label>
+                <select name="status" id="status">
                     <option value="needed">Needed</option>
                     <option value="acquired">Acquired</option>
                     <option value="packed">Packed</option>
@@ -72,8 +72,8 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Condition</label>
-                <select name="condition">
+                <label for="condition">Condition</label>
+                <select name="condition" id="condition">
                     <option value="">-- Select --</option>
                     <option value="new">New</option>
                     <option value="good">Good</option>
@@ -82,15 +82,15 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Cost ($)</label>
-                <input type="number" name="cost" step="0.01" min="0" placeholder="0.00">
+                <label for="cost">Cost ($)</label>
+                <input type="number" name="cost" step="0.01" min="0" placeholder="0.00" id="cost">
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
-                <label>Assign to Bin</label>
-                <select name="bin_id">
+                <label for="bin-id">Assign to Bin</label>
+                <select name="bin_id" id="bin-id">
                     <option value="">-- No Bin --</option>
                     {% for bin in bins %}
                     <option value="{{ bin.id }}">{{ bin.label }}{% if bin.table_number %} (Table {{ bin.table_number }}){% endif %}</option>
@@ -101,23 +101,23 @@
 
         <div class="form-row">
             <div class="form-group">
-                <label>Return By (for rentals)</label>
-                <input type="date" name="return_by">
+                <label for="return-by">Return By (for rentals)</label>
+                <input type="date" name="return_by" id="return-by">
             </div>
             <div class="form-group">
-                <label>Return To</label>
-                <input type="text" name="return_to" placeholder="e.g., ABC Rentals, 123 Main St">
+                <label for="return-to">Return To</label>
+                <input type="text" name="return_to" placeholder="e.g., ABC Rentals, 123 Main St" id="return-to">
             </div>
         </div>
 
         <div class="form-group">
-            <label>Setup Instructions</label>
-            <textarea name="setup_instructions" rows="2" placeholder="How should this item be set up? Include photos or descriptions."></textarea>
+            <label for="setup-instructions">Setup Instructions</label>
+            <textarea name="setup_instructions" rows="2" placeholder="How should this item be set up? Include photos or descriptions." id="setup-instructions"></textarea>
         </div>
 
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="2" placeholder="Additional details"></textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="2" placeholder="Additional details" id="notes"></textarea>
         </div>
 
         <div class="form-actions">

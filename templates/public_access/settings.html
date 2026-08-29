@@ -15,8 +15,8 @@
             <p class="form-help">If your server is accessible via a public URL (through a reverse proxy like nginx, Caddy, or Cloudflare), enter it here. All embed codes and public links will use this URL.</p>
 
             <div class="form-group">
-                <label>Public URL</label>
-                <input type="url" name="public_url" value="{{ wedding.public_url or '' }}" placeholder="https://wedding.mydomain.com">
+                <label for="public-url">Public URL</label>
+                <input type="url" name="public_url" value="{{ wedding.public_url or '' }}" placeholder="https://wedding.mydomain.com" id="public-url">
                 <small class="form-help">The full URL where this application is accessible from the internet. Include https:// but no trailing slash. Leave blank if not publicly accessible.</small>
             </div>
 
@@ -33,7 +33,7 @@
             <h2 style="font-size: 1.15rem;">Embeddable Widgets</h2>
             <div class="form-group">
                 <label>
-                    <input type="checkbox" name="embed_enabled" {% if wedding.embed_enabled %}checked{% endif %}>
+                    <input type="checkbox" name="embed_enabled" {% if wedding.embed_enabled %}checked{% endif %} id="embed-enabled">
                     Enable embeddable widgets for this wedding
                 </label>
                 <small class="form-help">When enabled, public pages are created that can be embedded on external websites via iframe. Anyone with the embed URL can view the information.</small>

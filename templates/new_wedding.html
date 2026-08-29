@@ -14,7 +14,7 @@
 
     <form method="POST">
         <div class="form-group">
-            <label>How many people are getting married?</label>
+            <label for="num_people">How many people are getting married?</label>
             <select name="num_people" id="num_people" onchange="updateNameFields()">
                 <option value="2" selected>2 people</option>
                 <option value="3">3 people</option>
@@ -25,22 +25,22 @@
 
         <div id="name-fields">
             <div class="form-group">
-                <label>Person 1 Name</label>
-                <input type="text" name="person_0_name" required placeholder="e.g., Sarah">
+                <label for="person-0-name">Person 1 Name</label>
+                <input type="text" name="person_0_name" required placeholder="e.g., Sarah" id="person-0-name">
             </div>
             <div class="form-group">
-                <label>Person 2 Name</label>
-                <input type="text" name="person_1_name" required placeholder="e.g., James">
+                <label for="person-1-name">Person 2 Name</label>
+                <input type="text" name="person_1_name" required placeholder="e.g., James" id="person-1-name">
             </div>
         </div>
 
         <div class="form-group">
-            <label>Wedding Date</label>
-            <input type="date" name="wedding_date" required>
+            <label for="wedding-date">Wedding Date</label>
+            <input type="date" name="wedding_date" required id="wedding-date">
         </div>
         <div class="form-group">
-            <label>Contact Email</label>
-            <input type="email" name="email" required placeholder="you@example.com">
+            <label for="email">Contact Email</label>
+            <input type="email" name="email" required placeholder="you@example.com" id="email">
         </div>
         <div class="form-actions" style="justify-content: center;">
             <button type="submit" class="btn-primary" style="padding: 0.7rem 2rem;">Create Wedding</button>

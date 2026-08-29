@@ -14,8 +14,8 @@
         <a href="{{ url_for('export_tasks_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
         <a href="{{ url_for('download_sample_csv', template_name='tasks') }}" class="btn-secondary btn-small">Download Template</a>
         <form method="POST" action="{{ url_for('import_tasks_csv', wedding_id=wedding.id) }}" enctype="multipart/form-data" style="display:inline;">
-            <label class="btn-secondary btn-small file-upload-control" role="button" tabindex="0" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" style="cursor:pointer;">Import CSV
-                <input type="file" name="file" accept=".csv" onchange="this.form.submit()" style="display:none;">
+            <label class="btn-secondary btn-small" style="cursor:pointer;" for="file">Import CSV
+                <input type="file" name="file" accept=".csv" onchange="this.form.submit()" style="display:none;" id="file">
             </label>
         </form>
         <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
@@ -53,12 +53,12 @@
 </div>
 
 <!-- Pending Tasks -->
-<div class="tabs" style="margin-bottom: 0;">
-    <button class="tab-btn active" onclick="switchTab(event, 'pending-tab')" style="font-size: 0.95rem;">Pending <span class="tab-count">{{ pending_tasks|length }}</span></button>
-    <button class="tab-btn" onclick="switchTab(event, 'completed-tab')" style="font-size: 0.95rem;">Completed <span class="tab-count">{{ completed_tasks|length }}</span></button>
+<div class="tabs" role="tablist" aria-label="Task status" style="margin-bottom: 0;">
+    <button type="button" id="tasks-pending-tab" class="tab-btn active" role="tab" aria-selected="true" aria-controls="pending-tab" tabindex="0" style="font-size: 0.95rem;">Pending <span class="tab-count">{{ pending_tasks|length }}</span></button>
+    <button type="button" id="tasks-completed-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="completed-tab" tabindex="-1" style="font-size: 0.95rem;">Completed <span class="tab-count">{{ completed_tasks|length }}</span></button>
 </div>
 
-<div class="tab-panel active" id="pending-tab">
+<div class="tab-panel active" id="pending-tab" role="tabpanel" aria-labelledby="tasks-pending-tab">
     {% if pending_tasks %}
     <div class="task-list">
         {% for task in pending_tasks|sort(attribute='due_date') %}
@@ -92,7 +92,7 @@
     {% else %}<p class="empty-message">No pending tasks!</p>{% endif %}
 </div>
 
-<div class="tab-panel" id="completed-tab">
+<div class="tab-panel" id="completed-tab" role="tabpanel" aria-labelledby="tasks-completed-tab" hidden>
     {% if completed_tasks %}
     <div class="task-list">
         {% for task in completed_tasks %}
@@ -112,13 +112,4 @@
     {% else %}<p class="empty-message">No completed tasks yet.</p>{% endif %}
 </div>
 
-<script>
-function switchTab(e, tabId) {
-    var container = e.currentTarget.closest('.tabs').parentElement;
-    container.querySelectorAll(':scope > .tabs .tab-btn').forEach(function(b) { b.classList.remove('active'); });
-    container.querySelectorAll(':scope > .tab-panel').forEach(function(p) { p.classList.remove('active'); });
-    e.currentTarget.classList.add('active');
-    document.getElementById(tabId).classList.add('active');
-}
-</script>
 {% endblock %}

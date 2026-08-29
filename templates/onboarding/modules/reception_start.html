@@ -13,7 +13,7 @@
     <div style="display: flex; flex-direction: column; gap: 1rem;">
         {% for key, tmpl in templates.items() %}
         <form method="POST" style="display: contents;">
-            <input type="hidden" name="template_key" value="{{ key }}">
+            <input type="hidden" name="template_key" value="{{ key }}" id="template-key-{{ key }}">
             <button type="submit" style="all: unset; cursor: pointer; display: block; width: 100%;">
                 <div class="module-section" style="transition: all 0.2s; border: 2px solid transparent; {% if key == 'no_reception' %}opacity: 0.7;{% endif %}">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">

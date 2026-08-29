@@ -9,12 +9,12 @@
     <form method="POST">
         <div class="form-row">
             <div class="form-group">
-                <label>Bin Label *</label>
-                <input type="text" name="label" required value="{{ bin.label }}">
+                <label for="label">Bin Label *</label>
+                <input type="text" name="label" required value="{{ bin.label }}" id="label">
             </div>
             <div class="form-group">
-                <label>Area</label>
-                <select name="area">
+                <label for="area">Area</label>
+                <select name="area" id="area">
                     <option value="">-- Select --</option>
                     {% for key, label in areas %}
                     <option value="{{ key }}" {% if bin.area == key %}selected{% endif %}>{{ label }}</option>
@@ -25,29 +25,29 @@
 
         <div class="form-row">
             <div class="form-group">
-                <label>Table Number</label>
-                <input type="number" name="table_number" min="1" value="{{ bin.table_number or '' }}">
+                <label for="table-number">Table Number</label>
+                <input type="number" name="table_number" min="1" value="{{ bin.table_number or '' }}" id="table-number">
             </div>
             <div class="form-group">
-                <label>Color Code</label>
-                <input type="color" name="color_code" value="{{ bin.color_code or '#b76e79' }}" style="height: 38px; padding: 2px;">
+                <label for="color-code">Color Code</label>
+                <input type="color" name="color_code" value="{{ bin.color_code or '#b76e79' }}" style="height: 38px; padding: 2px;" id="color-code">
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
-                <label>Storage Location</label>
-                <input type="text" name="storage_location" value="{{ bin.storage_location or '' }}">
+                <label for="storage-location">Storage Location</label>
+                <input type="text" name="storage_location" value="{{ bin.storage_location or '' }}" id="storage-location">
             </div>
             <div class="form-group">
-                <label>Assigned To</label>
-                <input type="text" name="assigned_to" value="{{ bin.assigned_to or '' }}">
+                <label for="assigned-to">Assigned To</label>
+                <input type="text" name="assigned_to" value="{{ bin.assigned_to or '' }}" id="assigned-to">
             </div>
         </div>
 
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="2">{{ bin.notes or '' }}</textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="2" id="notes">{{ bin.notes or '' }}</textarea>
         </div>
 
         <div class="form-actions">

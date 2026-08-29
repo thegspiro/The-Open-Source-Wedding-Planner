@@ -12,26 +12,26 @@
         <!-- Hashtag Section -->
         <h2 style="font-family: var(--font-heading); margin: 1rem 0;">Wedding Hashtag</h2>
         <div class="form-group">
-            <label>Wedding Hashtag</label>
-            <input type="text" name="wedding_hashtag" value="{{ settings.wedding_hashtag or '' if settings else '' }}" placeholder="e.g., #JamieAndAlexForever">
+            <label for="wedding-hashtag">Wedding Hashtag</label>
+            <input type="text" name="wedding_hashtag" value="{{ settings.wedding_hashtag or '' if settings else '' }}" placeholder="e.g., #JamieAndAlexForever" id="wedding-hashtag">
             <small class="form-help">Tip: Combine names, date, or a pun. Check Instagram/Twitter to make sure it's unique!</small>
         </div>
         <div class="form-group">
-            <label>Backup Hashtag Ideas</label>
-            <textarea name="backup_hashtags" rows="2" placeholder="Other options you considered...">{{ settings.backup_hashtags or '' if settings else '' }}</textarea>
+            <label for="backup-hashtags">Backup Hashtag Ideas</label>
+            <textarea name="backup_hashtags" rows="2" placeholder="Other options you considered..." id="backup-hashtags">{{ settings.backup_hashtags or '' if settings else '' }}</textarea>
         </div>
 
         <!-- Unplugged Ceremony -->
         <h2 style="font-family: var(--font-heading); margin: 2rem 0 1rem;">Unplugged Ceremony</h2>
         <div class="form-group">
             <label>
-                <input type="checkbox" name="unplugged_ceremony" {% if settings and settings.unplugged_ceremony %}checked{% endif %}>
+                <input type="checkbox" name="unplugged_ceremony" {% if settings and settings.unplugged_ceremony %}checked{% endif %} id="unplugged-ceremony">
                 Request an unplugged ceremony (guests put phones away)
             </label>
         </div>
         <div class="form-group">
-            <label>Unplugged Ceremony Message</label>
-            <textarea name="unplugged_message" rows="3" placeholder="Custom wording for your sign or officiant announcement...">{{ settings.unplugged_message or '' if settings else '' }}</textarea>
+            <label for="unplugged-message">Unplugged Ceremony Message</label>
+            <textarea name="unplugged_message" rows="3" placeholder="Custom wording for your sign or officiant announcement..." id="unplugged-message">{{ settings.unplugged_message or '' if settings else '' }}</textarea>
         </div>
 
         {% if unplugged_templates %}
@@ -50,38 +50,38 @@
         <!-- Social Sharing Policy -->
         <h2 style="font-family: var(--font-heading); margin: 2rem 0 1rem;">Social Media Sharing Policy</h2>
         <div class="form-group">
-            <label>Sharing Policy</label>
-            <select name="social_sharing_policy">
+            <label for="social-sharing-policy">Sharing Policy</label>
+            <select name="social_sharing_policy" id="social-sharing-policy">
                 {% for value, label in sharing_policies %}
                 <option value="{{ value }}" {% if settings and settings.social_sharing_policy == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="form-group">
-            <label>Custom Message (optional)</label>
-            <textarea name="sharing_policy_message" rows="2" placeholder="Additional instructions for guests about social media...">{{ settings.sharing_policy_message or '' if settings else '' }}</textarea>
+            <label for="sharing-policy-message">Custom Message (optional)</label>
+            <textarea name="sharing_policy_message" rows="2" placeholder="Additional instructions for guests about social media..." id="sharing-policy-message">{{ settings.sharing_policy_message or '' if settings else '' }}</textarea>
         </div>
 
         <!-- Photo Sharing -->
         <h2 style="font-family: var(--font-heading); margin: 2rem 0 1rem;">Guest Photo Sharing</h2>
         <div class="form-group">
-            <label>Photo Sharing App</label>
-            <input type="text" name="photo_sharing_app" value="{{ settings.photo_sharing_app or '' if settings else '' }}" placeholder="e.g., Wedding Share, The Guest, WedPics">
+            <label for="photo-sharing-app">Photo Sharing App</label>
+            <input type="text" name="photo_sharing_app" value="{{ settings.photo_sharing_app or '' if settings else '' }}" placeholder="e.g., Wedding Share, The Guest, WedPics" id="photo-sharing-app">
             <small class="form-help">We recommend <a href="https://hub.docker.com/r/cirx08/wedding_share" target="_blank">Wedding Share</a> -- a free, self-hosted photo sharing app you can run alongside this planner via Docker.</small>
         </div>
         <div class="form-group">
-            <label>Photo Sharing URL / QR Link</label>
-            <input type="text" name="photo_sharing_url" value="{{ settings.photo_sharing_url or '' if settings else '' }}" placeholder="URL for guests to upload photos">
+            <label for="photo-sharing-url">Photo Sharing URL / QR Link</label>
+            <input type="text" name="photo_sharing_url" value="{{ settings.photo_sharing_url or '' if settings else '' }}" placeholder="URL for guests to upload photos" id="photo-sharing-url">
         </div>
         <div class="form-group">
-            <label>Photo Sharing Notes</label>
-            <textarea name="photo_sharing_notes" rows="2" placeholder="Instructions for guests, QR code placement, etc.">{{ settings.photo_sharing_notes or '' if settings else '' }}</textarea>
+            <label for="photo-sharing-notes">Photo Sharing Notes</label>
+            <textarea name="photo_sharing_notes" rows="2" placeholder="Instructions for guests, QR code placement, etc." id="photo-sharing-notes">{{ settings.photo_sharing_notes or '' if settings else '' }}</textarea>
         </div>
 
         <!-- General Notes -->
         <div class="form-group">
-            <label>Additional Notes</label>
-            <textarea name="notes" rows="2">{{ settings.notes or '' if settings else '' }}</textarea>
+            <label for="notes">Additional Notes</label>
+            <textarea name="notes" rows="2" id="notes">{{ settings.notes or '' if settings else '' }}</textarea>
         </div>
 
         <div class="form-actions">

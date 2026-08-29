@@ -8,12 +8,12 @@
 <div class="form-container">
     <form method="POST">
         <div class="form-group">
-            <label>Recipient *</label>
-            <input type="text" name="recipient" required placeholder="e.g., Lead Photographer, DJ, Catering Staff">
+            <label for="recipient">Recipient *</label>
+            <input type="text" name="recipient" required placeholder="e.g., Lead Photographer, DJ, Catering Staff" id="recipient">
         </div>
         <div class="form-group">
-            <label>Service Category</label>
-            <select name="service_category">
+            <label for="service-category">Service Category</label>
+            <select name="service_category" id="service-category">
                 <option value="">-- Select --</option>
                 <option value="photography">Photography / Videography</option>
                 <option value="catering">Catering / Banquet Staff</option>
@@ -30,17 +30,17 @@
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Suggested Amount ($)</label>
-                <input type="number" name="suggested_amount" step="1" min="0" placeholder="e.g., 150">
+                <label for="suggested-amount">Suggested Amount ($)</label>
+                <input type="number" name="suggested_amount" step="1" min="0" placeholder="e.g., 150" id="suggested-amount">
             </div>
             <div class="form-group">
-                <label>Actual Amount ($)</label>
-                <input type="number" name="actual_amount" step="1" min="0">
+                <label for="actual-amount">Actual Amount ($)</label>
+                <input type="number" name="actual_amount" step="1" min="0" id="actual-amount">
             </div>
         </div>
         <div class="form-group">
-            <label>Payment Method</label>
-            <select name="payment_method">
+            <label for="payment-method">Payment Method</label>
+            <select name="payment_method" id="payment-method">
                 <option value="cash">Cash (in envelope)</option>
                 <option value="check">Check</option>
                 <option value="venmo">Venmo / Digital</option>
@@ -48,8 +48,8 @@
             </select>
         </div>
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="2" placeholder="e.g., Hand to lead photographer at end of reception"></textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="2" placeholder="e.g., Hand to lead photographer at end of reception" id="notes"></textarea>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn-primary">Add Tip</button>

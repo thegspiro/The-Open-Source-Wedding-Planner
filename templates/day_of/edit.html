@@ -50,13 +50,13 @@
 
         {% if participants %}
         <div class="form-group">
-            <label>Assign Participants</label>
+            <span class="form-label">Assign Participants</span>
             <p class="form-help">Select who should be present for this timeline item. <a href="{{ url_for('itinerary_add_participant', wedding_id=wedding.id) }}">Add more participants</a></p>
             <div class="checkbox-grid">
                 {% for p in participants %}
                 <label class="checkbox-item">
                     <input type="checkbox" name="participants" value="{{ p.id }}"
-                        {% if p in item.assigned_participants %}checked{% endif %}>
+                        {% if p in item.assigned_participants %}checked{% endif %} id="participant-{{ p.id }}">
                     <span>{{ p.name }} <small>({{ p.role or p.role_category or 'Participant' }})</small></span>
                 </label>
                 {% endfor %}
@@ -64,7 +64,7 @@
         </div>
         {% else %}
         <div class="form-group">
-            <label>Assign Participants</label>
+            <span class="form-label">Assign Participants</span>
             <p class="form-help">No participants set up yet. <a href="{{ url_for('itinerary_participants', wedding_id=wedding.id) }}">Add participants</a> to assign individual itineraries.</p>
         </div>
         {% endif %}

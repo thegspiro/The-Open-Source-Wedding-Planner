@@ -8,12 +8,12 @@
 <div class="form-container">
     <form method="POST">
         <div class="form-group">
-            <label>Task *</label>
-            <input type="text" name="task_name" required placeholder="e.g., Update passport">
+            <label for="task-name">Task *</label>
+            <input type="text" name="task_name" required placeholder="e.g., Update passport" id="task-name">
         </div>
         <div class="form-group">
-            <label>Category</label>
-            <select name="category">
+            <label for="category">Category</label>
+            <select name="category" id="category">
                 <option value="government">Government IDs</option>
                 <option value="financial">Financial Accounts</option>
                 <option value="insurance">Insurance</option>
@@ -24,12 +24,12 @@
             </select>
         </div>
         <div class="form-group">
-            <label>Reference / Confirmation Number</label>
-            <input type="text" name="reference_number" placeholder="Track confirmation numbers here">
+            <label for="reference-number">Reference / Confirmation Number</label>
+            <input type="text" name="reference_number" placeholder="Track confirmation numbers here" id="reference-number">
         </div>
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="2" placeholder="Requirements, documents needed, website URL, etc."></textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="2" placeholder="Requirements, documents needed, website URL, etc." id="notes"></textarea>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn-primary">Add Task</button>

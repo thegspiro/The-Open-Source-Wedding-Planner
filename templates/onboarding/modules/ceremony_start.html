@@ -18,8 +18,8 @@
 
         <form method="POST" action="{{ url_for('onboarding_ceremony_templates', wedding_id=wedding.id) }}" class="choice-form">
             <div class="choice-grid">
-                <label class="choice-card">
-                    <input type="radio" name="ceremony_type" value="religious" required>
+                <label class="choice-card" for="ceremony-type">
+                    <input type="radio" name="ceremony_type" value="religious" required id="ceremony-type">
                     <div class="choice-content">
                         <div class="choice-icon">⛪</div>
                         <h3>Religious Ceremony</h3>
@@ -28,8 +28,8 @@
                     </div>
                 </label>
 
-                <label class="choice-card">
-                    <input type="radio" name="ceremony_type" value="secular">
+                <label class="choice-card" for="ceremony-type-2">
+                    <input type="radio" name="ceremony_type" value="secular" id="ceremony-type-2">
                     <div class="choice-content">
                         <div class="choice-icon">💕</div>
                         <h3>Secular Ceremony</h3>
@@ -38,8 +38,8 @@
                     </div>
                 </label>
 
-                <label class="choice-card">
-                    <input type="radio" name="ceremony_type" value="spiritual">
+                <label class="choice-card" for="ceremony-type-3">
+                    <input type="radio" name="ceremony_type" value="spiritual" id="ceremony-type-3">
                     <div class="choice-content">
                         <div class="choice-icon">🕊️</div>
                         <h3>Spiritual (Non-Religious)</h3>
@@ -48,8 +48,8 @@
                     </div>
                 </label>
 
-                <label class="choice-card">
-                    <input type="radio" name="ceremony_type" value="civil">
+                <label class="choice-card" for="ceremony-type-4">
+                    <input type="radio" name="ceremony_type" value="civil" id="ceremony-type-4">
                     <div class="choice-content">
                         <div class="choice-icon">📜</div>
                         <h3>Civil/Legal Only</h3>

@@ -9,73 +9,73 @@
     <form method="POST">
         <div class="form-row">
             <div class="form-group">
-                <label>Event Type *</label>
-                <select name="event_type" required>
+                <label for="event-type">Event Type *</label>
+                <select name="event_type" required id="event-type">
                     {% for value, label in event_types %}
                     <option value="{{ value }}" {% if event.event_type == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="form-group">
-                <label>Event Name *</label>
-                <input type="text" name="name" required value="{{ event.name }}">
+                <label for="name">Event Name *</label>
+                <input type="text" name="name" required value="{{ event.name }}" id="name">
             </div>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Date</label>
-                <input type="date" name="date" value="{{ event.date.strftime('%Y-%m-%d') if event.date else '' }}">
+                <label for="date">Date</label>
+                <input type="date" name="date" value="{{ event.date.strftime('%Y-%m-%d') if event.date else '' }}" id="date">
             </div>
             <div class="form-group">
-                <label>Start Time</label>
-                <input type="text" name="time" value="{{ event.time or '' }}">
+                <label for="time">Start Time</label>
+                <input type="text" name="time" value="{{ event.time or '' }}" id="time">
             </div>
             <div class="form-group">
-                <label>End Time</label>
-                <input type="text" name="end_time" value="{{ event.end_time or '' }}">
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Venue Name</label>
-                <input type="text" name="venue_name" value="{{ event.venue_name or '' }}">
-            </div>
-            <div class="form-group">
-                <label>Venue Address</label>
-                <input type="text" name="venue_address" value="{{ event.venue_address or '' }}">
+                <label for="end-time">End Time</label>
+                <input type="text" name="end_time" value="{{ event.end_time or '' }}" id="end-time">
             </div>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Host Name</label>
-                <input type="text" name="host_name" value="{{ event.host_name or '' }}">
+                <label for="venue-name">Venue Name</label>
+                <input type="text" name="venue_name" value="{{ event.venue_name or '' }}" id="venue-name">
             </div>
             <div class="form-group">
-                <label>Host Phone</label>
-                <input type="text" name="host_phone" value="{{ event.host_phone or '' }}">
-            </div>
-            <div class="form-group">
-                <label>Host Email</label>
-                <input type="email" name="host_email" value="{{ event.host_email or '' }}">
+                <label for="venue-address">Venue Address</label>
+                <input type="text" name="venue_address" value="{{ event.venue_address or '' }}" id="venue-address">
             </div>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Expected Guest Count</label>
-                <input type="number" name="expected_guest_count" min="0" value="{{ event.expected_guest_count or '' }}">
+                <label for="host-name">Host Name</label>
+                <input type="text" name="host_name" value="{{ event.host_name or '' }}" id="host-name">
             </div>
             <div class="form-group">
-                <label>Estimated Cost ($)</label>
-                <input type="number" name="estimated_cost" step="0.01" min="0" value="{{ event.estimated_cost or '' }}">
+                <label for="host-phone">Host Phone</label>
+                <input type="text" name="host_phone" value="{{ event.host_phone or '' }}" id="host-phone">
             </div>
             <div class="form-group">
-                <label>Actual Cost ($)</label>
-                <input type="number" name="actual_cost" step="0.01" min="0" value="{{ event.actual_cost or '' }}">
+                <label for="host-email">Host Email</label>
+                <input type="email" name="host_email" value="{{ event.host_email or '' }}" id="host-email">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="expected-guest-count">Expected Guest Count</label>
+                <input type="number" name="expected_guest_count" min="0" value="{{ event.expected_guest_count or '' }}" id="expected-guest-count">
+            </div>
+            <div class="form-group">
+                <label for="estimated-cost">Estimated Cost ($)</label>
+                <input type="number" name="estimated_cost" step="0.01" min="0" value="{{ event.estimated_cost or '' }}" id="estimated-cost">
+            </div>
+            <div class="form-group">
+                <label for="actual-cost">Actual Cost ($)</label>
+                <input type="number" name="actual_cost" step="0.01" min="0" value="{{ event.actual_cost or '' }}" id="actual-cost">
             </div>
         </div>
         <div class="form-group">
-            <label>Status</label>
-            <select name="status">
+            <label for="status">Status</label>
+            <select name="status" id="status">
                 <option value="planning" {% if event.status == 'planning' %}selected{% endif %}>Planning</option>
                 <option value="confirmed" {% if event.status == 'confirmed' %}selected{% endif %}>Confirmed</option>
                 <option value="completed" {% if event.status == 'completed' %}selected{% endif %}>Completed</option>
@@ -83,8 +83,8 @@
             </select>
         </div>
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="3">{{ event.notes or '' }}</textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="3" id="notes">{{ event.notes or '' }}</textarea>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn-primary">Save Changes</button>

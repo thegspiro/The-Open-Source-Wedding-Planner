@@ -54,7 +54,7 @@
                            data-overdue="{{ 'true' if task.is_overdue else 'false' }}"
                            data-months="{{ task.months_before }}"
                            {% if not task.is_overdue %}checked{% endif %}
-                           style="accent-color: var(--color-primary); margin-top: 0.2rem; flex-shrink: 0;">
+                           style="accent-color: var(--color-primary); margin-top: 0.2rem; flex-shrink: 0;" id="task-{{ task.idx }}">
                     <div style="flex: 1; min-width: 0;">
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                             <span style="font-weight: 500;">{{ task.title }}</span>

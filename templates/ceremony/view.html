@@ -16,15 +16,15 @@
 </div>
 
 <!-- Tabs -->
-<div class="tabs">
-    <button class="tab-btn active" onclick="switchTab(event, 'details-tab')">Details</button>
-    <button class="tab-btn" onclick="switchTab(event, 'timeline-tab')">Timeline <span class="tab-count">{{ timeline_items|length }}</span></button>
-    {% if ceremony.has_special_readings %}<button class="tab-btn" onclick="switchTab(event, 'readings-tab')">Readings</button>{% endif %}
-    <button class="tab-btn" onclick="switchTab(event, 'ideas-tab')">Ideas {% if included_elements %}<span class="tab-count">{{ included_elements|length }}</span>{% endif %}</button>
+<div class="tabs" role="tablist" aria-label="Ceremony sections">
+    <button type="button" id="ceremony-details-tab" class="tab-btn active" role="tab" aria-selected="true" aria-controls="details-tab" tabindex="0">Details</button>
+    <button type="button" id="ceremony-timeline-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="timeline-tab" tabindex="-1">Timeline <span class="tab-count">{{ timeline_items|length }}</span></button>
+    {% if ceremony.has_special_readings %}<button type="button" id="ceremony-readings-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="readings-tab" tabindex="-1">Readings</button>{% endif %}
+    <button type="button" id="ceremony-ideas-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="ideas-tab" tabindex="-1">Ideas {% if included_elements %}<span class="tab-count">{{ included_elements|length }}</span>{% endif %}</button>
 </div>
 
 <!-- Tab: Details -->
-<div class="tab-panel active" id="details-tab" data-print-title="Ceremony Details">
+<div class="tab-panel active" id="details-tab" role="tabpanel" aria-labelledby="ceremony-details-tab" data-print-title="Ceremony Details">
     <div class="info-cards-grid">
         <div class="info-card">
             <div class="info-card-header">
@@ -73,7 +73,7 @@
 </div>
 
 <!-- Tab: Timeline -->
-<div class="tab-panel" id="timeline-tab" data-print-title="Ceremony Timeline">
+<div class="tab-panel" id="timeline-tab" role="tabpanel" aria-labelledby="ceremony-timeline-tab" hidden data-print-title="Ceremony Timeline">
     <div style="margin-bottom: 1rem;">
         <button onclick="document.getElementById('timeline-form').style.display=document.getElementById('timeline-form').style.display==='none'?'block':'none'; this.querySelector('.toggle-arrow').classList.toggle('open')" class="collapsible-toggle">
             <span class="toggle-arrow">&#9654;</span> Add Timeline Item
@@ -85,27 +85,27 @@
             <form method="POST" action="{{ url_for('ceremony_timeline_add', wedding_id=wedding.id) }}">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Order</label>
-                        <input type="number" name="order" required min="1" value="{{ timeline_items|length + 1 }}">
+                        <label for="order">Order</label>
+                        <input type="number" name="order" required min="1" value="{{ timeline_items|length + 1 }}" id="order">
                     </div>
                     <div class="form-group">
-                        <label>Item Name *</label>
-                        <input type="text" name="item_name" required placeholder="e.g., Processional">
+                        <label for="item-name">Item Name *</label>
+                        <input type="text" name="item_name" required placeholder="e.g., Processional" id="item-name">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Duration (seconds)</label>
-                        <input type="number" name="duration_seconds" placeholder="e.g., 180">
+                        <label for="duration-seconds">Duration (seconds)</label>
+                        <input type="number" name="duration_seconds" placeholder="e.g., 180" id="duration-seconds">
                     </div>
                     <div class="form-group">
-                        <label>Participants</label>
-                        <input type="text" name="participants" placeholder="e.g., Bridal party">
+                        <label for="participants">Participants</label>
+                        <input type="text" name="participants" placeholder="e.g., Bridal party" id="participants">
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Description</label>
-                    <textarea name="description" rows="2"></textarea>
+                    <label for="description">Description</label>
+                    <textarea name="description" rows="2" id="description"></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn-primary">Add Item</button>
@@ -142,7 +142,7 @@
 
 <!-- Tab: Readings -->
 {% if ceremony.has_special_readings %}
-<div class="tab-panel" id="readings-tab" data-print-title="Readings">
+<div class="tab-panel" id="readings-tab" role="tabpanel" aria-labelledby="ceremony-readings-tab" hidden data-print-title="Readings">
     {% if readings %}
     <div class="info-cards-grid">
         {% for reading in readings %}
@@ -168,7 +168,7 @@
 {% endif %}
 
 <!-- Tab: Ideas -->
-<div class="tab-panel" id="ideas-tab" data-print-title="Included Ideas">
+<div class="tab-panel" id="ideas-tab" role="tabpanel" aria-labelledby="ceremony-ideas-tab" hidden data-print-title="Included Ideas">
     {% if included_elements %}
     <div class="info-cards-grid">
         {% for we in included_elements %}
@@ -194,12 +194,4 @@
     <a href="{{ url_for('wedding_dashboard', wedding_id=wedding.id) }}" class="btn-secondary">&#8592; Back to Dashboard</a>
 </div>
 
-<script>
-function switchTab(e, tabId) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    e.currentTarget.classList.add('active');
-    document.getElementById(tabId).classList.add('active');
-}
-</script>
 {% endblock %}

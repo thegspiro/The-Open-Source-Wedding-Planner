@@ -10,8 +10,8 @@
 <div class="form-container">
     <form method="POST" action="{{ url_for('invitations_add', wedding_id=wedding.id) }}">
         <div class="form-group">
-            <label>Item Type *</label>
-            <select name="item_type" required>
+            <label for="item-type">Item Type *</label>
+            <select name="item_type" required id="item-type">
                 <option value="">-- Select --</option>
                 <option value="save_the_date">Save the Date</option>
                 <option value="invitation">Invitation</option>
@@ -24,24 +24,24 @@
             </select>
         </div>
         <div class="form-group">
-            <label>Designer</label>
-            <input type="text" name="designer" placeholder="e.g., Minted, Paperless Post">
+            <label for="designer">Designer</label>
+            <input type="text" name="designer" placeholder="e.g., Minted, Paperless Post" id="designer">
         </div>
         <div class="form-group">
-            <label>Quantity</label>
-            <input type="number" name="quantity" min="0" placeholder="e.g., 100">
+            <label for="quantity">Quantity</label>
+            <input type="number" name="quantity" min="0" placeholder="e.g., 100" id="quantity">
         </div>
         <div class="form-group">
-            <label>Cost ($)</label>
-            <input type="number" name="cost" step="0.01" min="0" placeholder="e.g., 250.00">
+            <label for="cost">Cost ($)</label>
+            <input type="number" name="cost" step="0.01" min="0" placeholder="e.g., 250.00" id="cost">
         </div>
         <div class="form-group">
-            <label>Send By Date</label>
-            <input type="date" name="send_by_date">
+            <label for="send-by-date">Send By Date</label>
+            <input type="date" name="send_by_date" id="send-by-date">
         </div>
         <div class="form-group">
-            <label>Status</label>
-            <select name="status">
+            <label for="status">Status</label>
+            <select name="status" id="status">
                 <option value="not_started">Not Started</option>
                 <option value="designing">Designing</option>
                 <option value="ordered">Ordered</option>
@@ -50,8 +50,8 @@
             </select>
         </div>
         <div class="form-group">
-            <label>Notes</label>
-            <textarea name="notes" rows="3" placeholder="Any additional details..."></textarea>
+            <label for="notes">Notes</label>
+            <textarea name="notes" rows="3" placeholder="Any additional details..." id="notes"></textarea>
         </div>
 
         <div class="form-actions">

@@ -15,20 +15,9 @@
         {% endif %}
     </div>
     <div class="header-actions">
-        <form action="{{ url_for('global_search', wedding_id=wedding.id) }}" method="GET" class="search-form-inline">
-            <input type="text" name="q" placeholder="Search everything..." class="search-input-inline">
-            <button type="submit" class="btn-primary btn-small">Search</button>
-        </form>
-        <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Setup Wizard</a>
+        <a href="{{ url_for('task_add', wedding_id=wedding.id) }}" class="btn-primary btn-small">+ Add Task</a>
+        <a href="{{ url_for('guest_add', wedding_id=wedding.id) }}" class="btn-primary btn-small">+ Add Guest</a>
         <a href="{{ url_for('calendar_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Calendar</a>
-        <a href="{{ url_for('index') }}" class="btn-secondary btn-small">All Weddings</a>
-        <a href="{{ url_for('export_wedding_json', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export Wedding (JSON)</a>
-        <form method="POST" action="{{ url_for('import_wedding_json', wedding_id=wedding.id) }}" enctype="multipart/form-data" style="display:inline;">
-            <label class="btn-secondary btn-small file-upload-control" role="button" tabindex="0" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" style="cursor:pointer;">Import Wedding (JSON)
-                <input type="file" name="file" accept=".json" onchange="if(confirm('Import data from this file? This will ADD data to the current wedding.')) this.form.submit();" style="display:none;">
-            </label>
-        </form>
-        <button onclick="printPage()" class="btn-print"><span class="print-icon"></span> Print</button>
     </div>
 </div>
 
@@ -104,9 +93,17 @@
         <p class="stat-label">Spent</p>
         <p class="stat-small">of ${{ "{:,.0f}".format(stats.budget_total) }}</p>
         {% if stats.budget_total > 0 %}
-        <div class="progress-bar">
-            <div class="progress-fill" style="width: {{ (stats.budget_spent / stats.budget_total * 100)|int }}%"></div>
+        {% set budget_percentage = stats.budget_spent / stats.budget_total * 100 %}
+        {% set budget_bar_width = 0 if budget_percentage < 0 else (100 if budget_percentage > 100 else budget_percentage) %}
+        <div class="progress-bar" role="progressbar" aria-label="Budget spent" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ budget_percentage|round(1) }}">
+            <div class="progress-fill{% if budget_percentage > 100 %} progress-fill-danger{% endif %}" style="width: {{ budget_bar_width|round(1) }}%"></div>
         </div>
+        {% if budget_percentage > 100 %}
+        <p class="budget-over-state">
+            Over budget by ${{ "{:,.0f}".format(stats.budget_spent - stats.budget_total) }}
+            ({{ (budget_percentage - 100)|round(1) }}% over)
+        </p>
+        {% endif %}
         {% endif %}
         <a href="{{ url_for('budget_view', wedding_id=wedding.id) }}" class="btn-primary btn-small">View Budget</a>
     </div>
@@ -210,18 +207,28 @@
     </div>
 </div>
 
-<!-- Export & Collaboration -->
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 2rem;">
-    <div class="quick-actions">
-        <h2>Export &amp; Print</h2>
-        <div class="action-buttons">
+<!-- Tools & Collaboration -->
+<div class="dashboard-secondary-sections">
+    <details class="dashboard-tools quick-actions">
+        <summary>Tools &amp; utilities</summary>
+        <p class="tools-description">Setup, transfer, export, and printing options.</p>
+        <div class="action-buttons tools-actions">
+            <a href="{{ url_for('onboarding_hub', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Setup Wizard</a>
+            <a href="{{ url_for('index') }}" class="btn-secondary btn-small">All Weddings</a>
+            <a href="{{ url_for('export_wedding_json', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export Wedding (JSON)</a>
             <a href="{{ url_for('export_guests_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Guests CSV</a>
             <a href="{{ url_for('export_budget_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Budget CSV</a>
             <a href="{{ url_for('export_tasks_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Tasks CSV</a>
-            <a href="{{ url_for('print_center', wedding_id=wedding.id) }}" class="btn-secondary btn-small" style="font-weight: 600;">Print Center (19 Documents)</a>
             <a href="{{ url_for('calendar_export_ical', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Calendar (.ics)</a>
+            <a href="{{ url_for('print_center', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Print Center (19 Documents)</a>
+            <button type="button" onclick="printPage()" class="btn-secondary btn-small">Print This Page</button>
         </div>
-    </div>
+        <form method="POST" action="{{ url_for('import_wedding_json', wedding_id=wedding.id) }}" enctype="multipart/form-data" class="import-wedding-form" onsubmit="return confirm('Import data from this file? This will ADD data to the current wedding.');">
+            <label for="wedding-import-file">Import Wedding (JSON)</label>
+            <input id="wedding-import-file" type="file" name="file" accept=".json" required>
+            <button type="submit" class="btn-secondary btn-small">Import Selected File</button>
+        </form>
+    </details>
 
     <div class="quick-actions">
         <h2>Collaboration</h2>
@@ -235,7 +242,7 @@
             <a href="{{ url_for('collaborators_view', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Manage Share Link</a>
             {% else %}
             <form method="POST" action="{{ url_for('share_enable', wedding_id=wedding.id) }}" style="display: inline;">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" id="-csrf-token">
                 <button type="submit" class="btn-secondary btn-small">Generate Share Link</button>
             </form>
             {% endif %}

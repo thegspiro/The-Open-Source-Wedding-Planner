@@ -208,6 +208,21 @@ body {
     flex-wrap: nowrap;
     gap: 1rem;
 }
+.navbar-top-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+.nav-menu {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0;
+    flex: 1;
+}
+.nav-menu-toggle { display: none; }
 .logo {
     font-family: var(--font-heading);
     font-size: 1.35rem;
@@ -334,6 +349,17 @@ body {
     font-size: 0.85rem;
 }
 .btn-logout:hover { opacity: 1; color: var(--color-danger) !important; }
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
 
 /* ============================================
    Main Content Area
@@ -370,9 +396,14 @@ main {
 }
 .header-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.6rem;
     align-items: center;
-    flex-wrap: wrap;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+}
+.header-actions .btn-primary,
+.header-actions .btn-secondary {
+    white-space: nowrap;
 }
 .subtitle {
     color: var(--color-text-light);
@@ -552,6 +583,18 @@ main {
     background: linear-gradient(90deg, var(--color-primary-light), var(--color-primary));
     border-radius: 3px;
     transition: width 0.5s ease;
+}
+.progress-fill-danger {
+    background: var(--color-danger);
+}
+.budget-over-state {
+    margin: -0.25rem 0 0.75rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+    font-size: 0.82rem;
+    font-weight: 600;
 }
 
 /* ============================================
@@ -958,6 +1001,49 @@ main {
     font-weight: 700;
 }
 .action-buttons { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+.dashboard-secondary-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-top: 2rem;
+    align-items: start;
+}
+.dashboard-secondary-sections .quick-actions { margin-top: 0; }
+.dashboard-tools summary {
+    cursor: pointer;
+    color: var(--color-text);
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+.dashboard-tools summary::marker { color: var(--color-primary); }
+.dashboard-tools summary:focus-visible {
+    outline: 3px solid var(--color-primary-light);
+    outline-offset: 4px;
+    border-radius: var(--radius-sm);
+}
+.tools-description {
+    color: var(--color-text-light);
+    font-size: 0.88rem;
+    margin: 0.65rem 0 1rem;
+}
+.tools-actions { margin-bottom: 1rem; }
+.import-wedding-form {
+    display: grid;
+    grid-template-columns: minmax(150px, auto) minmax(180px, 1fr) auto;
+    gap: 0.6rem;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border-light);
+}
+.import-wedding-form label { font-size: 0.88rem; font-weight: 600; }
+.import-wedding-form input[type="file"] {
+    min-width: 0;
+    color: var(--color-text-light);
+    font: inherit;
+    font-size: 0.82rem;
+}
 
 /* ============================================
    Empty State
@@ -2205,15 +2291,78 @@ footer p { margin: 0; }
    ============================================ */
 @media (max-width: 768px) {
     .page-header { flex-direction: column; align-items: flex-start; }
-    .navbar .container { flex-direction: column; gap: 0.5rem; height: auto; padding: 0.75rem 16px; }
     .navbar { height: auto; }
-    .module-nav { justify-content: flex-start; width: 100%; overflow-x: auto; }
-    .wedding-nav { width: 100%; }
-    .nav-links { width: 100%; justify-content: center; flex-wrap: wrap; gap: 0.35rem; }
+    .navbar .container { display: block; height: auto; padding: 0 16px; }
+    .navbar-top-row { height: var(--header-height); width: 100%; }
+    .navbar-top-row .logo { font-size: 1.05rem; }
+    .navbar-top-row .wedding-name {
+        min-width: 0;
+        max-width: 42%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 0.25rem 0.55rem;
+        font-size: 0.8rem;
+    }
+    .nav-menu-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-left: auto;
+        padding: 0.45rem 0.65rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-card);
+        color: var(--color-text);
+        font: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .nav-menu-toggle:focus-visible { outline: 3px solid var(--color-primary-light); outline-offset: 2px; }
+    .nav-menu-icon,
+    .nav-menu-icon::before,
+    .nav-menu-icon::after { display: block; width: 16px; height: 2px; background: currentColor; content: ""; }
+    .nav-menu-icon { position: relative; }
+    .nav-menu-icon::before { position: absolute; top: -5px; }
+    .nav-menu-icon::after { position: absolute; top: 5px; }
+    .nav-menu {
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        max-height: calc(100vh - var(--header-height));
+        overflow-y: auto;
+        padding: 0.75rem 0 1rem;
+        border-top: 1px solid var(--color-border-light);
+    }
+    .nav-menu.is-open { display: flex; }
+    .module-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; overflow: visible; }
+    .module-nav a { padding: 0.55rem 0.7rem; }
+    .wedding-nav { flex-direction: column; align-items: stretch; width: 100%; overflow: visible; }
+    .global-search,
+    .global-search input { width: 100% !important; }
+    .nav-links { flex-direction: column; align-items: stretch; width: 100%; gap: 0.2rem; }
+    .nav-links li,
+    .nav-links a,
+    .nav-links form,
+    .nav-links .btn-logout { width: 100%; }
+    .nav-links a,
+    .nav-links .btn-logout { display: block; padding: 0.55rem 0.7rem; text-align: left; }
+    .user-info { justify-content: space-between; border-radius: var(--radius-sm); }
     .dashboard-grid { grid-template-columns: 1fr; }
     .wedding-grid { grid-template-columns: 1fr; }
     .task-header { flex-direction: column; gap: 0.75rem; }
-    .header-actions { flex-direction: column; align-items: flex-start; }
+    .header-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+        align-items: stretch;
+    }
+    .header-actions .btn-primary,
+    .header-actions .btn-secondary { text-align: center; }
+    .header-actions .btn-secondary { grid-column: 1 / -1; }
+    .dashboard-secondary-sections { grid-template-columns: 1fr; }
+    .import-wedding-form { grid-template-columns: 1fr; align-items: start; }
     .participant-grid { grid-template-columns: 1fr; }
     .handler-time-header { flex-direction: column; }
     .handler-summary-grid { grid-template-columns: 1fr 1fr; }
@@ -2238,8 +2387,7 @@ footer p { margin: 0; }
     .stat-large { font-size: 1.85rem; }
     .handler-summary-grid { grid-template-columns: 1fr; }
     .calc-grid { grid-template-columns: 1fr; }
-    .nav-links { gap: 0.2rem; }
-    .nav-links a { padding: 0.35rem 0.5rem; font-size: 0.8rem; }
+    .navbar-top-row .logo { max-width: 34%; overflow: hidden; text-overflow: ellipsis; }
 }
 
 /* ============================================

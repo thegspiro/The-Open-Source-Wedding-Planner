@@ -48,7 +48,7 @@
                 <td><span class="role-badge">{{ entry.role|title }}</span></td>
                 <td>
                     <form method="POST" action="{{ url_for('collaborator_update', wedding_id=wedding.id, access_id=entry.access_id) }}" class="form-inline">
-                        <select name="role" class="select-small">
+                        <select name="role" class="select-small" id="role-{{ entry.id }}">
                             <option value="owner" {% if entry.role == 'owner' %}selected{% endif %}>Owner</option>
                             <option value="planner" {% if entry.role == 'planner' %}selected{% endif %}>Planner</option>
                             <option value="viewer" {% if entry.role == 'viewer' %}selected{% endif %}>Viewer</option>
@@ -85,12 +85,12 @@
         <div class="share-actions">
             <form method="POST" action="{{ url_for('share_regenerate', wedding_id=wedding.id) }}"
                   onsubmit="return confirm('Generate a new link? The current link will stop working for anyone you have already sent it to.');">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" id="-csrf-token">
                 <button type="submit" class="btn-secondary btn-small">Generate New Link</button>
             </form>
             <form method="POST" action="{{ url_for('share_revoke', wedding_id=wedding.id) }}"
                   onsubmit="return confirm('Revoke this link? Anyone holding it will immediately lose access.');">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" id="-csrf-token-2">
                 <button type="submit" class="btn-danger btn-small">Revoke Link</button>
             </form>
         </div>
@@ -102,7 +102,7 @@
     {% else %}
     <p>Generate a shareable link so others can view your wedding details without an account.</p>
     <form method="POST" action="{{ url_for('share_enable', wedding_id=wedding.id) }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" id="-csrf-token-3">
         <button type="submit" class="btn-primary">Generate Shareable Link</button>
     </form>
     {% endif %}
