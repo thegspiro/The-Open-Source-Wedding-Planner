@@ -47,12 +47,12 @@
 <div class="tab-panel active" id="all-tab" role="tabpanel" aria-labelledby="inventory-all-tab" data-print-title="All Items">
     <!-- Status filter -->
     <div class="tab-links" style="margin-bottom: 1rem;">
-        <span class="tab-link active" onclick="filterItems(this, 'all')">All</span>
-        <span class="tab-link" onclick="filterItems(this, 'needed')">Needed</span>
-        <span class="tab-link" onclick="filterItems(this, 'acquired')">Acquired</span>
-        <span class="tab-link" onclick="filterItems(this, 'packed')">Packed</span>
-        <span class="tab-link" onclick="filterItems(this, 'setup')">Set Up</span>
-        <span class="tab-link" onclick="filterItems(this, 'returned')">Returned</span>
+        <button type="button" class="tab-link active" onclick="filterItems(this, 'all')">All</button>
+        <button type="button" class="tab-link" onclick="filterItems(this, 'needed')">Needed</button>
+        <button type="button" class="tab-link" onclick="filterItems(this, 'acquired')">Acquired</button>
+        <button type="button" class="tab-link" onclick="filterItems(this, 'packed')">Packed</button>
+        <button type="button" class="tab-link" onclick="filterItems(this, 'setup')">Set Up</button>
+        <button type="button" class="tab-link" onclick="filterItems(this, 'returned')">Returned</button>
     </div>
 
     {% if items %}
