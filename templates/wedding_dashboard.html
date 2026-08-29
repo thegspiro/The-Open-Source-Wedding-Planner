@@ -24,7 +24,7 @@
         <a href="{{ url_for('index') }}" class="btn-secondary btn-small">All Weddings</a>
         <a href="{{ url_for('export_wedding_json', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export Wedding (JSON)</a>
         <form method="POST" action="{{ url_for('import_wedding_json', wedding_id=wedding.id) }}" enctype="multipart/form-data" style="display:inline;">
-            <label class="btn-secondary btn-small" style="cursor:pointer;">Import Wedding (JSON)
+            <label class="btn-secondary btn-small file-upload-control" role="button" tabindex="0" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" style="cursor:pointer;">Import Wedding (JSON)
                 <input type="file" name="file" accept=".json" onchange="if(confirm('Import data from this file? This will ADD data to the current wedding.')) this.form.submit();" style="display:none;">
             </label>
         </form>

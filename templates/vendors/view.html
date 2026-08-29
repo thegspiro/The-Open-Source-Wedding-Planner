@@ -11,7 +11,7 @@
         <a href="{{ url_for('export_vendors_csv', wedding_id=wedding.id) }}" class="btn-secondary btn-small">Export CSV</a>
         <a href="{{ url_for('download_sample_csv', template_name='vendors') }}" class="btn-secondary btn-small">Download Template</a>
         <form method="POST" action="{{ url_for('import_vendors_csv', wedding_id=wedding.id) }}" enctype="multipart/form-data" style="display:inline;">
-            <label class="btn-secondary btn-small" style="cursor:pointer;">Import CSV
+            <label class="btn-secondary btn-small file-upload-control" role="button" tabindex="0" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" style="cursor:pointer;">Import CSV
                 <input type="file" name="file" accept=".csv" onchange="this.form.submit()" style="display:none;">
             </label>
         </form>

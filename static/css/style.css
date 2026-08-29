@@ -38,6 +38,9 @@
     --sidebar-width: 260px;
     --header-height: 64px;
     --transition: 0.2s ease;
+    /* A deep blue clears 3:1 against every light palette background. */
+    --color-focus: #005fcc;
+    --color-focus-contrast: #ffffff;
 }
 
 /* ============================================
@@ -98,6 +101,9 @@
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
     --shadow-md: 0 4px 12px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.15);
     --shadow-lg: 0 10px 30px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2);
+    /* Gold remains distinct from every dark-mode surface and theme color. */
+    --color-focus: #ffd166;
+    --color-focus-contrast: #17120a;
 }
 
 /* Dark mode adjustments for primary colors per theme */
@@ -2319,6 +2325,7 @@ footer p { margin: 0; }
     flex-wrap: wrap;
 }
 .tab-link {
+    appearance: none;
     padding: 0.4rem 0.9rem;
     font-size: 0.85rem;
     font-weight: 500;
@@ -2328,6 +2335,8 @@ footer p { margin: 0; }
     border-radius: var(--radius-xl);
     text-decoration: none;
     transition: all var(--transition);
+    font-family: inherit;
+    cursor: pointer;
 }
 .tab-link:hover {
     border-color: var(--color-primary-light);
@@ -2740,6 +2749,25 @@ footer p { margin: 0; }
     .info-card, .dashboard-card, tr {
         break-inside: avoid;
     }
+}
+
+/* ============================================
+   Keyboard focus
+   The contrasting halo keeps the indicator visible when a control sits on a
+   theme-colored surface; native outlines are retained for anything not listed.
+   ============================================ */
+:where(
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    .tab-btn,
+    label.file-upload-control
+):focus-visible {
+    outline: 3px solid var(--color-focus) !important;
+    outline-offset: 3px !important;
+    box-shadow: 0 0 0 5px var(--color-focus-contrast) !important;
 }
 
 /* Printable section wrapper — used by printSection() JS */
